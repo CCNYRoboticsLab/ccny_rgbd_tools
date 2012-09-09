@@ -29,7 +29,7 @@ Download the stack from our repository:
 
     git clone https://github.com/ccny-ros-pkg/ccny_rgbd_tools.git
 
-Install any dependencies using [[rosdep]].
+Install any dependencies using rosdep.
 
     rosdep install ccny_rgbd_tools
 
