@@ -42,10 +42,7 @@ rosbuild_add_library (ccny_rgbd_features
   src/features/feature_detector.cpp
   src/features/orb_detector.cpp
   src/features/gft_detector.cpp
-  src/features/klt_detector.cpp
   src/features/surf_detector.cpp
-  src/features/fast_detector.cpp
-  src/features/sift_gpu_detector.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_registration

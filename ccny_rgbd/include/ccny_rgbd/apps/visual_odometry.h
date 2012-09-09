@@ -25,13 +25,12 @@
 
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
+
 #include "ccny_rgbd/features/feature_detector.h"
-#include "ccny_rgbd/features/klt_detector.h"
 #include "ccny_rgbd/features/orb_detector.h"
 #include "ccny_rgbd/features/surf_detector.h"
-#include "ccny_rgbd/features/sift_gpu_detector.h"
 #include "ccny_rgbd/features/gft_detector.h"
-#include "ccny_rgbd/features/fast_detector.h"
+
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_model.h"

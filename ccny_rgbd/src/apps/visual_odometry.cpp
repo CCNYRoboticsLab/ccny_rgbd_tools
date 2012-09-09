@@ -24,14 +24,8 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
     feature_detector_ = new OrbDetector(nh_, nh_private_);
   else if (detector_type_ == "SURF")
     feature_detector_ = new SurfDetector(nh_, nh_private_);
-  else if (detector_type_ == "SURF_GPU")
-    feature_detector_ = new SiftGpuDetector(nh_, nh_private_);
   else if (detector_type_ == "GFT")
     feature_detector_ = new GftDetector(nh_, nh_private_);
-  else if (detector_type_ == "KLT")
-    feature_detector_ = new KltDetector(nh_, nh_private_);
-  else if (detector_type_ == "FAST")
-    feature_detector_ = new FastDetector(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
 
