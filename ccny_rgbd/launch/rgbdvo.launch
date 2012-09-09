@@ -1,0 +1,97 @@
+<!-- RGB-D Visual odometry -->
+
+<launch>
+
+  # ORB, SURF, GTF, KLT
+  <arg name="detector_type" default="GFT"/> 
+
+  # ICP, ICPModel, RANSAC
+  <arg name="reg_type" default="ICP"/> 
+
+  <node pkg="ccny_rgbd_vo" type="rgbd_vo_node" name="rgbd_vo_node" 
+    output="screen">
+
+    <param name="fixed_frame" value="/odom"/>
+    <param name="base_frame"  value="/camera_link"/>
+       
+    #### keyframes #####################################
+
+    <param name="kf/kf_dist_eps"  value="0.15"/>
+    <param name="kf/kf_angle_eps" value="0.30"/> 
+
+    #### features #####################################
+
+    <param name="feature/detector_type"       value="$(arg detector_type)"/> #  ORB, SURF, or GFT (Good features to track)
+    <param name="feature/compute_descriptors" value="false"/>
+    <param name="feature/smooth"              value="0"/>
+    <param name="feature/max_range"           value="7.0"/>
+    <param name="feature/show_image"          value="false"/>
+
+    #### features: GFT ################################
+
+    <param name="feature/GFT/n_features"   value = "500"/>
+    <param name="feature/GFT/min_distance" value = "3.0"/>
+    <param name="feature/GFT/grid_cells"   value = "1"/>
+
+    #### features: SURF ###############################
+  
+    <param name="feature/SURF/hessian_threshold" value = "300"/>
+    <param name="feature/SURF/upright"           value = "false"/>
+
+    #### features: ORB ###############################
+  
+    <param name="feature/ORB/n_features"     value = "300"/>
+    <param name="feature/ORB/edge_threshold" value = "31"/>
+
+    #### features: FAST ###############################
+  
+    <param name="feature/FAST/threshold"          value = "31"/>
+    <param name="feature/FAST/nonmax_suppression" value = "true"/>
+
+    #### registration #################################
+
+    <param name="reg/reg_type"          value="$(arg reg_type)"/>
+    <param name="reg/motion_constraint" value="0"/>
+
+    #### registration: ICP ############################
+
+    <param name="reg/ICP/history_size"            value="5"/>
+    <param name="reg/ICP/max_iterations"          value="10"/>
+    <param name="reg/ICP/max_corresp_dist"        value="0.20"/>
+    <param name="reg/ICP/tf_epsilon"              value="1e-4"/>
+    <param name="reg/ICP/use_ransac_rejection"    value="false"/>
+    <param name="reg/ICP/ransac_inlier_threshold" value="0.15"/>
+
+    #### registration: ICP Prob Model #################
+
+    <param name="reg/ICPProbModel/max_iterations"          value="10"/>
+    <param name="reg/ICPProbModel/max_corresp_dist"        value="0.20"/>
+    <param name="reg/ICPProbModel/tf_epsilon"              value="1e-4"/>
+    <param name="reg/ICPProbModel/use_ransac_rejection"    value="false"/>
+    <param name="reg/ICPProbModel/ransac_inlier_threshold" value="0.15"/>
+
+    <param name="reg/ICPProbModel/max_model_size"       value="15000"/>
+    <param name="reg/ICPProbModel/max_association_dist" value="10.0"/>
+    <param name="reg/ICPProbModel/n_nearest_neighbors"  value="2"/>
+
+    #### registration: RANSAC #########################
+
+    <param name="reg/RANSAC/matching_distance" value="100.0"/>
+    <param name="reg/RANSAC/icp_refine"        value="false"/>
+    <param name="reg/RANSAC/inlier_threshold"  value="0.10"/>
+
+  </node>
+
+  <node pkg="ccny_3dmap_server" type="map_server_node" name="map_server" 
+    output="screen">
+
+    <!--remap from="/camera/depth_registered/points/" to="/keyframes"/-->
+
+    <param name="fixed_frame"  value="/odom"/>
+    <param name="resolution"   value="0.02"/>
+    <param name="max_range"    value="4"/>
+
+  </node>
+
+</launch>
+

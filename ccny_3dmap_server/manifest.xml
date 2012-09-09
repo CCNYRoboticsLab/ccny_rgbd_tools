@@ -1,0 +1,20 @@
+<package>
+  <description brief="ccny_3dmap_server">
+
+     ccny_3dmap_server
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_3dmap_server</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <depend package="tf"/>
+  <depend package="pcl"/>
+  <depend package="pcl_ros"/>
+  <depend package="ccny_gicp"/>
+
+</package>
+
+

@@ -1,0 +1,15 @@
+<launch>
+
+  <arg name="path"/>
+  <arg name="bag_name"/>
+  <arg name="delay"/>
+
+  <node pkg="rosbag" type="play" name="play" output="screen"
+    args="$(arg path)/$(arg bag_name) --clock --loop --queue=1000 -d $(arg delay) --rate=1.0">
+
+    <!--remap from="/camera/depth/image"     to="/camera/depth/image_raw"/-->
+    <!--remap from="/camera/rgb/image_color" to="/camera/rgb/image_raw"-->
+
+  </node>
+
+</launch>

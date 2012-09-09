@@ -1,0 +1,42 @@
+---------------------------------------------------------
+CCNY RGBD
+---------------------------------------------------------
+Ivan Dryanovski               ivan.dryanovski@gmail.com
+CCNY Robotics Lab 2011
+http://robotics.ccny.cuny.edu/
+
+1. DETAILS:
+
+This code is in an experimental stage. It provides several classes capable of
+providing real-time visual odometry for a hand-held RGB-D camera, and a map
+server which accumulates an octree-based map.
+
+2. INSTALLING:
+
+First, install the dependencies:
+
+  sudo apt-get install ros-fuerte-openni-camera
+  sudo apt-get install ros-fuerte-openni-launch
+  sudo apt-get install libgsl0-dev
+
+Next, compile the stack:
+
+  rosmake ccny_rgbd
+
+
+3. USAGE
+
+Connect your RGB-D camera and launch the Openni device. 
+
+  roslaunch ccny_openni_launch openni.launch 
+
+Next, launch the VO:
+
+  roslaunch ccny_rgbd_vo rgbdvo.launch
+
+Finally, launch rviz. 
+
+  rosrun rviz rviz
+
+For convenience, you can load the ccny_rgbd_vo/launch/rviz.cfg file.
+

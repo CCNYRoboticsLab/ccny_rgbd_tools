@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="ccny_3dmap_server" type="map_server_node" name="map_server" 
+    output="screen">
+
+    <param name="resolution"   value="0.02"/>
+    <param name="fixed_frame"  value="odom"/>
+    <param name="max_range"  value="3"/>
+
+  </node>
+
+</launch>
+

@@ -1,0 +1,14 @@
+<package>
+  <description brief="ccny_openni_launch">
+
+     ccny_openni_launch
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_openni_launch</url>
+
+</package>
+
+

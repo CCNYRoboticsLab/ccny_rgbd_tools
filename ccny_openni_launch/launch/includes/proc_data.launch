@@ -1,0 +1,68 @@
+<!-- Processes the raw image data -->
+<launch>
+
+  <!-- Name of nodelet manager, must be fully resolved -->
+  <arg name="manager" />
+
+  <!-- Driver parameters -->
+  <arg name="device_id" />
+  <arg name="rgb_frame_id" />
+  <arg name="depth_frame_id" />
+  <arg name="rgb_camera_info_url" />
+  <arg name="depth_camera_info_url" />
+  <arg name="bond" default="--no-bond" />
+  
+  <!-- Remapping arguments -->
+  <arg name="rgb"              default="rgb" />
+  <arg name="ir"               default="ir" />
+  <arg name="depth"            default="depth" />
+  <arg name="depth_registered" default="depth_registered" />
+  <arg name="projector"        default="projector" />
+
+  <!-- RGB processing -->
+  <include file="$(find openni_launch)/launch/includes/rgb.launch"
+	   ns="$(arg rgb)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- IR processing -->
+  <include file="$(find openni_launch)/launch/includes/ir.launch"
+	   ns="$(arg ir)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- Unregistered depth processing -->
+  <include file="$(find openni_launch)/launch/includes/depth.launch"
+	   ns="$(arg depth)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- Depth-to-RGB registration and processing -->
+  <include file="$(find openni_launch)/launch/includes/depth_registered.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="rgb" value="$(arg rgb)" />
+    <arg name="depth" value="$(arg depth)" />
+    <arg name="depth_registered" value="$(arg depth_registered)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- Unregistered disparity image -->
+  <include file="$(find openni_launch)/launch/includes/disparity.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="depth" value="$(arg depth)" />
+    <arg name="projector" value="$(arg projector)" />
+    <arg name="bond" value="$(arg bond)" />    
+  </include>
+
+  <!-- Registered disparity image -->
+  <include file="$(find openni_launch)/launch/includes/disparity.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="depth" value="$(arg depth_registered)" />
+    <arg name="projector" value="$(arg projector)" />
+    <arg name="bond" value="$(arg bond)" />    
+  </include>
+
+</launch>
