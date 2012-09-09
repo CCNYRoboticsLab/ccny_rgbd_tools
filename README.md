@@ -1,10 +1,10 @@
 CCNY RGB-D tools 
 ===================================
 
-Ivan Dryanovski
-CCNY Robotics Lab 2011
-ivan.dryanovski@gmail.com
-http://robotics.ccny.cuny.edu/
+Ivan Dryanovski  
+CCNY Robotics Lab 2011  
+ivan.dryanovski@gmail.com  
+http://robotics.ccny.cuny.edu/  
 
 Overview
 -----------------------------------
@@ -42,15 +42,15 @@ Usage
 
 Connect your RGB-D camera and launch the Openni device. 
 
-  roslaunch ccny_openni_launch openni.launch 
+    roslaunch ccny_openni_launch openni.launch 
 
 Next, launch the visual odometry:
 
-  roslaunch ccny_rgbd visual_odometry.launch
+    roslaunch ccny_rgbd visual_odometry.launch
 
 Finally, launch rviz. 
 
-  rosrun rviz rviz
+    rosrun rviz rviz
 
 For convenience, you can load the ccny_rgbd/launch/rviz.cfg file.
 
