@@ -1,5 +1,5 @@
 <package>
-  <description brief="ccny_rgbd_tools">
+  <description brief="ccny_rgbd">
 
      ccny_rgbd_tools
 
@@ -7,7 +7,7 @@
   <author>Ivan Dryanovski</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/ccny_rgbd_tools</url>
+  <url>http://ros.org/wiki/ccny_rgbd</url>
   <depend package="roscpp"/>
 
   <depend package="roscpp"/>
@@ -16,7 +16,6 @@
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>
-  <depend package="ccny_gicp"/>
   <depend package="tf"/>
   <depend package="dynamic_reconfigure"/>
   <depend package="cv_bridge"/>

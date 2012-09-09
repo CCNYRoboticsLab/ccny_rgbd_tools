@@ -1,7 +1,7 @@
 <package>
   <description brief="ccny_rgbd">
 
-     ccny_rgbd_tools
+     RGB-D tools form visual odometry and mapping
 
   </description>
   <author>Ivan Dryanovski</author>
@@ -16,7 +16,6 @@
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>
-  <depend package="ccny_gicp"/>
   <depend package="tf"/>
   <depend package="dynamic_reconfigure"/>
   <depend package="cv_bridge"/>

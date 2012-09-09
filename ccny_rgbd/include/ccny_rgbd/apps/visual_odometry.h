@@ -36,9 +36,6 @@
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
 
 #include "ccny_rgbd/mapping/keyframe_mapper.h"
-//#include "ccny_rgbd/loop/loop_solver.h"
-//#include "ccny_rgbd/loop/loop_solver_sba.h"
-//#include "ccny_rgbd/loop/loop_solver_gicp.h"
 
 namespace ccny_rgbd
 {

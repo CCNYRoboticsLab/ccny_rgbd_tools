@@ -14,10 +14,9 @@ rosbuild_init()
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-# opencv
-
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
+# opencv
 pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
@@ -54,6 +53,7 @@ rosbuild_add_library (ccny_rgbd_registration
 
 rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_mapper.cpp
+  src/mapping/octree_pointcloud_storage.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_util
@@ -74,7 +74,6 @@ target_link_libraries (visual_odometry_node ccny_rgbd_registration)
 target_link_libraries (visual_odometry_node ccny_rgbd_mapping) 
 target_link_libraries (visual_odometry_node ccny_rgbd_util) 
 
-target_link_libraries (visual_odometry_node ccny_gicp) 
 target_link_libraries (visual_odometry_node ${OPENCV_LIBRARIES}) 
 target_link_libraries (visual_odometry_node boost_signals boost_system)
 
