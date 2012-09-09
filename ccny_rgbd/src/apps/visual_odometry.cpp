@@ -33,12 +33,8 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
   if      (reg_type_ == "ICP")
     motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
-  else if (reg_type_ == "ICPModel")
-    motion_estimation_ = new MotionEstimationICPModel(nh_, nh_private_);
   else if (reg_type_ == "ICPProbModel")
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
-  else if (reg_type_ == "RANSAC")
-    motion_estimation_ = new MotionEstimationRANSAC(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 

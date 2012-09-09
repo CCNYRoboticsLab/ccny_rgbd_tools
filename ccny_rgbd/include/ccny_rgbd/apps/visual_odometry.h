@@ -33,12 +33,7 @@
 
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
-#include "ccny_rgbd/registration/motion_estimation_icp_model.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
-#include "ccny_rgbd/registration/motion_estimation_icp_loop.h"
-#include "ccny_rgbd/registration/motion_estimation_icp_particles.h"
-#include "ccny_rgbd/registration/motion_estimation_ransac.h"
-#include "ccny_rgbd/registration/motion_estimation_ransac_model.h"
 
 #include "ccny_rgbd/loop/keyframe_generator.h"
 #include "ccny_rgbd/loop/loop_solver.h"

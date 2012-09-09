@@ -48,9 +48,7 @@ rosbuild_add_library (ccny_rgbd_features
 rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation.cpp
   src/registration/motion_estimation_icp.cpp
-  src/registration/motion_estimation_icp_model.cpp
   src/registration/motion_estimation_icp_prob_model.cpp
-  src/registration/motion_estimation_ransac.cpp
   src/registration/motion_prediction_imu.cpp
 )
 
