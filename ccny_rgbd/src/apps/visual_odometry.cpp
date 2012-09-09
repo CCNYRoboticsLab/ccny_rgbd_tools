@@ -1,8 +1,8 @@
-#include "ccny_rgbd/registration/rgbd_vo.h"
+#include "ccny_rgbd/apps/visual_odometry.h"
 
 namespace ccny_rgbd {
 
-RGBDVO::RGBDVO(ros::NodeHandle nh, ros::NodeHandle nh_private):
+VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), 
   nh_private_(nh_private),
   initialized_(false),
@@ -45,10 +45,6 @@ RGBDVO::RGBDVO(ros::NodeHandle nh, ros::NodeHandle nh_private):
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
   else if (reg_type_ == "RANSAC")
     motion_estimation_ = new MotionEstimationRANSAC(nh_, nh_private_);
-/*
-  else if (reg_type_ == "RANSACModel")
-    motion_estimation_ = new MotionEstimationRANSACModel(nh_, nh_private_);
-*/
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 
@@ -80,17 +76,17 @@ RGBDVO::RGBDVO(ros::NodeHandle nh, ros::NodeHandle nh_private):
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
   int queue_size = 5;
   sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
-  sync_->registerCallback(boost::bind(&RGBDVO::imageCb, this, _1, _2, _3));  
+  sync_->registerCallback(boost::bind(&VisualOdometry::imageCb, this, _1, _2, _3));  
 }
 
-RGBDVO::~RGBDVO()
+VisualOdometry::~VisualOdometry()
 {
   ROS_INFO("Destroying RGBD Visual Odometry"); 
 
   delete feature_detector_;
 }
 
-void RGBDVO::initParams()
+void VisualOdometry::initParams()
 {
   // **** frames
 
@@ -105,7 +101,7 @@ void RGBDVO::initParams()
     reg_type_ = "ICP";
 }
 
-void RGBDVO::imageCb(
+void VisualOdometry::imageCb(
   const sensor_msgs::ImageConstPtr& depth_msg,
   const sensor_msgs::ImageConstPtr& rgb_msg,
   const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -168,7 +164,7 @@ void RGBDVO::imageCb(
     d_total);
 }
 
-void RGBDVO::publishTf(const std_msgs::Header& header)
+void VisualOdometry::publishTf(const std_msgs::Header& header)
 {
   tf::StampedTransform transform_msg(
    f2b_, header.stamp, fixed_frame_, base_frame_);
@@ -181,7 +177,7 @@ void RGBDVO::publishTf(const std_msgs::Header& header)
   odom_publisher_.publish(odom);
 }
 
-bool RGBDVO::getBaseToCameraTf(const std_msgs::Header& header)
+bool VisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
 {
   tf::StampedTransform tf_m;
 

@@ -14,7 +14,7 @@ rosbuild_init()
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-## opencv
+# opencv
 
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
@@ -25,43 +25,65 @@ link_directories(${OPENCV_LIBRARY_DIRS})
 # services
 rosbuild_gensrv()
 
-## boost
-
+# boost
 rosbuild_add_boost_directories()
 
-################################################################################
+################################################################
+# Build libraries
+################################################################
 
-rosbuild_add_executable(rgbd_vo_node 
-                          src/node/rgbd_vo_node.cpp
-                          src/structures/rgbd_frame.cpp
-                          src/structures/rgbd_keyframe.cpp
-                          src/structures/feature_history.cpp
-                          src/features/feature_detector.cpp
-                          src/features/orb_detector.cpp
-                          src/features/gft_detector.cpp
-                          src/features/klt_detector.cpp
-                          src/features/surf_detector.cpp
-                          src/features/fast_detector.cpp
-                          src/features/sift_gpu_detector.cpp
-                          src/registration/rgbd_vo.cpp
-                          src/registration/motion_estimation.cpp
-                          src/registration/motion_estimation_icp.cpp
-                          src/registration/motion_estimation_icp_model.cpp
-                          src/registration/motion_estimation_icp_prob_model.cpp
-                          #src/registration/motion_estimation_icp_loop.cpp
-                          #src/registration/motion_estimation_icp_particles.cpp
-                          src/registration/motion_estimation_ransac.cpp
-                          #src/registration/motion_estimation_ransac_model.cpp
-                          src/registration/motion_prediction_imu.cpp
-                          src/registration/icp_kd.cpp
-                          src/loop/keyframe_generator.cpp
-                          src/loop/loop_detection.cpp
-                          src/loop/loop_solver.cpp
-                          src/loop/loop_solver_sba.cpp
-                          src/loop/loop_solver_gicp.cpp
-                          src/rgbd_util.cpp)
+rosbuild_add_library (ccny_rgbd_structures
+  src/structures/rgbd_frame.cpp
+  src/structures/rgbd_keyframe.cpp
+  src/structures/feature_history.cpp
+)
 
-target_link_libraries (rgbd_vo_node ccny_gicp) 
-target_link_libraries (rgbd_vo_node ${OPENCV_LIBRARIES}) 
-target_link_libraries (rgbd_vo_node boost_signals boost_system)
+rosbuild_add_library (ccny_rgbd_features
+  src/features/feature_detector.cpp
+  src/features/orb_detector.cpp
+  src/features/gft_detector.cpp
+  src/features/klt_detector.cpp
+  src/features/surf_detector.cpp
+  src/features/fast_detector.cpp
+  src/features/sift_gpu_detector.cpp
+)
+
+rosbuild_add_library (ccny_rgbd_registration
+  src/registration/motion_estimation.cpp
+  src/registration/motion_estimation_icp.cpp
+  src/registration/motion_estimation_icp_model.cpp
+  src/registration/motion_estimation_icp_prob_model.cpp
+  src/registration/motion_estimation_ransac.cpp
+  src/registration/motion_prediction_imu.cpp
+)
+
+rosbuild_add_library (ccny_rgbd_loop
+  src/loop/keyframe_generator.cpp
+  src/loop/loop_detection.cpp
+  src/loop/loop_solver.cpp
+  src/loop/loop_solver_sba.cpp
+  src/loop/loop_solver_gicp.cpp
+)
+
+rosbuild_add_library (ccny_rgbd_util
+  src/rgbd_util.cpp
+)
+
+################################################################
+# Build visual odometry application
+################################################################
+
+rosbuild_add_executable(visual_odometry_node 
+  src/node/visual_odometry_node.cpp
+  src/apps/visual_odometry.cpp)
+
+target_link_libraries (visual_odometry_node ccny_rgbd_structures) 
+target_link_libraries (visual_odometry_node ccny_rgbd_features) 
+target_link_libraries (visual_odometry_node ccny_rgbd_registration) 
+target_link_libraries (visual_odometry_node ccny_rgbd_loop) 
+target_link_libraries (visual_odometry_node ccny_rgbd_util) 
+
+target_link_libraries (visual_odometry_node ccny_gicp) 
+target_link_libraries (visual_odometry_node ${OPENCV_LIBRARIES}) 
+target_link_libraries (visual_odometry_node boost_signals boost_system)
 

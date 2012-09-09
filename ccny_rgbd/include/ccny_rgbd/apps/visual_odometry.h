@@ -1,5 +1,5 @@
-#ifndef CCNY_RGBD_RGBD_VO_H
-#define CCNY_RGBD_RGBD_VO_H
+#ifndef CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
+#define CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -51,7 +51,7 @@ namespace ccny_rgbd
 
 using namespace message_filters::sync_policies;
 
-class RGBDVO
+class VisualOdometry
 {
   typedef image_transport::SubscriberFilter ImageSubFilter;
   typedef message_filters::Subscriber<sensor_msgs::CameraInfo> CameraInfoSubFilter;
@@ -61,8 +61,8 @@ class RGBDVO
 
   public:
 
-    RGBDVO(ros::NodeHandle nh, ros::NodeHandle nh_private);
-    virtual ~RGBDVO();
+    VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    virtual ~VisualOdometry();
 
   private:
 
@@ -120,4 +120,4 @@ class RGBDVO
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_VO_H
+#endif // CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
