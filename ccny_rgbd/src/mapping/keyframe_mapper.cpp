@@ -1,9 +1,9 @@
-#include "ccny_rgbd/loop/keyframe_generator.h"
+#include "ccny_rgbd/mapping/keyframe_mapper.h"
 
 namespace ccny_rgbd
 {
 
-KeyframeGenerator::KeyframeGenerator(ros::NodeHandle nh, ros::NodeHandle nh_private):
+KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), 
   nh_private_(nh_private)
 {
@@ -28,17 +28,17 @@ KeyframeGenerator::KeyframeGenerator(ros::NodeHandle nh, ros::NodeHandle nh_priv
   // **** services
 
   pub_frame_service_ = nh_.advertiseService(
-    "publish_keyframe", &KeyframeGenerator::publishFrameSrvCallback, this);
+    "publish_keyframe", &KeyframeMapper::publishKeyframeSrvCallback, this);
   pub_frames_service_ = nh_.advertiseService(
-    "publish_keyframes", &KeyframeGenerator::publishAllFramesSrvCallback, this);
+    "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
 }
 
-KeyframeGenerator::~KeyframeGenerator()
+KeyframeMapper::~KeyframeMapper()
 {
 
 }
 
-void KeyframeGenerator::processFrame(
+void KeyframeMapper::processFrame(
   const RGBDFrame& frame, 
   const tf::Transform& pose)
 {
@@ -56,7 +56,7 @@ void KeyframeGenerator::processFrame(
   }
 }
 
-void KeyframeGenerator::addKeyframe(
+void KeyframeMapper::addKeyframe(
   const RGBDFrame& frame, 
   const tf::Transform& pose)
 {
@@ -67,9 +67,9 @@ void KeyframeGenerator::addKeyframe(
   keyframes_.push_back(keyframe);
 }
 
-bool KeyframeGenerator::publishFrameSrvCallback(
-  ccny_rgbd::PublishFrame::Request& request,
-  ccny_rgbd::PublishFrame::Response& response)
+bool KeyframeMapper::publishKeyframeSrvCallback(
+  PublishKeyframe::Request& request,
+  PublishKeyframe::Response& response)
 {
   if (request.id < 0 || request.id >= (int)keyframes_.size())
   {
@@ -84,9 +84,9 @@ bool KeyframeGenerator::publishFrameSrvCallback(
   return true;
 }
 
-bool KeyframeGenerator::publishAllFramesSrvCallback(
-  ccny_rgbd::PublishAllFrames::Request&  request,
-  ccny_rgbd::PublishAllFrames::Response& response)
+bool KeyframeMapper::publishAllKeyframesSrvCallback(
+  PublishAllKeyframes::Request&  request,
+  PublishAllKeyframes::Response& response)
 {
   if (request.step <= 0)
   {
@@ -106,7 +106,7 @@ bool KeyframeGenerator::publishAllFramesSrvCallback(
   return true;
 }
 
-void KeyframeGenerator::publishKeyframeData(int i)
+void KeyframeMapper::publishKeyframeData(int i)
 {
   RGBDKeyframe& keyframe = keyframes_[i];
 
@@ -124,7 +124,7 @@ void KeyframeGenerator::publishKeyframeData(int i)
   keyframes_pub_.publish(keyframe_data_ff);
 }
 
-void KeyframeGenerator::publishEdges()
+void KeyframeMapper::publishEdges()
 {
   visualization_msgs::Marker marker_edge;
   marker_edge.header.stamp = ros::Time::now();
@@ -155,7 +155,7 @@ void KeyframeGenerator::publishEdges()
   edges_pub_.publish(marker_edge);
 }
 
-void KeyframeGenerator::publishKeyframePose(int i)
+void KeyframeMapper::publishKeyframePose(int i)
 {
   RGBDKeyframe& keyframe = keyframes_[i];
 

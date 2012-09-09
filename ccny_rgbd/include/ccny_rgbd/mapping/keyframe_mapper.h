@@ -1,5 +1,5 @@
-#ifndef CCNY_RGBD_KEYFRAME_GENERATOR_H
-#define CCNY_RGBD_KEYFRAME_GENERATOR_H
+#ifndef CCNY_RGBD_KEYFRAME_MAPPER_H
+#define CCNY_RGBD_KEYFRAME_MAPPER_H
 
 #include <stdio.h>
 #include <ros/ros.h>
@@ -10,8 +10,8 @@
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd/PublishFrame.h"
-#include "ccny_rgbd/PublishAllFrames.h"
+#include "ccny_rgbd/PublishKeyframe.h"
+#include "ccny_rgbd/PublishAllKeyframes.h"
 
 namespace ccny_rgbd
 {
@@ -19,23 +19,23 @@ namespace ccny_rgbd
 typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
 typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
 
-class KeyframeGenerator
+class KeyframeMapper
 {
   public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    KeyframeGenerator(ros::NodeHandle nh, ros::NodeHandle nh_private);
-    virtual ~KeyframeGenerator();
+    KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    virtual ~KeyframeMapper();
  
     void processFrame(const RGBDFrame& frame, const tf::Transform& pose);
     void addKeyframe(const RGBDFrame& frame, const tf::Transform& pose);
 
-    bool publishAllFramesSrvCallback(ccny_rgbd::PublishAllFrames::Request& request,
-                                     ccny_rgbd::PublishAllFrames::Response& response);
+    bool publishAllKeyframesSrvCallback(PublishAllKeyframes::Request& request,
+                                        PublishAllKeyframes::Response& response);
 
-    bool publishFrameSrvCallback(ccny_rgbd::PublishFrame::Request& request,
-                                 ccny_rgbd::PublishFrame::Response& response);
+    bool publishKeyframeSrvCallback(PublishKeyframe::Request& request,
+                                    PublishKeyframe::Response& response);
 
     void publishKeyframeData(int i);
     void publishKeyframePose(int i);
@@ -68,4 +68,4 @@ class KeyframeGenerator
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_KEYFRAME_GENERATOR_H
+#endif // CCNY_RGBD_KEYFRAME_MAPPER_H

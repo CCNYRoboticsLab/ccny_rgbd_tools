@@ -52,12 +52,8 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_prediction_imu.cpp
 )
 
-rosbuild_add_library (ccny_rgbd_loop
-  src/loop/keyframe_generator.cpp
-  src/loop/loop_detection.cpp
-  src/loop/loop_solver.cpp
-  src/loop/loop_solver_sba.cpp
-  src/loop/loop_solver_gicp.cpp
+rosbuild_add_library (ccny_rgbd_mapping
+  src/mapping/keyframe_mapper.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_util
@@ -75,7 +71,7 @@ rosbuild_add_executable(visual_odometry_node
 target_link_libraries (visual_odometry_node ccny_rgbd_structures) 
 target_link_libraries (visual_odometry_node ccny_rgbd_features) 
 target_link_libraries (visual_odometry_node ccny_rgbd_registration) 
-target_link_libraries (visual_odometry_node ccny_rgbd_loop) 
+target_link_libraries (visual_odometry_node ccny_rgbd_mapping) 
 target_link_libraries (visual_odometry_node ccny_rgbd_util) 
 
 target_link_libraries (visual_odometry_node ccny_gicp) 

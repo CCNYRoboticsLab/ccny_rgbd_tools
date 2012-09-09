@@ -35,10 +35,10 @@
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
 
-#include "ccny_rgbd/loop/keyframe_generator.h"
-#include "ccny_rgbd/loop/loop_solver.h"
-#include "ccny_rgbd/loop/loop_solver_sba.h"
-#include "ccny_rgbd/loop/loop_solver_gicp.h"
+#include "ccny_rgbd/mapping/keyframe_mapper.h"
+//#include "ccny_rgbd/loop/loop_solver.h"
+//#include "ccny_rgbd/loop/loop_solver_sba.h"
+//#include "ccny_rgbd/loop/loop_solver_gicp.h"
 
 namespace ccny_rgbd
 {
@@ -97,7 +97,7 @@ class VisualOdometry
 
     MotionEstimation * motion_estimation_;
 
-    KeyframeGenerator * keyframe_generator_;
+    KeyframeMapper * keyframe_mapper_;
   
     // **** private functions
 

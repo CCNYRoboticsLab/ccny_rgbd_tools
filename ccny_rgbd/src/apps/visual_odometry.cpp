@@ -42,7 +42,7 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
   //keyframe_generator_ = new KeyframeGenerator(nh_, nh_private_);
 
-  keyframe_generator_ = new LoopSolverSBA(nh_, nh_private_);
+  keyframe_mapper_ = new KeyframeMapper(nh_, nh_private_);
 
   // **** publishers
 
@@ -129,7 +129,7 @@ void VisualOdometry::imageCb(
 
   // **** aggregate keyframe ******************************************
   
-  keyframe_generator_->processFrame(frame, f2b_ * b2c_);
+  keyframe_mapper_->processFrame(frame, f2b_ * b2c_);
 
   // **** publish motion **********************************************
 
@@ -147,11 +147,14 @@ void VisualOdometry::imageCb(
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
-  printf("Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
+  printf("[%d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
+    frame_count_,
     d_frame, 
     detector_type_.c_str(), n_features, n_keypoints, d_features, 
     reg_type_.c_str(), d_reg, 
     d_total);
+
+  frame_count_++;
 }
 
 void VisualOdometry::publishTf(const std_msgs::Header& header)
