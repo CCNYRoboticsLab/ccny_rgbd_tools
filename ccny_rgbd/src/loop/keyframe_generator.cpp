@@ -68,8 +68,8 @@ void KeyframeGenerator::addKeyframe(
 }
 
 bool KeyframeGenerator::publishFrameSrvCallback(
-  ccny_rgbd_vo::PublishFrame::Request& request,
-  ccny_rgbd_vo::PublishFrame::Response& response)
+  ccny_rgbd::PublishFrame::Request& request,
+  ccny_rgbd::PublishFrame::Response& response)
 {
   if (request.id < 0 || request.id >= (int)keyframes_.size())
   {
@@ -85,8 +85,8 @@ bool KeyframeGenerator::publishFrameSrvCallback(
 }
 
 bool KeyframeGenerator::publishAllFramesSrvCallback(
-  ccny_rgbd_vo::PublishAllFrames::Request&  request,
-  ccny_rgbd_vo::PublishAllFrames::Response& response)
+  ccny_rgbd::PublishAllFrames::Request&  request,
+  ccny_rgbd::PublishAllFrames::Response& response)
 {
   if (request.step <= 0)
   {

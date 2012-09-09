@@ -10,8 +10,8 @@
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd_vo/PublishFrame.h"
-#include "ccny_rgbd_vo/PublishAllFrames.h"
+#include "ccny_rgbd/PublishFrame.h"
+#include "ccny_rgbd/PublishAllFrames.h"
 
 namespace ccny_rgbd
 {
@@ -31,11 +31,11 @@ class KeyframeGenerator
     void processFrame(const RGBDFrame& frame, const tf::Transform& pose);
     void addKeyframe(const RGBDFrame& frame, const tf::Transform& pose);
 
-    bool publishAllFramesSrvCallback(ccny_rgbd_vo::PublishAllFrames::Request& request,
-                                     ccny_rgbd_vo::PublishAllFrames::Response& response);
+    bool publishAllFramesSrvCallback(ccny_rgbd::PublishAllFrames::Request& request,
+                                     ccny_rgbd::PublishAllFrames::Response& response);
 
-    bool publishFrameSrvCallback(ccny_rgbd_vo::PublishFrame::Request& request,
-                                 ccny_rgbd_vo::PublishFrame::Response& response);
+    bool publishFrameSrvCallback(ccny_rgbd::PublishFrame::Request& request,
+                                 ccny_rgbd::PublishFrame::Response& response);
 
     void publishKeyframeData(int i);
     void publishKeyframePose(int i);

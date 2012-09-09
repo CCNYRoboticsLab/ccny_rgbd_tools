@@ -21,8 +21,8 @@ LoopSolver::~LoopSolver()
 }
 
 bool LoopSolver::solveLoopSrvCallback(
-  ccny_rgbd_vo::SolveLoop::Request& request,
-  ccny_rgbd_vo::SolveLoop::Response& response)
+  ccny_rgbd::SolveLoop::Request& request,
+  ccny_rgbd::SolveLoop::Response& response)
 {
   ROS_INFO("Solve loop service called");
   solve();
@@ -31,8 +31,8 @@ bool LoopSolver::solveLoopSrvCallback(
 }
 
 bool LoopSolver::generateAssociationsSrvCallback(
-  ccny_rgbd_vo::SolveLoop::Request& request,
-  ccny_rgbd_vo::SolveLoop::Response& response)
+  ccny_rgbd::SolveLoop::Request& request,
+  ccny_rgbd::SolveLoop::Response& response)
 {
   ROS_INFO("Generate associations service called");
   generateAssociations();

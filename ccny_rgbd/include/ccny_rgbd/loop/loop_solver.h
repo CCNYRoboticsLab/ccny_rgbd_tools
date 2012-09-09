@@ -9,8 +9,8 @@
 
 #include "ccny_rgbd/loop/keyframe_generator.h"
 #include "ccny_rgbd/loop/loop_detection.h"
-#include "ccny_rgbd_vo/SolveLoop.h"
-#include "ccny_rgbd_vo/GenerateAssociations.h"
+#include "ccny_rgbd/SolveLoop.h"
+#include "ccny_rgbd/GenerateAssociations.h"
 
 namespace ccny_rgbd
 {
@@ -23,12 +23,12 @@ class LoopSolver: public KeyframeGenerator
     virtual ~LoopSolver();
  
     bool solveLoopSrvCallback(
-      ccny_rgbd_vo::SolveLoop::Request& request,
-      ccny_rgbd_vo::SolveLoop::Response& response);
+      ccny_rgbd::SolveLoop::Request& request,
+      ccny_rgbd::SolveLoop::Response& response);
 
     bool generateAssociationsSrvCallback(
-      ccny_rgbd_vo::SolveLoop::Request& request,
-      ccny_rgbd_vo::SolveLoop::Response& response);
+      ccny_rgbd::SolveLoop::Request& request,
+      ccny_rgbd::SolveLoop::Response& response);
 
   protected:
 

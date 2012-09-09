@@ -45,8 +45,8 @@ LoopSolverGICP::~LoopSolverGICP()
 }
 
 bool LoopSolverGICP::alignPairSrvCallback(
-  ccny_rgbd_vo::AlignPair::Request&  request,
-  ccny_rgbd_vo::AlignPair::Response& response)
+  ccny_rgbd::AlignPair::Request&  request,
+  ccny_rgbd::AlignPair::Response& response)
 {
   alignPair(request.idx_a, request.idx_b);
   return true;

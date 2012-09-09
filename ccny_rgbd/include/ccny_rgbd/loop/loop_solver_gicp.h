@@ -12,7 +12,7 @@
 #include <ccny_gicp/gicp_align.h>
 
 #include "ccny_rgbd/loop/loop_solver.h"
-#include "ccny_rgbd_vo/AlignPair.h"
+#include "ccny_rgbd/AlignPair.h"
 
 namespace ccny_rgbd
 {
@@ -30,8 +30,8 @@ class LoopSolverGICP: public LoopSolver
     void solve();
 
     bool alignPairSrvCallback(
-      ccny_rgbd_vo::AlignPair::Request&  request,
-      ccny_rgbd_vo::AlignPair::Response& response);
+      ccny_rgbd::AlignPair::Request&  request,
+      ccny_rgbd::AlignPair::Response& response);
 
   private:
 
