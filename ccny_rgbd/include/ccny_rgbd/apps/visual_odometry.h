@@ -23,6 +23,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
@@ -35,8 +36,6 @@
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
 
-#include "ccny_rgbd/mapping/keyframe_mapper.h"
-
 namespace ccny_rgbd
 {
 
@@ -44,10 +43,6 @@ using namespace message_filters::sync_policies;
 
 class VisualOdometry
 {
-  typedef image_transport::SubscriberFilter ImageSubFilter;
-  typedef message_filters::Subscriber<sensor_msgs::CameraInfo> CameraInfoSubFilter;
-  typedef ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> SyncPolicy;
-  typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
   typedef nav_msgs::Odometry OdomMsg;
 
   public:
@@ -93,14 +88,12 @@ class VisualOdometry
     FeatureDetector * feature_detector_;
 
     MotionEstimation * motion_estimation_;
-
-    KeyframeMapper * keyframe_mapper_;
   
     // **** private functions
 
-    void imageCb(const sensor_msgs::ImageConstPtr& depth_msg,
-                 const sensor_msgs::ImageConstPtr& rgb_msg,
-                 const sensor_msgs::CameraInfoConstPtr& info_msg);
+    void imageCb(const ImageMsg::ConstPtr& depth_msg,
+                 const ImageMsg::ConstPtr& rgb_msg,
+                 const CameraInfoMsg::ConstPtr& info_msg);
 
     void initParams();
 

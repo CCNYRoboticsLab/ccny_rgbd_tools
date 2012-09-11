@@ -34,21 +34,19 @@ void RGBDKeyframe::constructDataCloud()
 
     PointT p;
 
-    // check for invalid measurements
-    if (z != 0 &&  z <= max_data_range_)
+    // check for out of range measurements
+    if (z_raw == 0 || z <= max_data_range_)
     {
       // fill in XYZ
       p.x = z * (u - cx) * constant_x;
       p.y = z * (v - cy) * constant_y;
       p.z = z;
 
-    // ****** distort FIXME: remove *********************************
-    double factor = 0.02;
-    double factor_s = 1.0 + factor * (std::abs(u - cx) / 160) + factor * (std::abs(v - cy) / 120);
-    p.z = z * factor_s;
-
-    // **************************************************************
-
+      // ****** distort FIXME: remove *********************************
+      double factor = 0.02;
+      double factor_s = 1.0 + factor * (std::abs(u - cx) / 160) + factor * (std::abs(v - cy) / 120);
+      p.z = z * factor_s;
+      // **************************************************************
     }
     else
       p.x = p.y = p.z = bad_point;

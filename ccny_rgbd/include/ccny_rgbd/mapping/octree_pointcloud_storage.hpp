@@ -21,9 +21,10 @@ OctreePointCloudStorage<PointT, LeafT, OctreeT>::~OctreePointCloudStorage()
 }
 
 template<typename PointT, typename LeafT, typename OctreeT>
-bool OctreePointCloudStorage<PointT, LeafT, OctreeT>::addPointWithReplacement(const PointT& point,
-                                                                                    PointCloudTPtr cloud,
-                                                                                    int& index)
+bool OctreePointCloudStorage<PointT, LeafT, OctreeT>::addPointWithReplacement(
+  const PointT& point,
+  PointCloudTPtr cloud,
+  int& index)
 {
   // generate key
   OctreeKey key;     

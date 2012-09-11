@@ -1,12 +1,13 @@
-#include "ccny_rgbd/mapping/keyframe_mapper.h"
+#include "ccny_rgbd/apps/keyframe_mapper.h"
 
 namespace ccny_rgbd
 {
 
 KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  nh_(nh), 
-  nh_private_(nh_private)
+  KeyframeGenerator(nh, nh_private)
 {
+  ROS_INFO("Starting RGBD Keyframe Mapper");
+
   // **** init variables
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
@@ -15,15 +16,6 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "keyframe_poses", 1);
   edges_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_edges", 1);
-
-  // *** init params
-
-  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
-    fixed_frame_ = "/odom";
-  if (!nh_private_.getParam ("kf/kf_dist_eps", kf_dist_eps_))
-    kf_dist_eps_  = 0.10;
-  if (!nh_private_.getParam ("kf/kf_angle_eps", kf_angle_eps_))
-    kf_angle_eps_  = 10.0 * M_PI / 180.0;
 
   // **** services
 
@@ -48,7 +40,6 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   int queue_size = 5;
   sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
   sync_->registerCallback(boost::bind(&KeyframeMapper::RGBDCallback, this, _1, _2, _3));  
-
 }
 
 KeyframeMapper::~KeyframeMapper()
@@ -65,43 +56,19 @@ void KeyframeMapper::RGBDCallback(
 
   const ros::Time& time = rgb_msg->header.stamp;
 
-  tf_listener_.waitForTransform(
-    fixed_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.1));
-  tf_listener_.lookupTransform(
-    fixed_frame_, rgb_msg->header.frame_id, time, transform);  
-
+  try{
+    tf_listener_.waitForTransform(
+     fixed_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.1));
+    tf_listener_.lookupTransform(
+      fixed_frame_, rgb_msg->header.frame_id, time, transform);  
+  }
+  catch(...)
+  {
+    return;
+  }
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
-
-  processFrame(frame, transform);
-}
-
-void KeyframeMapper::processFrame(
-  const RGBDFrame& frame, 
-  const tf::Transform& pose)
-{
-  if(keyframes_.empty())
-  {
-    addKeyframe(frame, pose);
-  }
-  else
-  {
-    double dist, angle;
-    getTfDifference(pose, keyframes_.back().pose, dist, angle);
-
-    if (dist > kf_dist_eps_ || angle > kf_angle_eps_)
-      addKeyframe(frame, pose);
-  }
-}
-
-void KeyframeMapper::addKeyframe(
-  const RGBDFrame& frame, 
-  const tf::Transform& pose)
-{
-  ROS_INFO("Adding frame");
-  RGBDKeyframe keyframe(frame);
-  keyframe.pose = pose;
-  //keyframe.constructDataCloud();
-  keyframes_.push_back(keyframe);
+  bool result = KeyframeGenerator::processFrame(frame, transform);
+  if (result) publishKeyframeData(keyframes_.size() - 1);
 }
 
 bool KeyframeMapper::publishKeyframeSrvCallback(

@@ -41,8 +41,7 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   // keyframes
 
   //keyframe_generator_ = new KeyframeGenerator(nh_, nh_private_);
-
-  keyframe_mapper_ = new KeyframeMapper(nh_, nh_private_);
+  //keyframe_mapper_ = new KeyframeMapper(nh_, nh_private_);
 
   // **** publishers
 
@@ -126,10 +125,6 @@ void VisualOdometry::imageCb(
   tf::Transform motion = motion_estimation_->getMotionEstimation(frame);
   f2b_ = motion * f2b_;
   ros::WallTime end_reg = ros::WallTime::now();
-
-  // **** aggregate keyframe ******************************************
-  
-  keyframe_mapper_->processFrame(frame, f2b_ * b2c_);
 
   // **** publish motion **********************************************
 

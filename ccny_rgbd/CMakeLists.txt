@@ -52,7 +52,7 @@ rosbuild_add_library (ccny_rgbd_registration
 )
 
 rosbuild_add_library (ccny_rgbd_mapping
-  src/mapping/keyframe_mapper.cpp
+  src/mapping/keyframe_generator.cpp
   src/mapping/octree_pointcloud_storage.cpp
 )
 
@@ -68,12 +68,48 @@ rosbuild_add_executable(visual_odometry_node
   src/node/visual_odometry_node.cpp
   src/apps/visual_odometry.cpp)
 
-target_link_libraries (visual_odometry_node ccny_rgbd_structures) 
-target_link_libraries (visual_odometry_node ccny_rgbd_features) 
-target_link_libraries (visual_odometry_node ccny_rgbd_registration) 
-target_link_libraries (visual_odometry_node ccny_rgbd_mapping) 
-target_link_libraries (visual_odometry_node ccny_rgbd_util) 
+target_link_libraries (visual_odometry_node 
+  ccny_rgbd_structures
+  ccny_rgbd_features
+  ccny_rgbd_registration
+  ccny_rgbd_mapping
+  ccny_rgbd_util
+  ${OPENCV_LIBRARIES}
+  boost_signals 
+  boost_system
+)
 
-target_link_libraries (visual_odometry_node ${OPENCV_LIBRARIES}) 
-target_link_libraries (visual_odometry_node boost_signals boost_system)
+################################################################
+# Build keyframe mapper application
+################################################################
+
+rosbuild_add_executable(keyframe_mapper_node 
+  src/node/keyframe_mapper_node.cpp
+  src/apps/keyframe_mapper.cpp)
+
+target_link_libraries (keyframe_mapper_node
+  ccny_rgbd_structures 
+  ccny_rgbd_mapping
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+)
+
+################################################################
+# Build octree mapper application
+################################################################
+
+rosbuild_add_executable(octree_mapper_node 
+  src/node/octree_mapper_node.cpp
+  src/apps/octree_mapper.cpp)
+
+target_link_libraries (octree_mapper_node
+  ccny_rgbd_structures 
+  ccny_rgbd_mapping
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+)
+
+
 
