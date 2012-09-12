@@ -332,16 +332,16 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
   for (int i = 0; i < n_nearest_neighbors_; i++)
   {
     int nn_idx = indices[i];
-
-    const PointFeature& p_m = model_ptr_->points[nn_idx];
-    
-    cv::Mat m_mean(3, 1, CV_64F);
-    m_mean.at<double>(0,0) = p_m.x;           
-    m_mean.at<double>(1,0) = p_m.y; 
-    m_mean.at<double>(2,0) = p_m.z;
+   
+    const cv::Mat& m_mean = means_[nn_idx];
+    const cv::Mat& m_cov  = covariances_[nn_idx];
 
     cv::Mat diff_mat = m_mean - f_mean;
-    cv::Mat mah_mat = diff_mat.t() * f_cov_inv * diff_mat;
+    cv::Mat sum_cov = m_cov + f_cov;
+    cv::Mat sum_cov_inv;
+    cv::invert(sum_cov, sum_cov_inv);
+
+    cv::Mat mah_mat = diff_mat.t() * sum_cov_inv * diff_mat;
 
     double mah_dist = sqrt(mah_mat.at<double>(0,0));
 

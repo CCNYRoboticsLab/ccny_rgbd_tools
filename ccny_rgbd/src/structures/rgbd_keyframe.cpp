@@ -35,7 +35,7 @@ void RGBDKeyframe::constructDataCloud()
     PointT p;
 
     // check for out of range measurements
-    if (z_raw == 0 || z <= max_data_range_)
+    if (z_raw != 0 && z <= max_data_range_)
     {
       // fill in XYZ
       p.x = z * (u - cx) * constant_x;
