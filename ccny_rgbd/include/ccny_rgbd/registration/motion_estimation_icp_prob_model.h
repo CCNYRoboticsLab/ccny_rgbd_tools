@@ -30,6 +30,8 @@ class MotionEstimationICPProbModel: public MotionEstimation
       const tf::Transform& prediction,
       tf::Transform& motion);
   
+    int getModelSize() const { return model_size_; }
+
   private:
 
     // **** ros

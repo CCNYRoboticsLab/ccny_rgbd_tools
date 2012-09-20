@@ -11,6 +11,8 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
@@ -25,7 +27,14 @@ namespace ccny_rgbd
 
 typedef pcl::PointXYZRGB        PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
-typedef pcl::octree::OctreePointCloudStorage<PointT> Octree;
+
+typedef pcl::octree::OctreeLeafDataT<int> LeafT;
+typedef pcl::octree::OctreeBase<int, LeafT> OctreeT;
+
+typedef pcl::octree::OctreePointCloudStorage<PointT, LeafT, OctreeT> Octree;
+
+typedef visualization_msgs::Marker      MarkerMsg;
+typedef visualization_msgs::MarkerArray MarkerArrayMsg;
 
 class OctreeMapper
 {
@@ -50,6 +59,7 @@ class OctreeMapper
 
     ros::Subscriber point_cloud_subscriber_;
     ros::Publisher map_pub_;
+    ros::Publisher marker_pub_;
 
     tf::TransformListener    tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
@@ -83,7 +93,8 @@ class OctreeMapper
 
     void initParams();
 
-    void publishMap();
+    void publishPointMap();
+    void publishMarkerMap();
 };
 
 } //namespace ccny_rgbd

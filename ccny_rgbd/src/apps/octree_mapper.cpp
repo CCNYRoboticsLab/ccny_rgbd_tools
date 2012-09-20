@@ -20,6 +20,8 @@ OctreeMapper::OctreeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
   map_pub_ = nh_.advertise<PointCloudT>(
    "map", 1);
+  marker_pub_ = nh_.advertise<MarkerArrayMsg>(
+   "map_markers", 1);
 
   // **** services
 
@@ -102,12 +104,70 @@ void OctreeMapper::RGBDCallback(
   }
   map_->header.stamp = cloud_tf.header.stamp;
 
-  publishMap();
+  publishPointMap();
+  //publishMarkerMap();
 }
 
-void OctreeMapper::publishMap()
+void OctreeMapper::publishPointMap()
 {
   map_pub_.publish(map_);
+}
+
+void OctreeMapper::publishMarkerMap()
+{
+  MarkerMsg marker_template;
+  MarkerArrayMsg marker_array;
+
+  marker_array.markers.resize(map_->points.size());
+
+  marker_template.header.frame_id = fixed_frame_;
+  marker_template.header.stamp = ros::Time::now(); // TODO
+  marker_template.ns = "map";
+  marker_template.type = visualization_msgs::Marker::CUBE;
+  marker_template.action = visualization_msgs::Marker::ADD;
+
+  marker_template.scale.x = resolution_;
+  marker_template.scale.y = resolution_;
+  marker_template.scale.z = resolution_;
+
+  marker_template.pose.orientation.x = 0.0;
+  marker_template.pose.orientation.y = 0.0;
+  marker_template.pose.orientation.z = 0.0;
+  marker_template.pose.orientation.w = 1.0;
+
+  for (unsigned int i = 0; i < map_->points.size(); ++i)
+  {
+    const PointT& p = map_->points[i];
+
+    MarkerMsg marker(marker_template);
+    marker.id = i;
+
+    pcl::octree::OctreePointCloudSearch<PointT, LeafT, OctreeT>::AlignedPointTVector voxel_list;
+
+    octree_->getApproxIntersectedVoxelCentersBySegment(
+      Eigen::Vector3f(p.x, p.y, p.z), 
+      Eigen::Vector3f(p.x, p.y, p.z+1.0), 
+      voxel_list);
+
+    if (voxel_list.empty()) continue;
+
+    marker.pose.position.x = voxel_list[0].x;
+    marker.pose.position.y = voxel_list[0].y;
+    marker.pose.position.z = voxel_list[0].z;
+
+    //marker.pose.position.x = p.x;
+    //marker.pose.position.y = p.y;
+    //marker.pose.position.z = p.z;
+
+    marker.color.a = 1.0;
+    marker.color.r = p.r / 255.0;
+    marker.color.g = p.g / 255.0;
+    marker.color.b = p.b / 255.0;
+
+    marker_array.markers[i] = marker;
+  }
+
+  marker_pub_.publish(marker_array);
 }
 
 bool OctreeMapper::saveSrvCallback(

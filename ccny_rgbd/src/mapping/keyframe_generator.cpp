@@ -51,7 +51,7 @@ void KeyframeGenerator::addKeyframe(
   const RGBDFrame& frame, 
   const tf::Transform& pose)
 {
-  ROS_INFO("Adding frame");
+  //ROS_INFO("Adding frame");
   RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
   //keyframe.constructDataCloud();

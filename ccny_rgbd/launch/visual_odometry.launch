@@ -20,18 +20,18 @@
     <param name="feature/compute_descriptors" value="false"/>
     <param name="feature/smooth"              value="0"/>
     <param name="feature/max_range"           value="7.0"/>
-    <param name="feature/show_image"          value="true"/>
-    <param name="feature/show_keypoints"      value="true"/>
+    <param name="feature/show_image"          value="false"/>
+    <param name="feature/show_keypoints"      value="false"/>
 
     #### features: GFT ################################
 
     <param name="feature/GFT/n_features"   value = "300"/>
-    <param name="feature/GFT/min_distance" value = "3.0"/>
+    <param name="feature/GFT/min_distance" value = "1.0"/>
     <param name="feature/GFT/grid_cells"   value = "1"/>
 
     #### features: SURF ###############################
   
-    <param name="feature/SURF/hessian_threshold" value = "300"/>
+    <param name="feature/SURF/hessian_threshold" value = "100"/>
     <param name="feature/SURF/upright"           value = "false"/>
 
     #### features: ORB ###############################
@@ -66,8 +66,8 @@
     <param name="reg/ICPProbModel/use_ransac_rejection"    value="false"/>
     <param name="reg/ICPProbModel/ransac_inlier_threshold" value="0.15"/>
 
-    <param name="reg/ICPProbModel/max_model_size"       value="15000"/>
-    <param name="reg/ICPProbModel/max_association_dist" value="7.0"/>
+    <param name="reg/ICPProbModel/max_model_size"       value="5000"/>
+    <param name="reg/ICPProbModel/max_association_dist" value="10.0"/>
     <param name="reg/ICPProbModel/n_nearest_neighbors"  value="2"/>
 
     #### registration: RANSAC #########################

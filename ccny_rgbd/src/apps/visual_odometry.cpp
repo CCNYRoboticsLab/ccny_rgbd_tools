@@ -18,8 +18,7 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
   f2b_.setIdentity();
 
-  // features
-
+  // feature params
   if      (detector_type_ == "ORB")
     feature_detector_ = new OrbDetector(nh_, nh_private_);
   else if (detector_type_ == "SURF")
@@ -29,8 +28,7 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   else
     ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
 
-  // registration
-
+  // registration params
   if      (reg_type_ == "ICP")
     motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
   else if (reg_type_ == "ICPProbModel")
@@ -38,17 +36,10 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 
-  // keyframes
-
-  //keyframe_generator_ = new KeyframeGenerator(nh_, nh_private_);
-  //keyframe_mapper_ = new KeyframeMapper(nh_, nh_private_);
-
   // **** publishers
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
     "odom", 5);
-
-  // **** services
 
   // **** subscribers
 
@@ -102,6 +93,7 @@ void VisualOdometry::imageCb(
   if (!initialized_)
   {
     initialized_ = getBaseToCameraTf(rgb_msg->header);
+    init_time_ = rgb_msg->header.stamp;
     if (!initialized_) return;
 
     motion_estimation_->setBaseToCameraTf(b2c_);
@@ -142,12 +134,32 @@ void VisualOdometry::imageCb(
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
+  float time = (rgb_msg->header.stamp - init_time_).toSec();
+  int model_size = motion_estimation_->getModelSize();
+
+  double pos_x = f2b_.getOrigin().getX();
+  double pos_y = f2b_.getOrigin().getY();
+  double pos_z = f2b_.getOrigin().getZ();
+
   printf("[%d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
     frame_count_,
     d_frame, 
     detector_type_.c_str(), n_features, n_keypoints, d_features, 
     reg_type_.c_str(), d_reg, 
     d_total);
+
+/*
+  // for time and model size profiling
+  printf("%d\t%.2f\t%2.1f\t%2.1f\t%2.1f\t%d\t%d\n",
+    frame_count_, time, 
+    d_frame, d_features, d_reg, 
+    n_features, model_size);
+
+  // for position profiling
+  printf("%d \t %.2f \t %.3f \t %.3f \t %.3f \n",
+    frame_count_, time, 
+    pos_x, pos_y, pos_z);
+*/
 
   frame_count_++;
 }
