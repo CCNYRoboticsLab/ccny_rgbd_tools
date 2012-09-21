@@ -5,5 +5,4 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd</url>
   <depend stack="ros" />
-
 </stack>

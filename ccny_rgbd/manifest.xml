@@ -12,7 +12,6 @@
 
   <depend package="roscpp"/>
   <depend package="pcl"/>
-  <depend package="sba"/>
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>

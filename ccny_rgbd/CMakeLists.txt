@@ -111,5 +111,22 @@ target_link_libraries (octree_mapper_node
   boost_system
 )
 
+################################################################
+# Build logger application
+################################################################
+
+rosbuild_add_executable(logger_node 
+  src/node/logger_node.cpp
+  src/apps/logger.cpp)
+
+target_link_libraries (logger_node
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
+
 
 
