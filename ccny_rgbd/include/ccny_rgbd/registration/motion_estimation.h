@@ -27,6 +27,8 @@ class MotionEstimation
 
     void setBaseToCameraTf(const tf::Transform& b2c);
 
+    virtual int getModelSize() const { return 0; }
+
   protected:
   
     ros::NodeHandle nh_;

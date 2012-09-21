@@ -14,14 +14,14 @@ namespace octree
 {
 
 template<typename PointT, 
-         typename LeafT = OctreeLeafDataT<int> , 
-         typename OctreeT = OctreeBase<int, LeafT> >
+         typename LeafT, 
+         typename OctreeT>
 class OctreePointCloudStorage : public OctreePointCloudSearch<PointT, LeafT, OctreeT>
 {
 
-    typedef pcl::PointCloud<PointT> PointCloudT;
-    typedef boost::shared_ptr<PointCloudT> PointCloudTPtr;
-    typedef typename OctreeT::OctreeKey OctreeKey;
+  typedef pcl::PointCloud<PointT> PointCloudT;
+  typedef boost::shared_ptr<PointCloudT> PointCloudTPtr;
+  typedef typename OctreeT::OctreeKey OctreeKey;
 
   public:
 

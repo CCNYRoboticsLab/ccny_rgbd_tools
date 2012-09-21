@@ -2,9 +2,6 @@
 
 <launch>
 
-  <param name="/camera/driver/image_mode"         value="5" />
-  <param name="/camera/driver/depth_mode"         value="5" />
-
   <arg name="path"     default="$(env HOME)/ros/bags/rgbd" />
   <arg name="bag_name" default="rgbd.bag" />
 
@@ -29,9 +26,7 @@
   <arg name="depth_camera_info_url" default="" />
 
   <!-- Use OpenNI's factory-calibrated depth->RGB registration? -->
-  <arg name="depth_registration" default="false" />
-  <arg name="image_mode"         value="5" />
-  <arg name="depth_mode"         value="5" />
+  <arg name="depth_registration" default="true" />
 
   <!-- Arguments for remapping all device namespaces -->
   <arg name="rgb"              default="rgb" />

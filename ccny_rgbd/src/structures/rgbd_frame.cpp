@@ -212,14 +212,11 @@ void RGBDFrame::computeDistributions()
     printf("%.2f, %.2f, %.2f\n", sqrt(s_xx)*1000.0, sqrt(s_yy)*1000.0, sqrt(s_zz)*1000.0);
 */
     // ****** distort FIXME: remove *********************************
-    double factor = 0.02;
+    double factor = +0.02;
     double factor_s = 1.0 + factor * (std::abs(umcx) / 160) + factor * (std::abs(vmcy) / 120);
     kp_mean[kp_idx].at<double>(2,0) = z * factor_s;
-
     // **************************************************************
   }
-
-
 }
 
 void RGBDFrame::constructFeatureCloud(float max_range, bool filter)
@@ -299,7 +296,7 @@ bool RGBDFrame::ransacMatchingOverlap(
   float eps_reproj, float inlier_threshold,
   PointCloudT::Ptr cloud_src, PointCloudT::Ptr cloud_dst)
 {
-  bool show = true;
+  bool show = false;
   bool save = false;
 
   // **** params

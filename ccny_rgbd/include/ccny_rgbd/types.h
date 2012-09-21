@@ -9,6 +9,8 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+
+
 namespace ccny_rgbd {
 
 typedef sensor_msgs::Image ImageMsg;

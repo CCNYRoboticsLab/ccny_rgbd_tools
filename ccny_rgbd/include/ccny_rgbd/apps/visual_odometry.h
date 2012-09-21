@@ -81,6 +81,7 @@ class VisualOdometry
     boost::mutex mutex_;
     bool initialized_;
     int  frame_count_;
+    ros::Time init_time_;
 
     tf::Transform b2c_;
     tf::Transform f2b_;

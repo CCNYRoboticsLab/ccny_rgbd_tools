@@ -291,7 +291,7 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   model_ptr_->header.stamp = ros::Time::now(); // TODO - change to actual timestamp
   model_ptr_->width = model_ptr_->points.size();
   model_publisher_.publish(model_ptr_);
-  printf("Model size: %d\n", (int)model_ptr_->points.size()); 
+  //printf("Model size: %d\n", (int)model_ptr_->points.size()); 
 
   publishCovariances();
 
@@ -353,7 +353,7 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
     }
   }
 
-  if (best_i != 0) printf("%d\n", best_i);
+  //if (best_i != 0) printf("%d\n", best_i);
   mah_dist   = best_mah_dist;
   mah_nn_idx = best_mah_nn_idx;
 }
