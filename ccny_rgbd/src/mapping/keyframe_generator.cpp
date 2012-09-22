@@ -54,7 +54,7 @@ void KeyframeGenerator::addKeyframe(
   //ROS_INFO("Adding frame");
   RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
-  //keyframe.constructDataCloud();
+  keyframe.constructDataCloud();
   keyframes_.push_back(keyframe);
 }
 

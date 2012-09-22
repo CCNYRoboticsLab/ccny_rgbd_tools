@@ -28,7 +28,9 @@ class RGBDKeyframe: public RGBDFrame
 
   private:
 
-    float max_data_range_;    // maximum z range for dense data
+    double max_data_range_;    // maximum z range for dense data
+    double max_sigma_z_;
+    double max_var_z_;
 };
 
 } //namespace ccny_rgbd

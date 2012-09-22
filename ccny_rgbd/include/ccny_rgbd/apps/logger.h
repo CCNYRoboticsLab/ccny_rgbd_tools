@@ -40,6 +40,8 @@ class Logger
 
     int id_;
 
+    bool rgb_;
+    bool depth_;
     int n_;
     std::string sequence_;
 

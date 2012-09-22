@@ -160,16 +160,6 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   pcl::transformPointCloud(frame.features , *features_ptr, eigenFromTf(predicted_f2b * b2c_));
   features_ptr->header.frame_id = fixed_frame_;
 
-  if (0)
-  {
-    // kalman filter prediction
-    for(unsigned int i = 0; i < model_size_; ++i)
-    {
-      cv::Mat& model_cov = covariances_[i];
-      model_cov = model_cov + model_cov*0.005;
-    }
-  }
-
   // **** build model ***************************************************
 
   if (model_size_ == 0)
@@ -328,7 +318,7 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
   // TODO - clean this up
   double best_mah_dist = 9999999;
   int best_mah_nn_idx = -1;
-  int best_i;
+  int best_i; // optionally print this to check how far in we found the best one
   for (int i = 0; i < n_nearest_neighbors_; i++)
   {
     int nn_idx = indices[i];
@@ -353,7 +343,7 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
     }
   }
 
-  //if (best_i != 0) printf("%d\n", best_i);
+  if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
   mah_dist   = best_mah_dist;
   mah_nn_idx = best_mah_nn_idx;
 }

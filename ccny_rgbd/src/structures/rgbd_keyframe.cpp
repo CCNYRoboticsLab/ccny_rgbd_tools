@@ -5,9 +5,10 @@ namespace ccny_rgbd
 
 RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
   RGBDFrame(frame),
-  max_data_range_(5.0)
+  max_data_range_(5.0),
+  max_sigma_z_(0.035) // TODO: Parameter, or max_sigma_z
 {
-
+  max_var_z_ = max_sigma_z_ * max_sigma_z_;
 }
 
 void RGBDKeyframe::constructDataCloud()
@@ -34,22 +35,36 @@ void RGBDKeyframe::constructDataCloud()
 
     PointT p;
 
-    // check for out of range measurements
-    if (z_raw != 0 && z <= max_data_range_)
-    {
-      // fill in XYZ
-      p.x = z * (u - cx) * constant_x;
-      p.y = z * (v - cy) * constant_y;
-      p.z = z;
+    double z_mean, z_var; 
 
-      // ****** distort FIXME: remove *********************************
-      double factor = 0.02;
-      double factor_s = 1.0 + factor * (std::abs(u - cx) / 160) + factor * (std::abs(v - cy) / 120);
-      p.z = z * factor_s;
-      // **************************************************************
+    // check for out of range or bad measurements
+    //if (z_raw != 0 && z <= max_data_range_)
+    if (z_raw != 0)
+    {
+      getGaussianMixtureDistribution(u, v, z_mean, z_var);
+     
+      if (z_var < max_var_z_)
+      {
+        // fill in XYZ
+        p.x = z * (u - cx) * constant_x;
+        p.y = z * (v - cy) * constant_y;
+        p.z = z;
+
+        // ****** FIXME: better distortion model
+        double factor_s = 1.0 + depth_factor_ * (std::abs(u - cx) / 160) + 
+                                depth_factor_ * (std::abs(v - cy) / 120);
+        p.z = z * factor_s;
+        // **************************************************************
+      }
+      else
+      {
+        p.x = p.y = p.z = bad_point;
+      }
     }
     else
+    {
       p.x = p.y = p.z = bad_point;
+    }
 
     cv::Vec3b& bgr = cv_ptr_rgb_->image.at<cv::Vec3b>(v,u);
     uint32_t color = (bgr[2] << 16) + (bgr[1] << 8) + bgr[0];

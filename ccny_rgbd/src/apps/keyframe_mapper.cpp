@@ -23,6 +23,9 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframe", &KeyframeMapper::publishKeyframeSrvCallback, this);
   pub_frames_service_ = nh_.advertiseService(
     "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
+  recolor_service_ = nh_.advertiseService(
+    "recolor", &KeyframeMapper::recolorSrvCallback, this);
+
 
  // **** subscribers
 
@@ -88,6 +91,34 @@ bool KeyframeMapper::publishKeyframeSrvCallback(
   return true;
 }
 
+bool KeyframeMapper::recolorSrvCallback(
+  Recolor::Request&  request,
+  Recolor::Response& response)
+{
+  srand(time(NULL));
+
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    ROS_INFO("Recoloring frame %d", kf_idx);
+    RGBDKeyframe& keyframe = keyframes_[kf_idx];
+
+    int r = rand() % 255;
+    int g = rand() % 255;
+    int b = rand() % 255;
+
+    for (unsigned int pt_idx = 0; pt_idx < keyframe.data.points.size(); ++pt_idx)
+    {
+      PointT& p = keyframe.data.points[pt_idx];
+      
+      p.r = r;
+      p.g = g;
+      p.b = b;
+    }
+  }
+
+  return true;
+}
+
 bool KeyframeMapper::publishAllKeyframesSrvCallback(
   PublishAllKeyframes::Request&  request,
   PublishAllKeyframes::Response& response)
@@ -116,7 +147,7 @@ void KeyframeMapper::publishKeyframeData(int i)
 
   // **** publish PointCloud data
 
-  keyframe.constructDataCloud();
+  //keyframe.constructDataCloud();
 
   PointCloudT keyframe_data_ff; // data transformed to the fixed frame
   
