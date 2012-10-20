@@ -5,6 +5,7 @@
 #include <visualization_msgs/Marker.h>
 
 #include "ccny_rgbd/mapping/keyframe_generator.h"
+
 #include "ccny_rgbd/PublishKeyframe.h"
 #include "ccny_rgbd/PublishAllKeyframes.h"
 #include "ccny_rgbd/Recolor.h"
@@ -19,6 +20,10 @@ class KeyframeMapper: public KeyframeGenerator
     KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~KeyframeMapper();
 
+    void RGBDCallback(const ImageMsg::ConstPtr& depth_msg,
+                      const ImageMsg::ConstPtr& rgb_msg,
+                      const CameraInfoMsg::ConstPtr& info_msg);
+
     bool publishAllKeyframesSrvCallback(PublishAllKeyframes::Request& request,
                                         PublishAllKeyframes::Response& response);
 
@@ -27,13 +32,6 @@ class KeyframeMapper: public KeyframeGenerator
 
     bool recolorSrvCallback(Recolor::Request& request,
                             Recolor::Response& response);
-
-  protected:
-
-    virtual void RGBDCallback(
-      const ImageMsg::ConstPtr& depth_msg,
-      const ImageMsg::ConstPtr& rgb_msg,
-      const CameraInfoMsg::ConstPtr& info_msg);
 
   private:
 

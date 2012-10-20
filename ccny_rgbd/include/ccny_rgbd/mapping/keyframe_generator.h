@@ -13,9 +13,6 @@
 namespace ccny_rgbd
 {
 
-typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
-typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
-
 class KeyframeGenerator
 {
   public:
@@ -32,6 +29,8 @@ class KeyframeGenerator
 
     KeyframeVector keyframes_;
     std::string fixed_frame_;
+
+    ros::ServiceServer pairwise_ransac_service_;
 
     bool processFrame(const RGBDFrame& frame, const tf::Transform& pose);
 

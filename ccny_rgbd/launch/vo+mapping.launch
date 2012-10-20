@@ -24,11 +24,11 @@
 
   #### KEYFRAME MAPPING ###################################
 
-  <node pkg="ccny_rgbd" type="keyframe_mapper_node" name="keyframe_mapper_node" 
+  <node pkg="ccny_rgbd" type="keyframe_loop_mapper_node" name="keyframe_loop_mapper_node" 
     output="screen">
 
     <param name="kf/kf_dist_eps"  value="0.30"/>
-    <param name="kf/kf_angle_eps" value="0.50"/> 
+    <param name="kf/kf_angle_eps" value="0.30"/> 
 
   </node>
 

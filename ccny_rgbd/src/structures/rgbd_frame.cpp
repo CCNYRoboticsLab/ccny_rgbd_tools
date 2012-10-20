@@ -105,7 +105,7 @@ void RGBDFrame::getGaussianMixtureDistribution(
 void RGBDFrame::computeDistributions()
 {
   // TODO: these should be a parameter
-  double max_var_z = 0.05 * 0.05; // maximum allowed z variance
+  double max_var_z = 0.03 * 0.03; // maximum allowed z variance
 
   double s_u = 1.0;            // uncertainty in pixels
   double s_v = 1.0;            // uncertainty in pixels
@@ -125,6 +125,10 @@ void RGBDFrame::computeDistributions()
   double fy2 = fy*fy;
 
   // allocate space
+  kp_valid.clear();
+  kp_mean.clear();
+  kp_covariance.clear();
+
   kp_valid.resize(keypoints.size());
   kp_mean.resize(keypoints.size());
   kp_covariance.resize(keypoints.size());

@@ -26,8 +26,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   recolor_service_ = nh_.advertiseService(
     "recolor", &KeyframeMapper::recolorSrvCallback, this);
 
-
- // **** subscribers
+  // **** subscribers
 
   image_transport::ImageTransport rgb_it(nh_);
   image_transport::ImageTransport depth_it(nh_);

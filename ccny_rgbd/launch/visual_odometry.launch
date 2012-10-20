@@ -25,7 +25,7 @@
 
     #### features: GFT ################################
 
-    <param name="feature/GFT/n_features"   value = "150"/>
+    <param name="feature/GFT/n_features"   value = "300"/>
     <param name="feature/GFT/min_distance" value = "0.0"/>
     <param name="feature/GFT/grid_cells"   value = "1"/>
 

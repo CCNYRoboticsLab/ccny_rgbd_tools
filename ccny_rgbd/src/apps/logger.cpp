@@ -11,7 +11,7 @@ Logger::Logger(ros::NodeHandle nh, ros::NodeHandle nh_private):
   image_transport::ImageTransport depth_it(nh_);
 
   sub_depth_.subscribe(
-    depth_it, "/camera/depth_registered/image_rect_raw", 1);
+    depth_it, "/camera/depth_registered/image_rect_raw", 1);  // uint16_t, in mm - opencv doesn't save floats
   sub_rgb_.subscribe(
     rgb_it, "/camera/rgb/image_rect_color", 1);
   sub_info_.subscribe(
@@ -74,11 +74,13 @@ void Logger::RGBDCallback(
 
     ROS_INFO("RGBD %s saved", ss_filename.str().c_str());
 
+/*
     cv::namedWindow("RGB", 1);
     cv::imshow("RGB", rgb_ptr->image);
     cv::waitKey(1);
     cv::namedWindow("Depth", 1);
     cv::imshow("Depth", depth_ptr->image);
+*/
 
     id_++;
   }

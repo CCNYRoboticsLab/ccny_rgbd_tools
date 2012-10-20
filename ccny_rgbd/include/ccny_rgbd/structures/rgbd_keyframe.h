@@ -33,6 +33,9 @@ class RGBDKeyframe: public RGBDFrame
     double max_var_z_;
 };
 
+typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
+typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
+
 } //namespace ccny_rgbd
 
 
