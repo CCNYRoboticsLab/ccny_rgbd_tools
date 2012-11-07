@@ -5,23 +5,6 @@ namespace ccny_rgbd {
 Logger::Logger(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), nh_private_(nh_private), id_(0)
 {
-  // **** subscribers
-
-  image_transport::ImageTransport rgb_it(nh_);
-  image_transport::ImageTransport depth_it(nh_);
-
-  sub_depth_.subscribe(
-    depth_it, "/camera/depth_registered/image_rect_raw", 1);  // uint16_t, in mm - opencv doesn't save floats
-  sub_rgb_.subscribe(
-    rgb_it, "/camera/rgb/image_rect_color", 1);
-  sub_info_.subscribe(
-    nh_, "/camera/rgb/camera_info", 1);
-
-  // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  int queue_size = 5;
-  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
-  sync_->registerCallback(boost::bind(&Logger::RGBDCallback, this, _1, _2, _3));  
-
   // **** parameters
 
   if (!nh_private_.getParam ("sequence", sequence_))
