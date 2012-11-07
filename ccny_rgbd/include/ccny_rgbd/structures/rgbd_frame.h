@@ -50,6 +50,7 @@ class RGBDFrame
 
     cv::Mat * getRGBImage()   const { return &cv_ptr_rgb_->image; }
     cv::Mat * getDepthImage() const { return &cv_ptr_depth_->image; }
+    const image_geometry::PinholeCameraModel * getModel() const { return &model_; }
 
     void computeDistributions();
     void constructFeatureCloud(float max_range, bool filter=true);

@@ -5,6 +5,7 @@
 #include <visualization_msgs/Marker.h>
 
 #include "ccny_rgbd/mapping/keyframe_generator.h"
+#include "ccny_rgbd/mapping/keyframe_aggregator.h"
 #include "ccny_rgbd/PublishKeyframe.h"
 #include "ccny_rgbd/PublishAllKeyframes.h"
 #include "ccny_rgbd/Recolor.h"
@@ -52,6 +53,8 @@ class KeyframeMapper: public KeyframeGenerator
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;
+
+    KeyframeAggregator keyframe_aggregator_;
 
     void publishMatchEdge(int i, int j);
     void publishKeyframeData(int i);

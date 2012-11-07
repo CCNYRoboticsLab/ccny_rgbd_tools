@@ -4,7 +4,8 @@ namespace ccny_rgbd
 {
 
 KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  KeyframeGenerator(nh, nh_private)
+  KeyframeGenerator(nh, nh_private),
+  keyframe_aggregator_(nh, nh_private)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
 
@@ -25,7 +26,6 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
   recolor_service_ = nh_.advertiseService(
     "recolor", &KeyframeMapper::recolorSrvCallback, this);
-
 
  // **** subscribers
 
@@ -71,7 +71,13 @@ void KeyframeMapper::RGBDCallback(
   }
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
   bool result = KeyframeGenerator::processFrame(frame, transform);
-  if (result) publishKeyframeData(keyframes_.size() - 1);
+  if (result)
+  { 
+    publishKeyframeData(keyframes_.size() - 1);
+    
+    // aggregate
+    keyframe_aggregator_.processKeyframe(keyframes_[keyframes_.size() - 1]);
+  }
 }
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
