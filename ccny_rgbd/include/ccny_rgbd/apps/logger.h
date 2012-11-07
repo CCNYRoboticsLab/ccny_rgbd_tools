@@ -21,28 +21,31 @@ class Logger
     void RGBDCallback(const ImageMsg::ConstPtr& depth_msg,
                       const ImageMsg::ConstPtr& rgb_msg,
                       const CameraInfoMsg::ConstPtr& info_msg);
+    
+    void IRCallback(const sensor_msgs::ImageConstPtr& ir_msg);
 
   private:
 
     ros::NodeHandle nh_;
     ros::NodeHandle nh_private_;
 
-    boost::shared_ptr<image_transport::ImageTransport> rgb_it_;
-    boost::shared_ptr<image_transport::ImageTransport> depth_it_;
     boost::shared_ptr<Synchronizer> sync_;
        
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
+    ros::Subscriber      sub_ir_;
     CameraInfoSubFilter sub_info_;
 
     std::stringstream ss_rgb_path_;
     std::stringstream ss_depth_path_;
+    std::stringstream ss_ir_path_;
 
     int id_;
 
-    bool rgb_;
-    bool depth_;
-    int n_;
+    // parameters   
+    int n_rgb_;
+    int n_depth_;
+    int n_ir_;
     std::string sequence_;
 
     void prepareDirectories();
