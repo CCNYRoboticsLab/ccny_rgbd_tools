@@ -34,4 +34,5 @@ rosbuild_add_executable(rgb_ir_calibrator_node
 target_link_libraries (rgb_ir_calibrator_node 
   ${OPENCV_LIBRARIES}
   boost_signals 
-  boost_system)
+  boost_system
+  boost_filesystem)

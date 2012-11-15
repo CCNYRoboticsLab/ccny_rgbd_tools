@@ -18,6 +18,9 @@ class RGBIRCalibrator
 {
   typedef pcl::PointXYZRGB PointT;
   typedef pcl::PointCloud<PointT> PointCloudT;
+
+  typedef std::vector<cv::Point2f> Point2fVector;
+  typedef std::vector<cv::Point3f> Point3fVector;
   
   public:
 
@@ -39,6 +42,7 @@ class RGBIRCalibrator
     // input filenames
     std::string rgb_filename_;
     std::string ir_filename_ ;
+    std::string path_;
     std::string calib_rgb_filename_;
     std::string calib_ir_filename_;
 
@@ -66,16 +70,22 @@ class RGBIRCalibrator
     
     cv::Mat rgb2ir_;
     
-    void build3dCornerVector();
-    
     void calibrate();
-    
+    void build3dCornerVector();
+    void buildRectMaps();
+    bool loadCameraParams();
+ 
     bool getCorners(
       const cv::Mat& img, 
       std::vector<cv::Point2f>& corners);
 
     void testExtrinsicCalibration();
     
+    bool loadCalibrationImagePair(
+      int idx,
+      cv::Mat& rgb_img,
+      cv::Mat& ir_img);
+
     void create8bImage(
       const cv::Mat depth_img,
       cv::Mat& depth_img_u);
