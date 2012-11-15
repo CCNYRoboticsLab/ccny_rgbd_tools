@@ -21,9 +21,6 @@ pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
-# services
-rosbuild_gensrv()
-
 # boost
 rosbuild_add_boost_directories()
 

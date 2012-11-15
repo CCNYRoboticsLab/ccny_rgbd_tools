@@ -40,8 +40,6 @@ class RGBIRCalibrator
     cv::Size patternsize_;
     
     // input filenames
-    std::string rgb_filename_;
-    std::string ir_filename_ ;
     std::string path_;
     std::string calib_rgb_filename_;
     std::string calib_ir_filename_;
