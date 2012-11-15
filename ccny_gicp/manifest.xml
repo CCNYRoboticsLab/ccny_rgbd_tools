@@ -1,0 +1,24 @@
+<package>
+  <description brief="ccny_gicp">
+
+     ccny_gicp
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_gicp</url>
+
+  <depend package="roscpp"/>
+  <depend package="pcl"/>
+  <depend package="pcl_ros"/>
+  <depend package="tf"/>
+  <depend package="dynamic_reconfigure"/>
+  
+  <export>
+    <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>
+  </export>
+
+</package>
+
+
