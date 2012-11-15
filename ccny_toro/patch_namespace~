@@ -1,0 +1,40 @@
+Index: transformation3.hh
+===================================================================
+--- transformation3.hh	(revision 28)
++++ transformation3.hh	(working copy)
+@@ -41,6 +41,8 @@
+ #include <cmath>
+ #include "dmatrix.hh"
+ 
++namespace AISNavigation {
++
+ template <class T>
+ struct Vector3 {
+   T elems[3] ;
+@@ -264,6 +266,7 @@
+   typedef Transformation3<T> ParametersType;
+ };
+ 
++} // namespace AISNavigation
+ /**************************** IMPLEMENTATION ****************************/
+ 
+ #include "transformation3.hxx"
+Index: transformation3.hxx
+===================================================================
+--- transformation3.hxx	(revision 28)
++++ transformation3.hxx	(working copy)
+@@ -36,6 +36,8 @@
+ 
+ #include <limits>
+ 
++namespace AISNavigation {
++
+ template <class T>
+ inline Vector3<T> operator * (const T& d, const Vector3<T>& v) {
+   return Vector3<T>(v.elems[0]*d, v.elems[1]*d, v.elems[2]*d);
+@@ -445,4 +447,5 @@
+   return rv;
+ }
+ 
++} // namespace AISNavigation
+ 

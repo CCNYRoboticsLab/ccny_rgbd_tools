@@ -1,0 +1,18 @@
+<package>
+  <description brief="ccny_toro">
+
+     Local install of TORO
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_toro</url>
+
+  <export>
+    <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>
+  </export>
+
+</package>
+
+
