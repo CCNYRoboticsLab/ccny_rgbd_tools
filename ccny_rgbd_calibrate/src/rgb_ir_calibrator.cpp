@@ -6,7 +6,7 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   nh_(nh), nh_private_(nh_private)
 {  
   std::string home_path = getenv("HOME");
-  path_ = home_path + "/ros/images/ext_calib_01/";
+  path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
   
   // parameters
   square_size_ = 23.0;
@@ -16,8 +16,8 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   patternsize_ = cv::Size(n_cols_, n_rows_);
   
   // input  
-  rgb_test_filename_   = path_ + "test/rgb_01.png";
-  depth_test_filename_ = path_ + "test/depth_01.png";
+  rgb_test_filename_   = path_ + "test/rgb/0001.png";
+  depth_test_filename_ = path_ + "test/depth/0001.png";
   
   calib_rgb_filename_ = path_ + "rgb.yml";
   calib_ir_filename_  = path_ + "depth.yml";
@@ -44,7 +44,7 @@ RGBIRCalibrator::~RGBIRCalibrator()
 void RGBIRCalibrator::build3dCornerVector()
 {
   // fill in 3d points
-  ROS_INFO("Creating vector of 3D corners...\n");
+  ROS_INFO("Creating vector of 3D corners...");
 
   for(int j = 0; j < n_rows_; ++j) // the order matters here
   for(int i = 0; i < n_cols_; ++i)
@@ -94,7 +94,7 @@ bool RGBIRCalibrator::loadCameraParams()
   }
 
   // **** load intrinsics and distortion coefficients
-  ROS_INFO("Reading camera info...\n");
+  ROS_INFO("Reading camera info...");
   cv::FileStorage fs_rgb(calib_rgb_filename_, cv::FileStorage::READ);
   cv::FileStorage fs_ir (calib_ir_filename_,  cv::FileStorage::READ);
   
