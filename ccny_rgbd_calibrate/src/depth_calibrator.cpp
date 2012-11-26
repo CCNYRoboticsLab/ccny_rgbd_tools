@@ -1,47 +1,33 @@
-#include "ccny_rgbd_calibrate/rgb_ir_calibrator.h"
+#include "ccny_rgbd_calibrate/depth_calibrator.h"
 
 namespace ccny_rgbd {
 
-RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private):
+DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), nh_private_(nh_private)
 {  
   std::string home_path = getenv("HOME");
   path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
   
   // parameters
-  square_size_ = 23.0;
-  n_cols_ = 8;
+  square_size_ = 100.0;
+  n_cols_ = 9;
   n_rows_ = 6;
   
   patternsize_ = cv::Size(n_cols_, n_rows_);
   
-  // input  
-  rgb_test_filename_   = path_ + "test/rgb/0001.png";
-  depth_test_filename_ = path_ + "test/depth/0001.png";
-  
+  // input   
   calib_rgb_filename_ = path_ + "rgb.yml";
   calib_ir_filename_  = path_ + "depth.yml";
- 
-  //output
-  calib_extrinsic_filename_ = path_ + "extr.yml";
-  
-  cloud_filename_ = path_ + "cloud.pcd";
 
   calibrate();
-  testExtrinsicCalibration();
- 
-  // output to screen and file to file
-  ROS_INFO("Writing to %s", calib_extrinsic_filename_.c_str()); 
-  cv::FileStorage fs(calib_extrinsic_filename_, cv::FileStorage::WRITE);
-  fs << "rgb2ir" << rgb2ir_;
 }
 
-RGBIRCalibrator::~RGBIRCalibrator()
+DepthCalibrator::~DepthCalibrator()
 {
  
 }
 
-void RGBIRCalibrator::build3dCornerVector()
+void DepthCalibrator::build3dCornerVector()
 {
   // fill in 3d points
   ROS_INFO("Creating vector of 3D corners...");
@@ -55,42 +41,40 @@ void RGBIRCalibrator::build3dCornerVector()
   }
 }
 
-bool RGBIRCalibrator::loadCalibrationImagePair(
+bool DepthCalibrator::loadCalibrationImagePair(
   int idx,
   cv::Mat& rgb_img,
-  cv::Mat& ir_img)
+  cv::Mat& depth_img)
 {
-
-  
   // construct the filename image index
   std::stringstream ss_filename;
   ss_filename << std::setw(4) << std::setfill('0') << idx << ".png";
 
   // construct the rgb and ir file paths
-  std::string rgb_filename = path_ + "train/rgb/" + ss_filename.str();
-  std::string ir_filename  = path_ + "train/ir/"  + ss_filename.str();
+  std::string rgb_filename   = path_ + "train_depth/rgb/"   + ss_filename.str();
+  std::string depth_filename = path_ + "train_depth/depth/" + ss_filename.str();
 
-  ROS_INFO("Trying images \n\t%s\n\t%s", rgb_filename.c_str(), ir_filename.c_str());
+  ROS_INFO("Trying images \n\t%s\n\t%s", rgb_filename.c_str(), depth_filename.c_str());
   
   // check that both exist
   if (!boost::filesystem::exists(rgb_filename))
   {
     return false;
   }
-  if (!boost::filesystem::exists(ir_filename))
+  if (!boost::filesystem::exists(depth_filename))
   {
-    ROS_INFO("%s does not exist", ir_filename.c_str());
+    ROS_INFO("%s does not exist", depth_filename.c_str());
     return false;
   }
   
   // load the images 
-  rgb_img = cv::imread(rgb_filename);
-  ir_img  = cv::imread(ir_filename);
+  rgb_img   = cv::imread(rgb_filename);
+  depth_img = cv::imread(depth_filename, -1);
 
   return true;
 }
 
-bool RGBIRCalibrator::loadCameraParams()
+bool DepthCalibrator::loadCameraParams()
 {
   // check that both exist
   if (!boost::filesystem::exists(calib_rgb_filename_))
@@ -117,7 +101,7 @@ bool RGBIRCalibrator::loadCameraParams()
   return true;
 }
 
-void RGBIRCalibrator::buildRectMaps()
+void DepthCalibrator::buildRectMaps()
 {
   // determine new matrix
   cv::Size size_rgb(640, 480);
@@ -143,101 +127,74 @@ void RGBIRCalibrator::buildRectMaps()
     size_ir_rect, CV_16SC2, map_ir_1_, map_ir_2_);
 }
 
-void RGBIRCalibrator::calibrate()
+void DepthCalibrator::calibrate()
 {
   if (!loadCameraParams()) return;
   buildRectMaps();
   build3dCornerVector();
   
-  std::vector<Point3fVector> v_corners_3d;
-  std::vector<Point2fVector> v_corners_2d_rgb;
-  std::vector<Point2fVector> v_corners_2d_ir;
-
-  // loop through all test images
-
+  // read in calibration images
   int img_idx = 0;
-
-  while(true)
+  cv::Mat rgb_img, depth_img;
+  bool load_result = loadCalibrationImagePair(img_idx, rgb_img, depth_img);  
+  if (!load_result)
   {
-    // read in calibration images
-    cv::Mat rgb_img, ir_img;
-    bool load_result = loadCalibrationImagePair(img_idx, rgb_img, ir_img);  
-    if (!load_result)
-    {
-      ROS_INFO("Images not found - reached end of image sequence.");
-      break;
-    }
-    else ROS_INFO("Loaded calibration image pair %d", img_idx);
-
-    if (0)
-    {
-      cv::imshow("rgb_img", rgb_img);
-      cv::imshow("ir_img",  ir_img);
-      cv::waitKey(0);
-    }
-    
-    // rectify
-    cv::Mat rgb_img_rect, ir_img_rect; // rectified images 
-    cv::remap(rgb_img, rgb_img_rect, map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
-    cv::remap(ir_img,  ir_img_rect,  map_ir_1_,  map_ir_2_,  cv::INTER_LINEAR);
-  
-    // detect corners
-    ROS_INFO("Detecting 2D corners...");
-    std::vector<cv::Point2f> corners_2d_rgb, corners_2d_ir;
-  
-    bool corner_result_rgb = getCorners(rgb_img_rect, corners_2d_rgb);
-    bool corner_result_ir  = getCorners(ir_img_rect,  corners_2d_ir);
-  
-    if (!corner_result_rgb || !corner_result_ir)
-    {
-      ROS_WARN("Corner detection failed. Skipping image pair %d.", img_idx);
-      img_idx++;
-      continue;
-    }
-
-    // show images with corners
-    if(1)
-    {
-      cv::Mat rgb_img_rect_corners = rgb_img_rect;
-      cv::Mat ir_img_rect_corners  = ir_img_rect;
-    
-      cv::drawChessboardCorners(
-        rgb_img_rect_corners, patternsize_, cv::Mat(corners_2d_rgb), corner_result_rgb);
-      cv::drawChessboardCorners(
-        ir_img_rect_corners, patternsize_, cv::Mat(corners_2d_ir), corner_result_ir);
-      cv::imshow("RGB Corners", rgb_img_rect_corners);  
-      cv::imshow("IR Corners",  ir_img_rect_corners); 
-      cv::waitKey(0);
-    }
-
-    // add corners to vectors
-    v_corners_3d.push_back(corners_3d_);
-    v_corners_2d_rgb.push_back(corners_2d_rgb);
-    v_corners_2d_ir.push_back(corners_2d_ir);
-
-    // increment image idnex
-    img_idx++;
+    ROS_INFO("Images not found - reached end of image sequence.");
+    // break
+    return;
   }
-
-  // perform the calibration
-  ROS_INFO("Determining extrinsic calibration...");
-
-  cv::Mat dist_rect_ir_  = cv::Mat::zeros(1, 5, CV_64FC1);
-  cv::Mat dist_rect_rgb_ = cv::Mat::zeros(1, 5, CV_64FC1);
-
-  cv::Mat R, t, E, F;
-  double reproj_error = cv::stereoCalibrate(
-    v_corners_3d, v_corners_2d_ir, v_corners_2d_rgb,
-    intr_rect_ir_,  dist_rect_ir_, 
-    intr_rect_rgb_, dist_rect_rgb_,
-    cv::Size(), R, t, E, F);
   
-  ROS_INFO("Reprojection error: %f", reproj_error);
+  // rectify
+  cv::Mat rgb_img_rect, depth_img_rect; // rectified images 
+  cv::remap(rgb_img,   rgb_img_rect,   map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
+  cv::remap(depth_img, depth_img_rect, map_ir_1_,  map_ir_2_,  cv::INTER_NEAREST);
+
+  // detect corners
+  ROS_INFO("Detecting 2D corners...");
+  std::vector<cv::Point2f> corners_2d_rgb;
+
+  bool corner_result_rgb = getCorners(rgb_img_rect, corners_2d_rgb);
+
+  if (!corner_result_rgb)
+  {
+    ROS_WARN("Corner detection failed. Skipping image pair %d.", img_idx);
+    return;
+    //img_idx++;
+    //continue;
+  }
   
-  matrixFromRT(R, t, rgb2ir_);
+  // show images with corners
+  if(1)
+  {
+    cv::Mat rgb_img_rect_corners = rgb_img_rect;
+    cv::drawChessboardCorners(
+      rgb_img_rect_corners, patternsize_, cv::Mat(corners_2d_rgb), corner_result_rgb);
+    cv::imshow("RGB Corners", rgb_img_rect_corners);  
+    cv::waitKey(0);
+  }
+  
+  // get pose from RGB camera to checkerboard
+  cv::Mat rvec, tvec;
+  bool pnp_result = solvePnP(corners_3d_, corners_2d_rgb, 
+    intr_rect_rgb_, cv::Mat(), rvec, tvec);
+
+  std::cout << "rvec" << std::endl << rvec << std::endl; 
+  std::cout << "tvec" << std::endl << tvec << std::endl;
+
+  testPlaneDetection(rgb_img_rect, depth_img_rect, rvec, tvec);
 }
 
-void RGBIRCalibrator::matrixFromRvecTvec(
+void DepthCalibrator::testPlaneDetection(
+  const cv::Mat& rgb_img_rect,
+  const cv::Mat& depth_img_rect,
+  const cv::Mat& rvec,
+  const cv::Mat& tvec)
+{
+  
+  
+}
+
+void DepthCalibrator::matrixFromRvecTvec(
   const cv::Mat& rvec,
   const cv::Mat& tvec,
   cv::Mat& E)
@@ -247,7 +204,7 @@ void RGBIRCalibrator::matrixFromRvecTvec(
   matrixFromRT(rmat, tvec, E);
 }
 
-void RGBIRCalibrator::matrixFromRT(
+void DepthCalibrator::matrixFromRT(
   const cv::Mat& rmat,
   const cv::Mat& tvec,
   cv::Mat& E)
@@ -269,11 +226,62 @@ void RGBIRCalibrator::matrixFromRT(
   E.at<double>(2,3) = tvec.at<double>(2,0);
 }
 
-void RGBIRCalibrator::testExtrinsicCalibration()
+/*
+ * Constructs a point cloud, given a depth image which
+ * has been undistorted and registered in the rgb frame, 
+ * and an rgb image.
+ * The intinsic matrix is the RGB matrix after rectification
+ * The depth image is uint16_t, in mm
+ */
+
+void DepthCalibrator::buildPouintCloud(
+  const cv::Mat& depth_img_rect_reg,
+  const cv::Mat& rgb_img_rect,
+  const cv::Mat& intr_rect_rgb,
+  PointCloudT& cloud)
+{
+  int w = depth_img_rect_reg.cols;
+  int h = depth_img_rect_reg.rows;
+  
+  cv::Mat p(3, 1, CV_64FC1);
+  PointT pt;
+  
+  for (int u = 0; u < w; ++u)
+  for (int v = 0; v < h; ++v)
+  {
+    uint16_t  z = depth_img_rect_reg.at<uint16_t>(v, u);
+    const cv::Vec3b& c = rgb_img_rect.at<cv::Vec3b>(v, u);
+    
+    if (z != 0)
+    {  
+      p.at<double>(0,0) = u;
+      p.at<double>(1,0) = v;
+      p.at<double>(2,0) = 1.0;
+      
+      cv::Mat P = z * intr_rect_rgb_.inv() * p;   
+        
+      pt.x = P.at<double>(0);
+      pt.y = P.at<double>(1);
+      pt.z = P.at<double>(2);
+  
+      pt.r = c[2];
+      pt.g = c[1];
+      pt.b = c[0];
+    }
+    else
+    {
+      pt.x = pt.y = pt.z = std::numeric_limits<float>::quiet_NaN();
+    }
+
+    cloud.points.push_back(pt);
+  }  
+}
+
+void DepthCalibrator::testExtrinsicCalibration()
 {
   // load images
-  cv::Mat rgb_img    = cv::imread(rgb_test_filename_);
-  cv::Mat depth_img  = cv::imread(depth_test_filename_,-1);
+  cv::Mat rgb_img   = cv::imread(rgb_test_filename_);
+  cv::Mat depth_img = cv::imread(depth_test_filename_,-1);
   
   int w = rgb_img.cols;
   int h = rgb_img.rows; 
@@ -383,7 +391,7 @@ void RGBIRCalibrator::testExtrinsicCalibration()
   pcl::io::savePCDFileBinary<PointT>(cloud_filename_, cloud);
 }
 
-void RGBIRCalibrator::create8bImage(
+void DepthCalibrator::create8bImage(
   const cv::Mat depth_img,
   cv::Mat& depth_img_u)
 {
@@ -401,7 +409,7 @@ void RGBIRCalibrator::create8bImage(
   }
 }
 
-void RGBIRCalibrator::blendImages(
+void DepthCalibrator::blendImages(
   const cv::Mat& rgb_img,
   const cv::Mat depth_img,
   cv::Mat& blend_img)
@@ -425,7 +433,7 @@ void RGBIRCalibrator::blendImages(
   cv::imshow("blend_img", blend_img);  
 }
 
-bool RGBIRCalibrator::getCorners(
+bool DepthCalibrator::getCorners(
   const cv::Mat& img,
   std::vector<cv::Point2f>& corners)
 {

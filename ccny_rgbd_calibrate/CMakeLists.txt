@@ -21,9 +21,6 @@ pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
-# services
-rosbuild_gensrv()
-
 # boost
 rosbuild_add_boost_directories()
 
@@ -31,7 +28,17 @@ rosbuild_add_executable(rgb_ir_calibrator_node
   src/rgb_ir_calibrator_node.cpp
   src/rgb_ir_calibrator.cpp)
   
+rosbuild_add_executable(depth_calibrator_node 
+  src/depth_calibrator_node.cpp
+  src/depth_calibrator.cpp)
+  
 target_link_libraries (rgb_ir_calibrator_node 
+  ${OPENCV_LIBRARIES}
+  boost_signals 
+  boost_system
+  boost_filesystem)
+
+target_link_libraries (depth_calibrator_node 
   ${OPENCV_LIBRARIES}
   boost_signals 
   boost_system

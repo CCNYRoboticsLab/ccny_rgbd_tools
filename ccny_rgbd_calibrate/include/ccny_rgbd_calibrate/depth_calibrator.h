@@ -1,5 +1,5 @@
-#ifndef CCNY_RGBD_CALIBRATE_RGB_IR_CALIBRATOR_H
-#define CCNY_RGBD_CALIBRATE_RGB_IR_CALIBRATOR_H
+#ifndef CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
+#define CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
@@ -14,7 +14,7 @@
 namespace ccny_rgbd
 {
 
-class RGBIRCalibrator
+class DepthCalibrator
 {
   typedef pcl::PointXYZRGB PointT;
   typedef pcl::PointCloud<PointT> PointCloudT;
@@ -24,8 +24,8 @@ class RGBIRCalibrator
   
   public:
 
-    RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
-    virtual ~RGBIRCalibrator();
+    DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    virtual ~DepthCalibrator();
 
   private:
 
@@ -82,11 +82,23 @@ class RGBIRCalibrator
     bool loadCalibrationImagePair(
       int idx,
       cv::Mat& rgb_img,
-      cv::Mat& ir_img);
+      cv::Mat& depth_img);
 
     void create8bImage(
       const cv::Mat depth_img,
       cv::Mat& depth_img_u);
+    
+    void testPlaneDetection(
+      const cv::Mat& rgb_img_rect,
+      const cv::Mat& depth_img_rect,
+      const cv::Mat& rvec,
+      const cv::Mat& tvec);
+    
+    void buildPouintCloud(
+      const cv::Mat& depth_img_rect_reg,
+      const cv::Mat& rgb_img_rect,
+      const cv::Mat& intr_rect_rgb,
+      PointCloudT& cloud);
     
     void blendImages(const cv::Mat& rgb_img,
                      const cv::Mat depth_img,
@@ -103,4 +115,4 @@ class RGBIRCalibrator
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_CALIBRATE_RGB_IR_CALIBRATOR_H
+#endif // CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
