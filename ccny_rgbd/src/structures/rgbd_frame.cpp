@@ -16,7 +16,7 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   keypoints_computed(false),
   descriptors_computed(false)  
 {
-  depth_factor_ = 0.02; // FIXME: proper distortion calibration
+  depth_factor_ = 0.00; // FIXME: proper distortion calibration
 
   // TODO: Share vs copy?
   cv_ptr_rgb_   = cv_bridge::toCvCopy(rgb_msg);
@@ -209,8 +209,9 @@ void RGBDFrame::computeDistributions()
     kp_covariance[kp_idx].at<double>(2,2) = s_zz; // zz
 
     // ****** FIXME: better distorition model ***********************
-    double factor_s = 1.0 + depth_factor_ * (std::abs(umcx) / 160) + 
-                            depth_factor_ * (std::abs(vmcy) / 120);
+    //double factor_s = 1.0 + depth_factor_ * (std::abs(umcx) / 160) + 
+    //                        depth_factor_ * (std::abs(vmcy) / 120);
+    double factor_s = 1.0;
     kp_mean[kp_idx].at<double>(2,0) = z * factor_s;
     // **************************************************************
   }

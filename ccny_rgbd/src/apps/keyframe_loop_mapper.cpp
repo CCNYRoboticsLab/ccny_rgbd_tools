@@ -43,6 +43,7 @@ bool KeyframeLoopMapper::generateAssociationsSrvCallback(
   GenerateAssociations::Request& request,
   GenerateAssociations::Response& response)
 {
+  associations_.clear();
   loop_detector_->generateKeyframeAssociations(keyframes_, associations_);
 
   publishKeyframeAssociations();

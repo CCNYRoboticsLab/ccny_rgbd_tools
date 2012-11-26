@@ -82,6 +82,7 @@ void KeyframeLoopSolverTORO::solve(
   else
     pg.buildMST(pg.vertices.begin()->first);
 
+  ROS_INFO("Initializing tree...");
   pg.initializeOnTree();
   pg.initializeTreeParameters();
   pg.initializeOptimization(compareMode);
@@ -98,6 +99,7 @@ void KeyframeLoopSolverTORO::solve(
 
   for (int i=0; i < loop_iterations; i++)
   {
+     printf("\tLoop iteration[%d]...\n", i);
      pg.iterate(0, ignorePreconditioner);
 
      // compute the error and dump it

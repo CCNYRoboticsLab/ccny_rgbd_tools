@@ -53,6 +53,13 @@ class KeyframeLoopDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
 
+    /* tries brite force search, but only through keyframes
+     * which have been manually added (manually_added= = true)
+     */
+    void manualBruteForceAssociations(
+      KeyframeVector& keyframes,
+      KeyframeAssociationVector& associations);
+
     double distEuclideanSq(const PointFeature& a, const PointFeature& b)
     {
       // calculate squared Euclidean distance

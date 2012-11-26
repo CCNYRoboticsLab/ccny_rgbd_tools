@@ -21,6 +21,8 @@ class RGBDKeyframe: public RGBDFrame
     tf::Transform pose;
     PointCloudT   data;
 
+    bool manually_added;
+
     double path_length_linear;
     double path_length_angular;
 

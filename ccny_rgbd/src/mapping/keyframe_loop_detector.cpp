@@ -24,9 +24,11 @@ void KeyframeLoopDetector::generateKeyframeAssociations(
   KeyframeAssociationVector& associations)
 {
   prepareFeaturesForRANSAC(keyframes);
-  simplifiedRingAssociations(keyframes, associations);
+
+  //simplifiedRingAssociations(keyframes, associations);
   //ringAssociations(keyframes, associations);
   //treeAssociations(keyframes, associations);
+  manualBruteForceAssociations(keyframes, associations);
 }
 
 bool KeyframeLoopDetector::addManualAssociation(
@@ -250,10 +252,97 @@ void KeyframeLoopDetector::getRandomIndices(
         duplicate = true;
         break;
       }
-    }    
+    }
 
     if (!duplicate)
       output.push_back(random_number);
+  }
+}
+
+void KeyframeLoopDetector::manualBruteForceAssociations(
+  KeyframeVector& keyframes,
+  KeyframeAssociationVector& associations)
+{
+  // params
+  double max_eucl_dist    = 0.05;
+  double max_desc_dist    = 10.0;
+  double min_inlier_ratio = 0.75;
+  double min_inliers      = 20;
+
+  double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
+
+  // insert time-consecutive frames
+  for (unsigned int kf_idx = 0; kf_idx < keyframes.size()-1; ++kf_idx)
+  {
+    unsigned int kf_idx_a = kf_idx;
+    unsigned int kf_idx_b = kf_idx+1;
+
+    // set up the two keyframe references
+    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
+
+    // create an association object
+    KeyframeAssociation association;
+    association.kf_idx_a = kf_idx_a;
+    association.kf_idx_b = kf_idx_b;
+    //association.matches  = inlier_matches;
+    association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;;
+    associations.push_back(association);
+  }
+
+  // generate a list of all keyframe indices, for which the keyframe
+  // is manually added
+  std::vector<unsigned int> manual_keyframe_indices;
+  
+  for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes[kf_idx];
+    if(keyframe.manually_added) 
+    {
+      printf("Manual keyframe: %d\n", kf_idx);
+      manual_keyframe_indices.push_back(kf_idx);
+    }
+  }
+
+  for (unsigned int mn_idx_a = 0; mn_idx_a < manual_keyframe_indices.size(); ++mn_idx_a)
+  for (unsigned int mn_idx_b = mn_idx_a+1; mn_idx_b < manual_keyframe_indices.size(); ++mn_idx_b)
+  {
+    // extract the indices of the manual keyframes
+    unsigned int kf_idx_a = manual_keyframe_indices[mn_idx_a];
+    unsigned int kf_idx_b = manual_keyframe_indices[mn_idx_b];
+
+    // set up the two keyframe references
+    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
+
+    // perform ransac matching, b onto a
+    std::vector<cv::DMatch> all_matches, inlier_matches;
+    Eigen::Matrix4f transformation;
+
+    pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
+      max_eucl_dist_sq, max_desc_dist, min_inlier_ratio,
+      all_matches, inlier_matches, transformation);
+
+    if (inlier_matches.size() >= min_inliers)
+    {
+      printf("[RANSAC %d -> %d] OK   (%d / %d)\n", 
+        kf_idx_a, kf_idx_b,
+        (int)inlier_matches.size(), (int)all_matches.size());
+
+      // create an association object
+      KeyframeAssociation association;
+      association.kf_idx_a = kf_idx_a;
+      association.kf_idx_b = kf_idx_b;
+      association.matches  = inlier_matches;
+      association.a2b = tfFromEigen(transformation);
+      associations.push_back(association);
+    }
+    else
+    {
+      printf("[RANSAC %d -> %d] FAIL (%d / %d)\n", 
+        kf_idx_a, kf_idx_b,
+        (int)inlier_matches.size(), (int)all_matches.size());
+    }
   }
 }
 
