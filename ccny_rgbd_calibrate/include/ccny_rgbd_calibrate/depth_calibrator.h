@@ -11,17 +11,14 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 
+#include "ccny_rgbd_calibrate/calib_util.h"
+
 namespace ccny_rgbd
 {
 
 class DepthCalibrator
 {
-  typedef pcl::PointXYZRGB PointT;
-  typedef pcl::PointCloud<PointT> PointCloudT;
-
-  typedef std::vector<cv::Point2f> Point2fVector;
-  typedef std::vector<cv::Point3f> Point3fVector;
-  
+ 
   public:
 
     DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
@@ -43,15 +40,16 @@ class DepthCalibrator
     std::string path_;
     std::string calib_rgb_filename_;
     std::string calib_ir_filename_;
-
+    std::string calib_extr_filename_;
+    
     std::string rgb_test_filename_;
     std::string depth_test_filename_;
        
     //output filenames
-    std::string calib_extrinsic_filename_;
-   
-    std::string cloud_filename_;
-    
+
+    std::string cloud_filename1_;
+    std::string cloud_filename2_;
+        
     // input to calibration       
     std::vector<cv::Point3f> corners_3d_;
     
@@ -72,10 +70,6 @@ class DepthCalibrator
     void build3dCornerVector();
     void buildRectMaps();
     bool loadCameraParams();
- 
-    bool getCorners(
-      const cv::Mat& img, 
-      std::vector<cv::Point2f>& corners);
 
     void testExtrinsicCalibration();
     
@@ -83,34 +77,12 @@ class DepthCalibrator
       int idx,
       cv::Mat& rgb_img,
       cv::Mat& depth_img);
-
-    void create8bImage(
-      const cv::Mat depth_img,
-      cv::Mat& depth_img_u);
     
     void testPlaneDetection(
       const cv::Mat& rgb_img_rect,
       const cv::Mat& depth_img_rect,
       const cv::Mat& rvec,
-      const cv::Mat& tvec);
-    
-    void buildPouintCloud(
-      const cv::Mat& depth_img_rect_reg,
-      const cv::Mat& rgb_img_rect,
-      const cv::Mat& intr_rect_rgb,
-      PointCloudT& cloud);
-    
-    void blendImages(const cv::Mat& rgb_img,
-                     const cv::Mat depth_img,
-                     cv::Mat& blend_img);
-    
-    void matrixFromRvecTvec(const cv::Mat& rvec,
-                            const cv::Mat& tvec,
-                            cv::Mat& E);
-
-    void matrixFromRT(const cv::Mat& rmat,
-                      const cv::Mat& tvec,
-                      cv::Mat& E);
+      const cv::Mat& tvec);   
 };
 
 } //namespace ccny_rgbd

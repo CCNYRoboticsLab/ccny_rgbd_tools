@@ -25,10 +25,12 @@ link_directories(${OPENCV_LIBRARY_DIRS})
 rosbuild_add_boost_directories()
 
 rosbuild_add_executable(rgb_ir_calibrator_node 
+  src/calib_util.cpp
   src/rgb_ir_calibrator_node.cpp
   src/rgb_ir_calibrator.cpp)
   
 rosbuild_add_executable(depth_calibrator_node 
+  src/calib_util.cpp
   src/depth_calibrator_node.cpp
   src/depth_calibrator.cpp)
   

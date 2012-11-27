@@ -60,8 +60,6 @@ bool RGBIRCalibrator::loadCalibrationImagePair(
   cv::Mat& rgb_img,
   cv::Mat& ir_img)
 {
-
-  
   // construct the filename image index
   std::stringstream ss_filename;
   ss_filename << std::setw(4) << std::setfill('0') << idx << ".png";
@@ -168,14 +166,7 @@ void RGBIRCalibrator::calibrate()
       break;
     }
     else ROS_INFO("Loaded calibration image pair %d", img_idx);
-
-    if (0)
-    {
-      cv::imshow("rgb_img", rgb_img);
-      cv::imshow("ir_img",  ir_img);
-      cv::waitKey(0);
-    }
-    
+   
     // rectify
     cv::Mat rgb_img_rect, ir_img_rect; // rectified images 
     cv::remap(rgb_img, rgb_img_rect, map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
@@ -183,10 +174,10 @@ void RGBIRCalibrator::calibrate()
   
     // detect corners
     ROS_INFO("Detecting 2D corners...");
-    std::vector<cv::Point2f> corners_2d_rgb, corners_2d_ir;
+    Point2fVector corners_2d_rgb, corners_2d_ir;
   
-    bool corner_result_rgb = getCorners(rgb_img_rect, corners_2d_rgb);
-    bool corner_result_ir  = getCorners(ir_img_rect,  corners_2d_ir);
+    bool corner_result_rgb = getCorners(rgb_img_rect, patternsize_, corners_2d_rgb);
+    bool corner_result_ir  = getCorners(ir_img_rect,  patternsize_, corners_2d_ir);
   
     if (!corner_result_rgb || !corner_result_ir)
     {
@@ -196,20 +187,12 @@ void RGBIRCalibrator::calibrate()
     }
 
     // show images with corners
-    if(1)
-    {
-      cv::Mat rgb_img_rect_corners = rgb_img_rect;
-      cv::Mat ir_img_rect_corners  = ir_img_rect;
-    
-      cv::drawChessboardCorners(
-        rgb_img_rect_corners, patternsize_, cv::Mat(corners_2d_rgb), corner_result_rgb);
-      cv::drawChessboardCorners(
-        ir_img_rect_corners, patternsize_, cv::Mat(corners_2d_ir), corner_result_ir);
-      cv::imshow("RGB Corners", rgb_img_rect_corners);  
-      cv::imshow("IR Corners",  ir_img_rect_corners); 
-      cv::waitKey(0);
-    }
-
+    showCornersImage(rgb_img_rect, patternsize_, corners_2d_rgb, 
+                     corner_result_rgb, "RGB Corners");
+    showCornersImage(ir_img_rect, patternsize_, corners_2d_ir, 
+                     corner_result_ir, "IR Corners");   
+    cv::waitKey(0);
+   
     // add corners to vectors
     v_corners_3d.push_back(corners_3d_);
     v_corners_2d_rgb.push_back(corners_2d_rgb);
@@ -237,212 +220,31 @@ void RGBIRCalibrator::calibrate()
   matrixFromRT(R, t, rgb2ir_);
 }
 
-void RGBIRCalibrator::matrixFromRvecTvec(
-  const cv::Mat& rvec,
-  const cv::Mat& tvec,
-  cv::Mat& E)
-{
-  cv::Mat rmat;
-  cv::Rodrigues(rvec, rmat);
-  matrixFromRT(rmat, tvec, E);
-}
-
-void RGBIRCalibrator::matrixFromRT(
-  const cv::Mat& rmat,
-  const cv::Mat& tvec,
-  cv::Mat& E)
-{   
-  E = cv::Mat::zeros(3, 4, CV_64FC1);
-  
-  E.at<double>(0,0) = rmat.at<double>(0,0);
-  E.at<double>(0,1) = rmat.at<double>(0,1);
-  E.at<double>(0,2) = rmat.at<double>(0,2);
-  E.at<double>(1,0) = rmat.at<double>(1,0);
-  E.at<double>(1,1) = rmat.at<double>(1,1);
-  E.at<double>(1,2) = rmat.at<double>(1,2);
-  E.at<double>(2,0) = rmat.at<double>(2,0);
-  E.at<double>(2,1) = rmat.at<double>(2,1);
-  E.at<double>(2,2) = rmat.at<double>(2,2);
-
-  E.at<double>(0,3) = tvec.at<double>(0,0);
-  E.at<double>(1,3) = tvec.at<double>(1,0);
-  E.at<double>(2,3) = tvec.at<double>(2,0);
-}
-
 void RGBIRCalibrator::testExtrinsicCalibration()
 {
-  // load images
+  // **** load images
   cv::Mat rgb_img    = cv::imread(rgb_test_filename_);
   cv::Mat depth_img  = cv::imread(depth_test_filename_,-1);
-  
-  int w = rgb_img.cols;
-  int h = rgb_img.rows; 
-  
+ 
   // **** rectify
-
   cv::Mat rgb_img_rect, depth_img_rect;
-  
   cv::remap(rgb_img,   rgb_img_rect,   map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
   cv::remap(depth_img, depth_img_rect, map_ir_1_,  map_ir_2_,  cv::INTER_NEAREST);
   
   // **** reproject
-  
-  cv::Mat depth_img_rect_reg = cv::Mat::zeros(h, w, CV_16UC1);
-  
-  cv::Mat p(3, 1, CV_64FC1);
-  
-  cv::Mat M = intr_rect_rgb_ * rgb2ir_;
-  
-  for (int u = 0; u < w; ++u)
-  for (int v = 0; v < h; ++v)
-  {
-    double z = (double) depth_img_rect.at<uint16_t>(v,u);
-
-    p.at<double>(0,0) = u;
-    p.at<double>(1,0) = v;
-    p.at<double>(2,0) = 1.0;
-    
-    cv::Mat P = z * intr_rect_ir_.inv() * p;    
-    
-    cv::Mat PP(4, 1, CV_64FC1);
-    PP.at<double>(0,0) = P.at<double>(0,0);
-    PP.at<double>(1,0) = P.at<double>(1,0);
-    PP.at<double>(2,0) = P.at<double>(2,0);
-    PP.at<double>(3,0) = 1; 
-    
-    cv::Mat q = M * PP; 
-    
-    double qx = q.at<double>(0,0);
-    double qy = q.at<double>(1,0);
-    double qz = q.at<double>(2,0);
-    
-    int qu = qx / qz;
-    int qv = qy / qz;  
-    
-    // skip outside of image 
-    if (qu < 0 || qu >= w || qv < 0 || qv >= h) continue;
-    
-    uint16_t& val = depth_img_rect_reg.at<uint16_t>(qv, qu);
-    
-    // z buffering
-    if (val == 0 || val > qz) val = qz;
-  }
+  cv::Mat depth_img_rect_reg;
+  buildRegisteredDepthImage(intr_rect_ir_, intr_rect_rgb_, rgb2ir_,
+                            depth_img_rect, depth_img_rect_reg);
   
   // **** visualize
-  
-  // create 8b images
-  cv::Mat depth_img_rect_u, depth_img_rect_reg_u;
-  create8bImage(depth_img_rect,     depth_img_rect_u);
-  create8bImage(depth_img_rect_reg, depth_img_rect_reg_u);
-  
-  // blend and show
-  cv::Mat blend_img, blend_img_reg;
-  blendImages(rgb_img_rect, depth_img_rect_u,     blend_img);
-  blendImages(rgb_img_rect, depth_img_rect_reg_u, blend_img_reg);
-  
-  cv::imshow("blend_img",     blend_img);
-  cv::imshow("blend_img_reg", blend_img_reg);
+  showBlendedImage(depth_img_rect,     rgb_img_rect, "Unregistered");
+  showBlendedImage(depth_img_rect_reg, rgb_img_rect, "Registered");  
   cv::waitKey(0);
   
   // **** save as a point cloud
-  
   PointCloudT cloud;
-  
-  for (int u = 0; u < w; ++u)
-  for (int v = 0; v < h; ++v)
-  {
-    uint16_t& z  = depth_img_rect_reg.at<uint16_t>(v, u);
-    cv::Vec3b& c = rgb_img_rect.at<cv::Vec3b>(v, u);
-    
-    PointT pt;
-    
-    if (z != 0)
-    {  
-      p.at<double>(0,0) = u;
-      p.at<double>(1,0) = v;
-      p.at<double>(2,0) = 1.0;
-      
-      cv::Mat P = z * intr_rect_rgb_.inv() * p;   
-        
-      pt.x = P.at<double>(0);
-      pt.y = P.at<double>(1);
-      pt.z = P.at<double>(2);
-  
-      pt.r = c[2];
-      pt.g = c[1];
-      pt.b = c[0];
-    }
-    else
-    {
-      pt.x = pt.y = pt.z = std::numeric_limits<float>::quiet_NaN();
-    }
-
-    cloud.points.push_back(pt);
-  }
-  
+  buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, cloud);
   pcl::io::savePCDFileBinary<PointT>(cloud_filename_, cloud);
-}
-
-void RGBIRCalibrator::create8bImage(
-  const cv::Mat depth_img,
-  cv::Mat& depth_img_u)
-{
-  int w = depth_img.cols;
-  int h = depth_img.rows;
-  
-  depth_img_u = cv::Mat::zeros(h,w, CV_8UC1);
-  
-  for (int u = 0; u < w; ++u)
-  for (int v = 0; v < h; ++v)
-  {
-    uint16_t d = depth_img.at<uint16_t>(v,u);
-    double df =((double)d * 0.001) * 100.0;
-    depth_img_u.at<uint8_t>(v,u) = (int)df;
-  }
-}
-
-void RGBIRCalibrator::blendImages(
-  const cv::Mat& rgb_img,
-  const cv::Mat depth_img,
-  cv::Mat& blend_img)
-{
-  double scale = 0.2;
-  
-  int w = rgb_img.cols;
-  int h = rgb_img.rows;
-  
-  blend_img = cv::Mat::zeros(h,w, CV_8UC3);
-  
-  for (int u = 0; u < w; ++u)
-  for (int v = 0; v < h; ++v)
-  {
-    cv::Vec3b color_rgb = rgb_img.at<cv::Vec3b>(v,u);
-    uint8_t mono_d = depth_img.at<uint8_t>(v, u);   
-    cv::Vec3b color_d(mono_d, mono_d, mono_d);
-    blend_img.at<cv::Vec3b>(v,u) = scale*color_rgb + (1.0-scale)*color_d;
-  }
-  
-  cv::imshow("blend_img", blend_img);  
-}
-
-bool RGBIRCalibrator::getCorners(
-  const cv::Mat& img,
-  std::vector<cv::Point2f>& corners)
-{
-  // convert to mono
-  cv::Mat img_mono;
-  cv::cvtColor(img, img_mono, CV_RGB2GRAY);
- 
-  int params = CV_CALIB_CB_ADAPTIVE_THRESH + CV_CALIB_CB_NORMALIZE_IMAGE + CV_CALIB_CB_FAST_CHECK;
-  
-  bool found = findChessboardCorners(img_mono, patternsize_, corners, params);
-  
-  if(found)
-    cornerSubPix(
-      img_mono, corners, patternsize_, cv::Size(-1, -1),
-      cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
-  
-  return found;
 }
 
 } //namespace ccny_rgbd

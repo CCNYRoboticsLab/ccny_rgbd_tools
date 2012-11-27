@@ -11,17 +11,13 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 
+#include "ccny_rgbd_calibrate/calib_util.h"
+
 namespace ccny_rgbd
 {
 
 class RGBIRCalibrator
 {
-  typedef pcl::PointXYZRGB PointT;
-  typedef pcl::PointCloud<PointT> PointCloudT;
-
-  typedef std::vector<cv::Point2f> Point2fVector;
-  typedef std::vector<cv::Point3f> Point3fVector;
-  
   public:
 
     RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
@@ -73,32 +69,12 @@ class RGBIRCalibrator
     void buildRectMaps();
     bool loadCameraParams();
  
-    bool getCorners(
-      const cv::Mat& img, 
-      std::vector<cv::Point2f>& corners);
-
     void testExtrinsicCalibration();
     
     bool loadCalibrationImagePair(
       int idx,
       cv::Mat& rgb_img,
       cv::Mat& ir_img);
-
-    void create8bImage(
-      const cv::Mat depth_img,
-      cv::Mat& depth_img_u);
-    
-    void blendImages(const cv::Mat& rgb_img,
-                     const cv::Mat depth_img,
-                     cv::Mat& blend_img);
-    
-    void matrixFromRvecTvec(const cv::Mat& rvec,
-                            const cv::Mat& tvec,
-                            cv::Mat& E);
-
-    void matrixFromRT(const cv::Mat& rmat,
-                      const cv::Mat& tvec,
-                      cv::Mat& E);
 };
 
 } //namespace ccny_rgbd
