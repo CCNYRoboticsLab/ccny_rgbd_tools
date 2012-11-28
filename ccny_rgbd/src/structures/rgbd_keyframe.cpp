@@ -54,9 +54,9 @@ void RGBDKeyframe::constructDataCloud()
         p.z = z;
 
         // ****** FIXME: better distortion model
-      //  double factor_s = 1.0 + depth_factor_ * (std::abs(u - cx) / 160) + 
-      //                          depth_factor_ * (std::abs(v - cy) / 120);
-        double factor_s = 1.0;
+        double factor_s = 1.0 + depth_factor_ * (std::abs(u - cx) / 160) +
+                                depth_factor_ * (std::abs(v - cy) / 120);
+//        double factor_s = 1.0;
         p.z = z * factor_s;
         // **************************************************************
       }

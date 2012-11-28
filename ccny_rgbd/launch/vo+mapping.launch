@@ -7,7 +7,7 @@
   # ORB, SURF, GTF, KLT
   <arg name="detector_type" default="GFT"/> 
 
-  # ICP, ICPModel, RANSAC
+  # ICP, ICPProbModel, RANSAC
   <arg name="reg_type" default="ICPProbModel"/> 
 
   <include file="$(find ccny_rgbd)/launch/visual_odometry.launch">

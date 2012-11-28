@@ -10,6 +10,8 @@ RGBDFrame::RGBDFrame():
 
 }
 
+// FIXME: get this out of here to a new class where feature detection on the rgb image will be processed
+// Don't use Ivan's feature detectors because they have extra machinary based on depth information (not needed for the 3Dto2D project)
 RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
                      const sensor_msgs::CameraInfoConstPtr& info_msg):
   keypoints_computed(false),
@@ -36,7 +38,7 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   keypoints_computed(false),
   descriptors_computed(false)
 {
-  depth_factor_ = 0.00; // FIXME: proper distortion calibration
+  depth_factor_ = 0.02; // FIXME: proper distortion calibration
 
   // TODO: Share vs copy?
   cv_ptr_rgb_   = cv_bridge::toCvCopy(rgb_msg);
@@ -229,9 +231,9 @@ void RGBDFrame::computeDistributions()
     kp_covariance[kp_idx].at<double>(2,2) = s_zz; // zz
 
     // ****** FIXME: better distorition model ***********************
-    //double factor_s = 1.0 + depth_factor_ * (std::abs(umcx) / 160) + 
-    //                        depth_factor_ * (std::abs(vmcy) / 120);
-    double factor_s = 1.0;
+    double factor_s = 1.0 + depth_factor_ * (std::abs(umcx) / 160) +
+                            depth_factor_ * (std::abs(vmcy) / 120);
+//    double factor_s = 1.0;
     kp_mean[kp_idx].at<double>(2,0) = z * factor_s;
     // **************************************************************
   }

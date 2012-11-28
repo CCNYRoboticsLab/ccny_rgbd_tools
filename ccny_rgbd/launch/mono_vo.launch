@@ -9,7 +9,7 @@
     output="screen">
 
     # PCD file location
-    <param name="PCD_filename" value="$(find ccny_rgbd)/data/test.pcd"/> 
+    <param name="PCD_filename" value="$(find ccny_rgbd)/data/apt1.pcd"/> 
 
     <param name="fixed_frame" value="/odom"/>
     <param name="base_frame"  value="/camera_link"/>
