@@ -9,12 +9,10 @@
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
+#include "ccny_rgbd/AddManualKeyframe.h"
 
 namespace ccny_rgbd
 {
-
-typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
-typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
 
 class KeyframeGenerator
 {
@@ -25,6 +23,9 @@ class KeyframeGenerator
     KeyframeGenerator(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~KeyframeGenerator();
 
+    bool addManualKeyframeSrvCallback(AddManualKeyframe::Request& request,
+                                      AddManualKeyframe::Response& response);
+
   protected:
 
     ros::NodeHandle nh_;
@@ -33,10 +34,14 @@ class KeyframeGenerator
     KeyframeVector keyframes_;
     std::string fixed_frame_;
 
+    ros::ServiceServer add_manual_keyframe_service_;
+
     bool processFrame(const RGBDFrame& frame, const tf::Transform& pose);
 
   private:
   
+    bool manual_add_; // if true, next frame will be added as keyframe
+
     double kf_dist_eps_;
     double kf_angle_eps_;
 

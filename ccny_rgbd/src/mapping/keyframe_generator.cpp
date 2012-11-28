@@ -5,7 +5,8 @@ namespace ccny_rgbd
 
 KeyframeGenerator::KeyframeGenerator(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), 
-  nh_private_(nh_private)
+  nh_private_(nh_private),
+  manual_add_(false)
 {
   // *** init params
 
@@ -15,11 +16,25 @@ KeyframeGenerator::KeyframeGenerator(ros::NodeHandle nh, ros::NodeHandle nh_priv
     kf_dist_eps_  = 0.10;
   if (!nh_private_.getParam ("kf/kf_angle_eps", kf_angle_eps_))
     kf_angle_eps_  = 10.0 * M_PI / 180.0;
+
+  // **** services
+
+  add_manual_keyframe_service_ = nh_.advertiseService(
+    "add_manual_keyframe", &KeyframeGenerator::addManualKeyframeSrvCallback, this);
 }
 
 KeyframeGenerator::~KeyframeGenerator()
 {
 
+}
+
+bool KeyframeGenerator::addManualKeyframeSrvCallback(
+  AddManualKeyframe::Request& request,
+  AddManualKeyframe::Response& response)
+{
+  manual_add_ = true;
+
+  return true;
 }
 
 bool KeyframeGenerator::processFrame(
@@ -28,7 +43,7 @@ bool KeyframeGenerator::processFrame(
 {
   bool result; // if true, add new frame
 
-  if(keyframes_.empty())
+  if(keyframes_.empty() || manual_add_)
   {
     result = true;
   }
@@ -55,6 +70,13 @@ void KeyframeGenerator::addKeyframe(
   RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
   keyframe.constructDataCloud();
+
+  if (manual_add_)
+  {
+    ROS_INFO("Adding frame manually");
+    manual_add_ = false;
+    keyframe.manually_added = true;
+  }
   keyframes_.push_back(keyframe);
 }
 

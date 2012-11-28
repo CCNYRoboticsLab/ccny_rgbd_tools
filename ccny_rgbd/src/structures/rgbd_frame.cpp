@@ -36,7 +36,7 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   keypoints_computed(false),
   descriptors_computed(false)
 {
-  depth_factor_ = 0.02; // FIXME: proper distortion calibration
+  depth_factor_ = 0.00; // FIXME: proper distortion calibration
 
   // TODO: Share vs copy?
   cv_ptr_rgb_   = cv_bridge::toCvCopy(rgb_msg);
@@ -125,7 +125,7 @@ void RGBDFrame::getGaussianMixtureDistribution(
 void RGBDFrame::computeDistributions()
 {
   // TODO: these should be a parameter
-  double max_var_z = 0.05 * 0.05; // maximum allowed z variance
+  double max_var_z = 0.03 * 0.03; // maximum allowed z variance
 
   double s_u = 1.0;            // uncertainty in pixels
   double s_v = 1.0;            // uncertainty in pixels
@@ -145,6 +145,10 @@ void RGBDFrame::computeDistributions()
   double fy2 = fy*fy;
 
   // allocate space
+  kp_valid.clear();
+  kp_mean.clear();
+  kp_covariance.clear();
+
   kp_valid.resize(keypoints.size());
   kp_mean.resize(keypoints.size());
   kp_covariance.resize(keypoints.size());
@@ -225,8 +229,9 @@ void RGBDFrame::computeDistributions()
     kp_covariance[kp_idx].at<double>(2,2) = s_zz; // zz
 
     // ****** FIXME: better distorition model ***********************
-    double factor_s = 1.0 + depth_factor_ * (std::abs(umcx) / 160) + 
-                            depth_factor_ * (std::abs(vmcy) / 120);
+    //double factor_s = 1.0 + depth_factor_ * (std::abs(umcx) / 160) + 
+    //                        depth_factor_ * (std::abs(vmcy) / 120);
+    double factor_s = 1.0;
     kp_mean[kp_idx].at<double>(2,0) = z * factor_s;
     // **************************************************************
   }

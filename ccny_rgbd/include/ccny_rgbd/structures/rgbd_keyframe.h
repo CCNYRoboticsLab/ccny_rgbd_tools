@@ -21,6 +21,8 @@ class RGBDKeyframe: public RGBDFrame
     tf::Transform pose;
     PointCloudT   data;
 
+    bool manually_added;
+
     double path_length_linear;
     double path_length_angular;
 
@@ -32,6 +34,9 @@ class RGBDKeyframe: public RGBDFrame
     double max_sigma_z_;
     double max_var_z_;
 };
+
+typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
+typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
 
 } //namespace ccny_rgbd
 

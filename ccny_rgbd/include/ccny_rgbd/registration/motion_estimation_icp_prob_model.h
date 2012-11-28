@@ -9,6 +9,8 @@
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/structures/feature_history.h"
 
+#include "ccny_rgbd/Save.h"
+
 namespace ccny_rgbd
 {
 
@@ -31,6 +33,9 @@ class MotionEstimationICPProbModel: public MotionEstimation
       tf::Transform& motion);
   
     int getModelSize() const { return model_size_; }
+
+    bool saveSrvCallback(ccny_rgbd::Save::Request& request,
+                         ccny_rgbd::Save::Response& response);
 
   private:
 
@@ -64,6 +69,9 @@ class MotionEstimationICPProbModel: public MotionEstimation
     MatVector means_;
     tf::Transform f2b_; // Fixed frame to Base (moving) frame
 
+    ros::ServiceServer save_service_;
+
+    // ***** funtions
     void publishCovariances();
 
     void getNNMahalanobis(
@@ -73,7 +81,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
       double& mah_dist,
       int& mah_nn_idx);
 
-  void transformToRotationCV(const tf::Transform& transform,
+    void transformToRotationCV(const tf::Transform& transform,
                              cv::Mat& translation,
                              cv::Mat& rotation);
 

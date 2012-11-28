@@ -1,0 +1,13 @@
+Index: trunk/Makefile
+===================================================================
+--- trunk/Makefile	(revision 28)
++++ trunk/Makefile	(working copy)
+@@ -32,7 +32,7 @@
+ endif
+ 
+ #CXXFLAGS += -O3 -ffast-math -Wall -W 
+-CXXFLAGS += -O0 -g -Wall -W 
++CXXFLAGS += -O0 -g -Wall -W -fPIC
+ IFLAGS =
+ LFLAGS =
+ 

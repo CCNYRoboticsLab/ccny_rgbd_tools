@@ -6,7 +6,8 @@ namespace ccny_rgbd
 RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
   RGBDFrame(frame),
   max_data_range_(5.0),
-  max_sigma_z_(0.035) // TODO: Parameter, or max_sigma_z
+  max_sigma_z_(0.020), // TODO: Parameter, or max_sigma_z
+  manually_added(false)
 {
   max_var_z_ = max_sigma_z_ * max_sigma_z_;
 }
@@ -20,6 +21,8 @@ void RGBDKeyframe::constructDataCloud()
   // Scale by focal length for computing (X,Y)
   float constant_x = 1.0 / model_.fx();
   float constant_y = 1.0 / model_.fy();
+
+  printf("%f, %f, %f %f\n", cx, cy, model_.fx(), model_.fy());
 
   float bad_point = std::numeric_limits<float>::quiet_NaN();
 
@@ -51,8 +54,9 @@ void RGBDKeyframe::constructDataCloud()
         p.z = z;
 
         // ****** FIXME: better distortion model
-        double factor_s = 1.0 + depth_factor_ * (std::abs(u - cx) / 160) + 
-                                depth_factor_ * (std::abs(v - cy) / 120);
+      //  double factor_s = 1.0 + depth_factor_ * (std::abs(u - cx) / 160) + 
+      //                          depth_factor_ * (std::abs(v - cy) / 120);
+        double factor_s = 1.0;
         p.z = z * factor_s;
         // **************************************************************
       }

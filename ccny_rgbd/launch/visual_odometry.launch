@@ -25,7 +25,7 @@
 
     #### features: GFT ################################
 
-    <param name="feature/GFT/n_features"   value = "150"/>
+    <param name="feature/GFT/n_features"   value = "300"/>
     <param name="feature/GFT/min_distance" value = "0.0"/>
     <param name="feature/GFT/grid_cells"   value = "1"/>
 
@@ -55,15 +55,15 @@
 
     #### registration: ICP Prob Model #################
 
-    <param name="reg/ICPProbModel/max_iterations"          value="15"/>
+    <param name="reg/ICPProbModel/max_iterations"          value="10"/>
     <param name="reg/ICPProbModel/max_corresp_dist"        value="0.20"/>
     <param name="reg/ICPProbModel/tf_epsilon"              value="1e-6"/>
     <param name="reg/ICPProbModel/use_ransac_rejection"    value="false"/>
     <param name="reg/ICPProbModel/ransac_inlier_threshold" value="0.15"/>
 
-    <param name="reg/ICPProbModel/max_model_size"       value="5000"/>
+    <param name="reg/ICPProbModel/max_model_size"       value="3000"/>
     <param name="reg/ICPProbModel/max_association_dist" value="10.0"/>
-    <param name="reg/ICPProbModel/n_nearest_neighbors"  value="2"/>
+    <param name="reg/ICPProbModel/n_nearest_neighbors"  value="1"/>
 
   </node>
 

@@ -38,6 +38,8 @@ class RGBDFrame
     
     std_msgs::Header header_;
 
+    image_geometry::PinholeCameraModel model_;
+
     PointCloudFeature features; // no NaNs
       
     std::vector<cv::KeyPoint> keypoints;  // with NaNs
@@ -59,7 +61,6 @@ class RGBDFrame
 
   protected:
 
-    image_geometry::PinholeCameraModel model_;
     cv_bridge::CvImagePtr cv_ptr_rgb_;
     cv_bridge::CvImagePtr cv_ptr_depth_;
 

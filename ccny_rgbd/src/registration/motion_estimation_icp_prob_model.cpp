@@ -63,6 +63,10 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
     "model", 1);
   covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
     "model_covariances", 1);
+
+  // **** services
+  save_service_ = nh_.advertiseService(
+    "save_sparse_map", &MotionEstimationICPProbModel::saveSrvCallback, this);
 }
 
 MotionEstimationICPProbModel::~MotionEstimationICPProbModel()
@@ -404,6 +408,20 @@ void MotionEstimationICPProbModel::publishCovariances()
   }
 
   covariances_publisher_.publish(marker);
+}
+
+bool MotionEstimationICPProbModel::saveSrvCallback(
+  ccny_rgbd::Save::Request& request,
+  ccny_rgbd::Save::Response& response)
+{
+  ROS_INFO("Saving to %s...", request.filename.c_str());
+  ROS_INFO("Map has %dK points", (int) model_ptr_->points.size()/1024);
+
+  pcl::io::savePCDFileBinary<PointT>(request.filename, *model_ptr_);
+  //pcl::io::savePLYFile<PointT>(request.filename + ".ply", *model_ptr_);
+
+  ROS_INFO("Save sparse map successfully");
+  return true;
 }
 
 } // namespace ccny_rgbd
