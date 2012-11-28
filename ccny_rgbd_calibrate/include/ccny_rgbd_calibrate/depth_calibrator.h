@@ -46,9 +46,6 @@ class DepthCalibrator
     std::string depth_test_filename_;
        
     //output filenames
-
-    std::string cloud_filename1_;
-    std::string cloud_filename2_;
         
     // input to calibration       
     std::vector<cv::Point3f> corners_3d_;
@@ -82,7 +79,12 @@ class DepthCalibrator
       const cv::Mat& rgb_img_rect,
       const cv::Mat& depth_img_rect,
       const cv::Mat& rvec,
-      const cv::Mat& tvec);   
+      const cv::Mat& tvec);
+    
+    bool processTrainingImagePair(
+      int img_idx,
+      const cv::Mat& rgb_img,
+      const cv::Mat& depth_img);
 };
 
 } //namespace ccny_rgbd

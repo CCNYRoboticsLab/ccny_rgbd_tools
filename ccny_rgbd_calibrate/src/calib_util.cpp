@@ -101,9 +101,7 @@ void buildRegisteredDepthImage(
   const cv::Mat& rgb2ir,
   const cv::Mat& depth_img_rect,
         cv::Mat& depth_img_rect_reg)
-{
-  printf("Building regstered image...\n");
-  
+{ 
   int w = depth_img_rect.cols;
   int h = depth_img_rect.rows;
       
@@ -111,11 +109,7 @@ void buildRegisteredDepthImage(
   
   depth_img_rect_reg = cv::Mat::zeros(h, w, CV_16UC1);
   
-  cv::Mat p(3, 1, CV_64FC1);
-  
-  std::cout << "intr_rect_rgb" << std::endl << intr_rect_rgb << std::endl;
-  std::cout << "rgb2ir" << std::endl << rgb2ir << std::endl;
-  
+  cv::Mat p(3, 1, CV_64FC1); 
   cv::Mat M = intr_rect_rgb * rgb2ir;
   
   for (int u = 0; u < w; ++u)
@@ -234,6 +228,81 @@ void showCornersImage(
   cv::drawChessboardCorners(
   img_corners, pattern_size, cv::Mat(corners_2d), corner_result);
   cv::imshow(title, img_corners);    
+}
+
+/* Given a set of detected checkerboard corners,
+ * outputs the 4 vertices of a rectangle which describes
+ * the checkerboard, plus a small margin around it
+ * to caprure the border squares
+ */
+void getCheckerBoardPolygon(
+  const Point2fVector& corners_2d,
+  int n_rows, int n_cols,
+  Point2fVector& vertices)
+{
+  cv::Point2f d = (corners_2d[0] - corners_2d[n_cols+1])*0.75; 
+  vertices.resize(4);
+  
+  vertices[0] = cv::Point2f(+d.x, +d.y) + corners_2d[0];
+  vertices[1] = cv::Point2f(-d.y, +d.x) + corners_2d[n_cols - 1];
+  vertices[2] = cv::Point2f(-d.x, -d.y) + corners_2d[n_cols * n_rows - 1];
+  vertices[3] = cv::Point2f(+d.y, -d.x) + corners_2d[n_cols * (n_rows - 1)];
+}
+
+void buildCheckerboardDepthImage(
+  const Point3fVector& corners_3d,
+  const Point2fVector& vertices,
+  int rows, int cols,
+  const cv::Mat& rvec, const cv::Mat& tvec,
+  const cv::Mat& intr_rect_rgb,
+  cv::Mat& depth_img)
+{
+  depth_img = cv::Mat::zeros(rows, cols, CV_16UC1);
+  
+  // calculate vertices
+  cv::Mat v0(corners_3d[0]);
+  cv::Mat v1(corners_3d[1]);
+  cv::Mat v2(corners_3d[corners_3d.size()-1]);
+  
+  v0.convertTo(v0, CV_64FC1);
+  v1.convertTo(v1, CV_64FC1);
+  v2.convertTo(v2, CV_64FC1);
+  
+  cv::Mat rmat;
+  cv::Rodrigues(rvec, rmat);
+  
+  // rotate into camera frame
+  v0 = rmat * v0 + tvec;
+  v1 = rmat * v1 + tvec;
+  v2 = rmat * v2 + tvec;
+  
+  // calculate normal
+  cv::Mat n = (v1 - v0).cross(v2 - v0);
+ 
+  // cache inverted intrinsics
+  cv::Mat intr_inv = intr_rect_rgb.inv();
+  
+  cv::Mat q = cv::Mat::zeros(3, 1, CV_64FC1);
+  PointT pt;
+  
+  for (int u = 0; u < cols; ++u)  
+  for (int v = 0; v < rows; ++v)
+  {    
+    float dist = cv::pointPolygonTest(vertices, cv::Point2f(u,v), false);
+    if (dist > 0)
+    {
+      q.at<double>(0,0) = (double)u;
+      q.at<double>(1,0) = (double)v;
+      q.at<double>(2,0) = 1.0;
+      
+      q = intr_inv * q;
+      double d = v0.dot(n) / q.dot(n);
+      cv::Mat p = d * q;
+
+      double z = p.at<double>(2,0);
+      depth_img.at<uint16_t>(v, u) = (int)z;
+    } 
+  }
 }
 
 } // namespace ccny_rgbd

@@ -19,11 +19,7 @@ DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   calib_rgb_filename_  = path_ + "rgb.yml";
   calib_ir_filename_   = path_ + "depth.yml";
   calib_extr_filename_ = path_ + "extr.yml";
-  
-  //output
-  cloud_filename1_ = path_ + "cloud_1.pcd";
-  cloud_filename2_ = path_ + "cloud_2.pcd";
-  
+   
   calibrate();
 }
 
@@ -146,49 +142,60 @@ void DepthCalibrator::calibrate()
   buildRectMaps();
   build3dCornerVector();
   
-  // read in calibration images
-  int img_idx = 1;
-  cv::Mat rgb_img, depth_img;
-  bool load_result = loadCalibrationImagePair(img_idx, rgb_img, depth_img);  
-  if (!load_result)
+  int img_idx = 0;
+  while(true)
   {
-    ROS_INFO("Images not found - reached end of image sequence.");
-    // break
-    return;
+    cv::Mat rgb_img, depth_img;
+    bool load_result = loadCalibrationImagePair(img_idx, rgb_img, depth_img);  
+    if (!load_result)
+    {
+      ROS_INFO("Images %d not found. Assuming end of sequence");
+      break;
+    }
+    
+    bool result = processTrainingImagePair(img_idx, rgb_img, depth_img);
+    img_idx++;
   }
-  
+}
+
+bool DepthCalibrator::processTrainingImagePair(
+  int img_idx,
+  const cv::Mat& rgb_img,
+  const cv::Mat& depth_img)
+{
   // rectify
   cv::Mat rgb_img_rect, depth_img_rect; // rectified images 
   cv::remap(rgb_img,   rgb_img_rect,   map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
   cv::remap(depth_img, depth_img_rect, map_ir_1_,  map_ir_2_,  cv::INTER_NEAREST);
 
   // detect corners
-  ROS_INFO("Detecting 2D corners...");
+  ROS_INFO("[%d] Detecting 2D corners...", img_idx);
   std::vector<cv::Point2f> corners_2d_rgb;
 
   bool corner_result_rgb = getCorners(rgb_img_rect, patternsize_, corners_2d_rgb);
-
   if (!corner_result_rgb)
   {
-    ROS_WARN("Corner detection failed. Skipping image pair %d.", img_idx);
-    return;
-    //img_idx++;
-    //continue;
+    ROS_WARN("[%d] Corner detection failed. Skipping image pair", img_idx);
+    return false;
   }
   
   // show images with corners
   showCornersImage(rgb_img_rect, patternsize_, corners_2d_rgb, 
                    corner_result_rgb, "RGB Corners");
-  cv::waitKey(0);
+  cv::waitKey(500);
   
   // get pose from RGB camera to checkerboard
+  ROS_INFO("[%d] Solving PnP...", img_idx);
   cv::Mat rvec, tvec;
   bool pnp_result = solvePnP(corners_3d_, corners_2d_rgb, 
     intr_rect_rgb_, cv::Mat(), rvec, tvec);
 
-  std::cout << "rvec" << std::endl << rvec << std::endl; 
-  std::cout << "tvec" << std::endl << tvec << std::endl;
-
+  if (!pnp_result)
+  {
+    ROS_WARN("[%d] PnP failed. Skipping image pair.", img_idx);
+    return false;
+  }
+  
   cv::Mat rgb_to_board;
   matrixFromRvecTvec(rvec, tvec, rgb_to_board);
   
@@ -203,15 +210,35 @@ void DepthCalibrator::calibrate()
   //showBlendedImage(depth_img_rect,     rgb_img_rect, "Unregistered");
   //showBlendedImage(depth_img_rect_reg, rgb_img_rect, "Registered");  
   //cv::waitKey(0);
-    
-  // **** build point cloud 
-  PointCloudT cloud;
-  buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, cloud);
-  pcl::io::savePCDFileBinary<PointT>(cloud_filename1_, cloud);
+     
+  // **** filter depth image by contours
+  Point2fVector vertices;
+  getCheckerBoardPolygon(corners_2d_rgb, n_rows_, n_cols_, vertices);
   
-  // **** build detected checkerboard cloud
-  PointCloudT d_cloud;
- 
+  for (int u = 0; u < depth_img_rect_reg.cols; ++u)  
+  for (int v = 0; v < depth_img_rect_reg.rows; ++v)
+  {
+    float dist = cv::pointPolygonTest(vertices, cv::Point2f(u,v), true);
+    if (dist <= 0)
+      depth_img_rect_reg.at<uint16_t>(v, u) = 0;
+  }
+  
+  // **** build measured point cloud  
+  PointCloudT m_cloud;
+  buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, m_cloud);
+  
+  // **** build ground-truth depth image from checkerboard
+  cv::Mat depth_img_gt;
+  
+  buildCheckerboardDepthImage(
+    corners_3d_, vertices, depth_img_rect_reg.rows, depth_img_rect_reg.cols,
+    rvec, tvec, intr_rect_rgb_, depth_img_gt);
+    
+  // **** build ground-truth point cloud  
+  PointCloudT g_cloud;
+  buildPointCloud(depth_img_gt, rgb_img_rect, intr_rect_rgb_, g_cloud);
+  
+/*
   for (unsigned int cn_idx = 0; cn_idx < corners_3d_.size(); ++cn_idx)
   {
     const cv::Point3f& corner = corners_3d_[cn_idx];
@@ -228,19 +255,22 @@ void DepthCalibrator::calibrate()
     pt.y = corner_tf.at<double>(1,0);
     pt.z = corner_tf.at<double>(2,0);
                   
-    d_cloud.push_back(pt);
+    g_cloud.push_back(pt);
   }
+  */
   
-  pcl::io::savePCDFileBinary<PointT>(cloud_filename2_, d_cloud);
-}
-
-void DepthCalibrator::testPlaneDetection(
-  const cv::Mat& rgb_img_rect,
-  const cv::Mat& depth_img_rect,
-  const cv::Mat& rvec,
-  const cv::Mat& tvec)
-{
-
+  // **** save clouds
+  ROS_INFO("[%d] Saving clouds", img_idx);
+  std::stringstream ss_filename;
+  ss_filename << std::setw(4) << std::setfill('0') << img_idx << ".pcd";
+  
+  std::string m_cloud_filename = path_  + "m_" +  ss_filename.str();
+  std::string g_cloud_filename = path_  + "g_" +  ss_filename.str();
+  
+  pcl::io::savePCDFileBinary<PointT>(m_cloud_filename, m_cloud);
+  pcl::io::savePCDFileBinary<PointT>(g_cloud_filename, g_cloud); 
+  
+  return true;
 }
 
 } //namespace ccny_rgbd
