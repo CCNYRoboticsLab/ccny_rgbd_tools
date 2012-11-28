@@ -23,13 +23,13 @@ FeatureDetector::FeatureDetector(ros::NodeHandle nh, ros::NodeHandle nh_private)
 
   if (publish_features_)
   {
-    features_publisher_ = nh_.advertise<PointCloudFeature>(
+    features_publisher_ = nh_private.advertise<PointCloudFeature>(
       "features", 1);
   }
 
   if (publish_covariances_)
   {
-    covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
+    covariances_publisher_ = nh_private.advertise<visualization_msgs::Marker>(
       "/covariances", 1);
   }
 }
@@ -91,7 +91,7 @@ void FeatureDetector::publishCovariances(RGBDFrame& frame)
 {
   // create markers
   visualization_msgs::Marker marker;
-  marker.header = frame.header;
+  marker.header = frame.header_;
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.color.r = 1.0;
   marker.color.g = 1.0;

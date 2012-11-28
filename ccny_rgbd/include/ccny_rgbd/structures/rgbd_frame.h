@@ -30,10 +30,13 @@ class RGBDFrame
     RGBDFrame();
     
     RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
+              const sensor_msgs::CameraInfoConstPtr& info_msg);
+
+    RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
               const sensor_msgs::ImageConstPtr& depth_msg,
               const sensor_msgs::CameraInfoConstPtr& info_msg);
     
-    std_msgs::Header header;
+    std_msgs::Header header_;
 
     PointCloudFeature features; // no NaNs
       

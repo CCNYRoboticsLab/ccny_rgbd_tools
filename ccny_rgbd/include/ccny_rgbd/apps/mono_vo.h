@@ -1,5 +1,5 @@
-#ifndef CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
-#define CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
+#ifndef CCNY_RGBD_MONO_VO
+#define CCNY_RGBD_MONO_VO
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -12,6 +12,7 @@
 #include <tf/transform_broadcaster.h>
 #include <pcl/point_types.h>
 #include <pcl/io/io.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/correspondence_rejection_sample_consensus.h>
@@ -22,6 +23,8 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+
+//#include <opencv2/calib3d/calib3d.hpp>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
@@ -41,14 +44,14 @@ namespace ccny_rgbd
 
 using namespace message_filters::sync_policies;
 
-class VisualOdometry
+class MonocularVisualOdometry
 {
   typedef nav_msgs::Odometry OdomMsg;
 
   public:
 
-    VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private);
-    virtual ~VisualOdometry();
+    MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    virtual ~MonocularVisualOdometry();
 
   private:
 
@@ -60,24 +63,22 @@ class VisualOdometry
     tf::TransformBroadcaster tf_broadcaster_;
     ros::Publisher odom_publisher_;
 
-    boost::shared_ptr<image_transport::ImageTransport> rgb_it_;
-    boost::shared_ptr<image_transport::ImageTransport> depth_it_;
-    boost::shared_ptr<Synchronizer> sync_;
-       
-    ImageSubFilter      sub_depth_;
+//    boost::shared_ptr<image_transport::ImageTransport> rgb_it_;
+    boost::shared_ptr<SynchronizerMonoVO> sync_;
+
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;
 
     // **** parameters 
 
+    std::string pcd_filename_;
     std::string fixed_frame_; 
     std::string base_frame_;
 
     std::string detector_type_;
-    std::string reg_type_;
 
     // **** variables
-
+    boost::mutex mutex_lock_; ///< Thread lock on subscribed input images
     boost::mutex mutex_;
     bool initialized_;
     int  frame_count_;
@@ -89,21 +90,31 @@ class VisualOdometry
     FeatureDetector * feature_detector_;
 
     MotionEstimation * motion_estimation_;
-  
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
+
+    // Camera parameters
+    cv::Mat K_; ///< intrinsic parameter matrix
+    cv::Mat R_; ///< rotation matrix
+    cv::Mat T_; ///< translation vector
+    cv::Mat rvec_; //< rotation vector
+    cv::Mat tvec_; ///< translation vector
+    cv::Mat dist_coeffs_; ///< distortion coefficients
+    double sensor_aperture_width_, sensor_aperture_height_; // TODO: find out values
+    cv::Point2d principal_point_; ///< Location of principal/optical center point in perspective camera (obtained from calibration)
+
     // **** private functions
 
-    void imageCb(const ImageMsg::ConstPtr& depth_msg,
-                 const ImageMsg::ConstPtr& rgb_msg,
-                 const CameraInfoMsg::ConstPtr& info_msg);
-
+    void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
+    void processCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam_info_ptr);
     void initParams();
-
     void publishTf(const std_msgs::Header& header);
 
     bool getBaseToCameraTf(const std_msgs::Header& header);
     void setFeatureDetector();
+    bool readPointCloudFromPCDFile(); ///< Returns true if PCD file was read successfully.
 };
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
+#endif // CCNY_RGBD_MONO_VO

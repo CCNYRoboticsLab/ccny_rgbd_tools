@@ -2,6 +2,19 @@
 
 namespace ccny_rgbd {
 
+void VisualOdometry::setFeatureDetector()
+{
+  // feature params
+  if (detector_type_ == "ORB")
+    feature_detector_ = new OrbDetector(nh_, nh_private_);
+  else if (detector_type_ == "SURF")
+    feature_detector_ = new SurfDetector(nh_, nh_private_);
+  else if (detector_type_ == "GFT")
+    feature_detector_ = new GftDetector(nh_, nh_private_);
+  else
+    ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
+}
+
 VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), 
   nh_private_(nh_private),
@@ -19,14 +32,7 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   f2b_.setIdentity();
 
   // feature params
-  if      (detector_type_ == "ORB")
-    feature_detector_ = new OrbDetector(nh_, nh_private_);
-  else if (detector_type_ == "SURF")
-    feature_detector_ = new SurfDetector(nh_, nh_private_);
-  else if (detector_type_ == "GFT")
-    feature_detector_ = new GftDetector(nh_, nh_private_);
-  else
-    ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
+  setFeatureDetector();
 
   // registration params
   if      (reg_type_ == "ICP")

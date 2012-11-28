@@ -11,10 +11,30 @@ RGBDFrame::RGBDFrame():
 }
 
 RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
-                     const sensor_msgs::ImageConstPtr& depth_msg,
                      const sensor_msgs::CameraInfoConstPtr& info_msg):
   keypoints_computed(false),
   descriptors_computed(false)  
+{
+  depth_factor_ = 0.02; // FIXME: proper distortion calibration
+
+  // TODO: Share vs copy?
+  // Answer by Carlos: I believe you would prefer to copy here because you are dealing with fast frames whose processing may not be mutually exclussive
+  cv_ptr_rgb_   = cv_bridge::toCvCopy(rgb_msg);
+
+  // create camera model
+  model_.fromCameraInfo(info_msg);
+
+  // record header - frame is from RGB camera
+  header_ = rgb_msg->header;
+}
+
+
+
+RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
+                     const sensor_msgs::ImageConstPtr& depth_msg,
+                     const sensor_msgs::CameraInfoConstPtr& info_msg):
+  keypoints_computed(false),
+  descriptors_computed(false)
 {
   depth_factor_ = 0.02; // FIXME: proper distortion calibration
 
@@ -26,7 +46,7 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   model_.fromCameraInfo(info_msg);
 
   // record header - frame is from RGB camera
-  header = rgb_msg->header;
+  header_ = rgb_msg->header;
 }
 
 // input - z [meters]
@@ -233,7 +253,7 @@ void RGBDFrame::constructFeatureCloud(float max_range, bool filter)
     }
   }
 
-  features.header = header;
+  features.header = header_;
   features.height = 1;
   features.width = features.points.size();
   features.is_dense = true;

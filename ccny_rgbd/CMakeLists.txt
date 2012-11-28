@@ -112,6 +112,25 @@ target_link_libraries (octree_mapper_node
 )
 
 ################################################################
+# Build Monocular visual odometry application
+################################################################
+
+rosbuild_add_executable(mono_vo_node 
+  src/node/mono_vo_node.cpp
+  src/apps/mono_vo.cpp)
+
+target_link_libraries (mono_vo_node 
+  ccny_rgbd_structures
+  ccny_rgbd_features
+  ccny_rgbd_mapping
+  ccny_rgbd_registration
+  ccny_rgbd_util
+  ${OPENCV_LIBRARIES}
+  boost_signals 
+  boost_system
+)
+
+################################################################
 # Build logger application
 ################################################################
 
