@@ -5,10 +5,10 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <visualization_msgs/Marker.h>
+#include <pcl/io/pcd_io.h>
 
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/structures/feature_history.h"
-
 #include "ccny_rgbd/Save.h"
 
 namespace ccny_rgbd

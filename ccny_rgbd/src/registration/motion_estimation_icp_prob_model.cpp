@@ -417,7 +417,7 @@ bool MotionEstimationICPProbModel::saveSrvCallback(
   ROS_INFO("Saving to %s...", request.filename.c_str());
   ROS_INFO("Map has %dK points", (int) model_ptr_->points.size()/1024);
 
-  pcl::io::savePCDFileBinary<PointT>(request.filename, *model_ptr_);
+  pcl::io::savePCDFileBinary<pcl::PointXYZ> (request.filename, *model_ptr_);
   //pcl::io::savePLYFile<PointT>(request.filename + ".ply", *model_ptr_);
 
   ROS_INFO("Save sparse map successfully");
