@@ -67,11 +67,11 @@ def processFile(filename):
   file.close()
   
   u,v  = 20, 20
-  index = u * 640 + v 
+  index = v * 640 + u 
   coeff = fitLine(lines[index])
   
   u,v  = 320, 240
-  index = u * 640 + v 
+  index = v * 640 + u 
   coeff = fitLine(lines[index])
   
   
