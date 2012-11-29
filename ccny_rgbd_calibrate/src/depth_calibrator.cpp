@@ -142,6 +142,11 @@ void DepthCalibrator::calibrate()
   buildRectMaps();
   build3dCornerVector();
   
+  cv::Mat count_img = cv::Mat::zeros(480, 640, CV_8UC1);
+  
+  std::vector<ReadingVector> readings;
+  readings.resize(640*480);
+  
   int img_idx = 0;
   while(true)
   {
@@ -149,20 +154,82 @@ void DepthCalibrator::calibrate()
     bool load_result = loadCalibrationImagePair(img_idx, rgb_img, depth_img);  
     if (!load_result)
     {
-      ROS_INFO("Images %d not found. Assuming end of sequence");
+      ROS_INFO("Images %d not found. Assuming end of sequence", img_idx);
       break;
     }
     
-    bool result = processTrainingImagePair(img_idx, rgb_img, depth_img);
+    // process the images
+    cv::Mat depth_img_g, depth_img_m;
+    bool result = processTrainingImagePair(
+      img_idx, rgb_img, depth_img, depth_img_g, depth_img_m);
+    if (!result) continue;
+    
+    // accumulate 
+    for (int u = 0; u < 640; ++u)
+    for (int v = 0; v < 480; ++v)
+    {
+      uint16_t mz = depth_img_m.at<uint16_t>(v, u);
+      uint16_t gz = depth_img_g.at<uint16_t>(v, u);      
+      
+      if (mz != 0 && gz != 0)
+      {
+        count_img.at<uint8_t>(v, u) += 10;
+      
+        ReadingVector& vec = readings[v*640 + u];
+      
+        ReadingPair p;
+        p.ground_truth = gz;
+        p.measured = mz;
+        vec.push_back(p);
+      }
+    }
+    
+    cv::imshow("count", count_img);
+    cv::waitKey(1);
+       
+    // increment image index
     img_idx++;
   }
+  
+  // write to file filename
+  ROS_INFO ("Writing to file");
+  std::ofstream datafile;
+  std::string data_filename = path_ + "data.txt";
+  datafile.open(data_filename.c_str());
+  
+  for (int idx = 0; idx < 640*480; ++idx)
+  {
+    int u = idx % 640;
+    int v = idx / 640;
+
+    ReadingVector& vec = readings[idx];
+    
+    datafile << u << " " << v;
+    
+    for (unsigned int j = 0; j < vec.size(); ++j)
+    {
+      datafile << " " << vec[j].ground_truth;
+      datafile << " " << vec[j].measured;
+    }
+    
+    datafile << std::endl;
+  }
+  
+  datafile.close();
+  
+  cv::waitKey(0);
 }
 
 bool DepthCalibrator::processTrainingImagePair(
   int img_idx,
   const cv::Mat& rgb_img,
-  const cv::Mat& depth_img)
+  const cv::Mat& depth_img,
+  cv::Mat& depth_img_g,
+  cv::Mat& depth_img_m)
 {
+  depth_img_g = cv::Mat(rgb_img.size(), CV_16UC1);
+  depth_img_m = cv::Mat(rgb_img.size(), CV_16UC1);
+  
   // rectify
   cv::Mat rgb_img_rect, depth_img_rect; // rectified images 
   cv::remap(rgb_img,   rgb_img_rect,   map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
@@ -182,7 +249,7 @@ bool DepthCalibrator::processTrainingImagePair(
   // show images with corners
   showCornersImage(rgb_img_rect, patternsize_, corners_2d_rgb, 
                    corner_result_rgb, "RGB Corners");
-  cv::waitKey(500);
+  cv::waitKey(1);
   
   // get pose from RGB camera to checkerboard
   ROS_INFO("[%d] Solving PnP...", img_idx);
@@ -200,6 +267,7 @@ bool DepthCalibrator::processTrainingImagePair(
   matrixFromRvecTvec(rvec, tvec, rgb_to_board);
   
   // **** reproject
+  ROS_INFO("[%d] Reprojecting depth image", img_idx);
   cv::Mat depth_img_rect_reg;
   
   buildRegisteredDepthImage(
@@ -220,23 +288,24 @@ bool DepthCalibrator::processTrainingImagePair(
   {
     float dist = cv::pointPolygonTest(vertices, cv::Point2f(u,v), true);
     if (dist <= 0)
-      depth_img_rect_reg.at<uint16_t>(v, u) = 0;
+      depth_img_m.at<uint16_t>(v, u) = 0;
+    else
+      depth_img_m.at<uint16_t>(v, u) = depth_img_rect_reg.at<uint16_t>(v, u);
   }
   
   // **** build measured point cloud  
   PointCloudT m_cloud;
-  buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, m_cloud);
+  buildPointCloud(depth_img_m, rgb_img_rect, intr_rect_rgb_, m_cloud);
   
   // **** build ground-truth depth image from checkerboard
-  cv::Mat depth_img_gt;
-  
+ 
   buildCheckerboardDepthImage(
-    corners_3d_, vertices, depth_img_rect_reg.rows, depth_img_rect_reg.cols,
-    rvec, tvec, intr_rect_rgb_, depth_img_gt);
+    corners_3d_, vertices, depth_img_g.rows, depth_img_g.cols,
+    rvec, tvec, intr_rect_rgb_, depth_img_g);
     
   // **** build ground-truth point cloud  
   PointCloudT g_cloud;
-  buildPointCloud(depth_img_gt, rgb_img_rect, intr_rect_rgb_, g_cloud);
+  buildPointCloud(depth_img_g, rgb_img_rect, intr_rect_rgb_, g_cloud);
   
 /*
   for (unsigned int cn_idx = 0; cn_idx < corners_3d_.size(); ++cn_idx)

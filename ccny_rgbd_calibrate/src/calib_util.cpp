@@ -42,13 +42,6 @@ void blendImages(
   }
 }
   
-/*
- * Constructs a point cloud, given a depth image which
- * has been undistorted and registered in the rgb frame, 
- * and an rgb image.
- * The intinsic matrix is the RGB matrix after rectification
- * The depth image is uint16_t, in mm
- */
 void buildPointCloud(
   const cv::Mat& depth_img_rect_reg,
   const cv::Mat& rgb_img_rect,
@@ -92,9 +85,6 @@ void buildPointCloud(
   }  
 }
 
-/* reprojects a depth image to another depth image,
- * registered in the rgb camera's frame
- */
 void buildRegisteredDepthImage(
   const cv::Mat& intr_rect_ir,
   const cv::Mat& intr_rect_rgb,
@@ -212,8 +202,7 @@ void showBlendedImage(
   
   // blend and show
   cv::Mat blend_img;
-  blendImages(rgb_img, depth_img_u, blend_img);
-  
+  blendImages(rgb_img, depth_img_u, blend_img); 
   cv::imshow(title, blend_img);
 }
 
@@ -224,23 +213,18 @@ void showCornersImage(
   bool corner_result,
   const std::string title)
 { 
-  cv::Mat img_corners = img;
+  cv::Mat img_corners = img.clone();
   cv::drawChessboardCorners(
   img_corners, pattern_size, cv::Mat(corners_2d), corner_result);
   cv::imshow(title, img_corners);    
 }
 
-/* Given a set of detected checkerboard corners,
- * outputs the 4 vertices of a rectangle which describes
- * the checkerboard, plus a small margin around it
- * to caprure the border squares
- */
 void getCheckerBoardPolygon(
   const Point2fVector& corners_2d,
   int n_rows, int n_cols,
   Point2fVector& vertices)
 {
-  cv::Point2f d = (corners_2d[0] - corners_2d[n_cols+1])*0.75; 
+  cv::Point2f d = (corners_2d[0] - corners_2d[n_cols+1])*0.6; 
   vertices.resize(4);
   
   vertices[0] = cv::Point2f(+d.x, +d.y) + corners_2d[0];

@@ -19,6 +19,13 @@ namespace ccny_rgbd
 class DepthCalibrator
 {
  
+  typedef struct  {
+    uint16_t ground_truth;
+    uint16_t measured;
+  } ReadingPair;
+  
+  typedef std::vector<ReadingPair> ReadingVector;
+    
   public:
 
     DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
@@ -84,7 +91,9 @@ class DepthCalibrator
     bool processTrainingImagePair(
       int img_idx,
       const cv::Mat& rgb_img,
-      const cv::Mat& depth_img);
+      const cv::Mat& depth_img,
+      cv::Mat& depth_img_g,
+      cv::Mat& depth_img_m);
 };
 
 } //namespace ccny_rgbd

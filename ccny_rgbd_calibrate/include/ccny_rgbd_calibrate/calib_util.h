@@ -39,7 +39,7 @@ void buildPointCloud(
   
 void blendImages(const cv::Mat& rgb_img,
                  const cv::Mat depth_img,
-                    cv::Mat& blend_img);
+                 cv::Mat& blend_img);
   
 void matrixFromRvecTvec(const cv::Mat& rvec,
                         const cv::Mat& tvec,
@@ -49,16 +49,24 @@ void matrixFromRT(const cv::Mat& rmat,
                   const cv::Mat& tvec,
                   cv::Mat& E);
 
+/* creates an 8-bit depth image from a 
+ * 16-bit depth image in mm
+ */
 void create8bImage(
   const cv::Mat depth_img,
   cv::Mat& depth_img_u);
   
-
+/* Given an image and a pattern size, detects and
+ * returns a vector of checkerboard corners 
+ */
 bool getCorners(
   const cv::Mat& img,
   const cv::Size& pattern_size,
   std::vector<cv::Point2f>& corners);
 
+/* Given a depth and an rgb image, it blends them
+ * and displays the result 
+ */
 void showBlendedImage(
   const cv::Mat& depth_img,
   const cv::Mat& rgb_img,
