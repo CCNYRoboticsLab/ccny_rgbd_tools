@@ -27,7 +27,7 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat * input_img)
   if(compute_descriptors_)
   {
     orb_descriptor_.compute(*input_img, frame.keypoints, frame.descriptors);
-    frame.descriptors_computed = true;
+    frame.descriptors_computed_ = true;
   }
 }
 

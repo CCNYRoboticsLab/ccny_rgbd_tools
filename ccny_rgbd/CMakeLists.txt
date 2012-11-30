@@ -42,6 +42,11 @@ rosbuild_add_library (ccny_rgbd_structures
   src/structures/feature_history.cpp
 )
 
+rosbuild_add_library (ccny_monocular_structures
+  src/structures/monocular_frame.cpp
+  src/structures/rgbd_frame.cpp
+)
+
 rosbuild_add_library (ccny_rgbd_features
   src/features/feature_detector.cpp
   src/features/orb_detector.cpp
@@ -150,7 +155,7 @@ rosbuild_add_executable(mono_vo_node
   src/apps/mono_vo.cpp)
 
 target_link_libraries (mono_vo_node 
-  ccny_rgbd_structures
+  ccny_monocular_structures
   ccny_rgbd_features
   ccny_rgbd_mapping
   ccny_rgbd_registration

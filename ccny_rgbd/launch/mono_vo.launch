@@ -1,15 +1,23 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
-
+  <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="apt_01_qvga" /> # Bag name only (Without extension)
+  <arg name="PATH_TO_PCD" value="$(env HOME)/ros/PCDs" />
+  <arg name="PCD_NAME" value="apt1.pcd" /> # PCD file name (with extension)
+  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
+  <arg name="FULL_PCD_NAME" value="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
+  <arg name="BAG_PLAY_DELAY" value="0.0" /> # Delay in seconds to start the bag's playback
+  
   # ORB, SURF, GTF, KLT
   <arg name="detector_type" default="GFT"/> 
 
-  <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
+  <node pkg="ccny_rgbd" type="mono_vo_node" name="mono_vo_node" 
     output="screen">
 
     # PCD file location
-    <param name="PCD_filename" value="$(find ccny_rgbd)/data/apt1.pcd"/> 
+    <param name="apps/mono_vo/PCD_filename" value="$(arg FULL_PCD_NAME)"/> 
+    <param name="apps/mono_vo/publish_cloud_model" value="true"/> 
 
     <param name="fixed_frame" value="/odom"/>
     <param name="base_frame"  value="/camera_link"/>
@@ -19,14 +27,13 @@
     <param name="feature/detector_type"       value="$(arg detector_type)"/> #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/compute_descriptors" value="false"/>
     <param name="feature/smooth"              value="0"/>
-    <param name="feature/max_range"           value="7.0"/>
-    <param name="feature/show_image"          value="false"/>
-    <param name="feature/show_keypoints"      value="false"/>
+    <param name="feature/show_keypoints"      value="true"/>
 
     #### features: GFT ################################
 
     <param name="feature/GFT/n_features"   value = "150"/>
     <param name="feature/GFT/min_distance" value = "0.0"/>
+    <param name="feature/GFT/quality_level"   value = "0.01"/>
     <param name="feature/GFT/grid_cells"   value = "1"/>
 
     #### features: SURF ###############################
@@ -38,34 +45,19 @@
   
     <param name="feature/ORB/n_features"     value = "300"/>
     <param name="feature/ORB/edge_threshold" value = "31"/>
-
-    #### registration #################################
-
-    <param name="reg/reg_type"          value="$(arg reg_type)"/>
-    <param name="reg/motion_constraint" value="0"/>
-
-    #### registration: ICP ############################
-
-    <param name="reg/ICP/history_size"            value="5"/>
-    <param name="reg/ICP/max_iterations"          value="10"/>
-    <param name="reg/ICP/max_corresp_dist"        value="0.20"/>
-    <param name="reg/ICP/tf_epsilon"              value="1e-4"/>
-    <param name="reg/ICP/use_ransac_rejection"    value="false"/>
-    <param name="reg/ICP/ransac_inlier_threshold" value="0.15"/>
-
-    #### registration: ICP Prob Model #################
-
-    <param name="reg/ICPProbModel/max_iterations"          value="15"/>
-    <param name="reg/ICPProbModel/max_corresp_dist"        value="0.20"/>
-    <param name="reg/ICPProbModel/tf_epsilon"              value="1e-6"/>
-    <param name="reg/ICPProbModel/use_ransac_rejection"    value="false"/>
-    <param name="reg/ICPProbModel/ransac_inlier_threshold" value="0.15"/>
-
-    <param name="reg/ICPProbModel/max_model_size"       value="5000"/>
-    <param name="reg/ICPProbModel/max_association_dist" value="10.0"/>
-    <param name="reg/ICPProbModel/n_nearest_neighbors"  value="2"/>
-
   </node>
+
+  # NOTES:
+  # the openni's camera_nodelet_manager expects the 3 following topics:
+  #         /camera/depth_registered/image_raw
+  #         /camera/depth_registered/camera_info
+  #         /camera/rgb/image_raw
+  #         /camera/rgb/camera_info
+  <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
+      <arg name="path" value="$(arg PATH_TO_BAG)" />
+      <arg name="bag_name" value="$(arg BAG_NAME).bag" />
+      <arg name="play_delay" value="$(arg BAG_PLAY_DELAY)" />
+  </include>
 
 </launch>
 

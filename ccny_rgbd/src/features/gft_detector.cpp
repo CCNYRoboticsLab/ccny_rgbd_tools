@@ -8,13 +8,16 @@ GftDetector::GftDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
 {
   if (!nh_private_.getParam ("feature/GFT/n_features", n_features_))
     n_features_ = 200;
+  if (!nh_private_.getParam ("feature/GFT/quality_level", quality_level_))
+    quality_level_ = 0.01;
   if (!nh_private_.getParam ("feature/GFT/min_distance", min_distance_))
     min_distance_ = 1.0;
+
   if (!nh_private_.getParam ("feature/GFT/grid_cells", grid_cells_))
     grid_cells_ = 1;
 
   gft_detector_ = new cv::GoodFeaturesToTrackDetector(
-    n_features_, 0.01, min_distance_);
+    n_features_, quality_level_, min_distance_);
 
   grid_detector_ = new cv::GridAdaptedFeatureDetector(
     gft_detector_, n_features_, grid_cells_, grid_cells_);

@@ -2,6 +2,78 @@
 
 namespace ccny_rgbd {
 
+MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
+  nh_(nh), 
+  nh_private_(nh_private),
+  initialized_(false),
+  frame_count_(0)
+{
+  ROS_INFO("Starting Monocular Visual Odometry from a 3D Sparse Model");
+  // **** init parameters
+
+  initParams();
+
+  // **** init variables
+  f2b_.setIdentity();
+
+  // **** publishers
+  pub_model_ = nh_.advertise<PointCloudFeature>(
+   "sparse_model", 1);
+  odom_publisher_ = nh_.advertise<OdomMsg>(
+    "odom", 5);
+
+  // **** subscribers
+  image_transport::ImageTransport rgb_it(nh_);
+  sub_rgb_.subscribe(
+    rgb_it, "/camera/rgb/image_rect_color", 1);
+  sub_info_.subscribe(
+    nh_, "/camera/rgb/camera_info", 1);
+
+  // feature params
+  setFeatureDetector();
+
+  if(readPointCloudFromPCDFile()==false)
+    ROS_FATAL("The sky needs its point cloud to operate!");
+
+
+  // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
+  int queue_size = 5;
+  sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
+  sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
+
+}
+
+MonocularVisualOdometry::~MonocularVisualOdometry()
+{
+  ROS_INFO("Destroying Monocular Visual Odometry");
+
+  delete feature_detector_;
+}
+
+void MonocularVisualOdometry::initParams()
+{
+  // PCD File
+  if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
+    pcd_filename_ = "cloud.pcd";
+
+  // **** frames
+  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
+    fixed_frame_ = "/odom";
+  if (!nh_private_.getParam ("base_frame", base_frame_))
+    base_frame_ = "/camera_link";
+
+  if (!nh_private_.getParam ("feature/detector_type", detector_type_))
+    detector_type_ = "GFT";
+
+  if (!nh_private_.getParam ("apps/mono_vo/publish_cloud_model", publish_cloud_model_))
+    publish_cloud_model_ = false;
+
+  // TODO: find the right values:
+  nh_private_.param("app/mono_vo/sensor_aperture_width", sensor_aperture_width_, 4.8); // Default for a 1/3" = 4.8 mm
+  nh_private_.param("app/mono_vo/sensor_aperture_height", sensor_aperture_height_, 3.6); // Default for a 1/3" = 3.6 mm
+
+}
+
 void MonocularVisualOdometry::setFeatureDetector()
 {
   // feature params
@@ -17,16 +89,20 @@ void MonocularVisualOdometry::setFeatureDetector()
 
 bool MonocularVisualOdometry::readPointCloudFromPCDFile()
 {
-  cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+//  cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+  model_ptr_ = PointCloudFeature::Ptr(new PointCloudFeature);
 
-  if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcd_filename_, *cloud_) == -1) //* load the file
+  if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcd_filename_, *model_ptr_) == -1) //* load the file
   {
     PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
     return false;
   }
+  model_ptr_->header.frame_id = fixed_frame_;
+  model_ptr_->header.stamp = ros::Time::now();
+
   std::cout << "Loaded "
-      << cloud_->width * cloud_->height
-      << " data points from test_pcd.pcd with the following fields: "
+      << model_ptr_->width * model_ptr_->height
+      << " data points from " << pcd_filename_ << " with header = " <<   model_ptr_->header.frame_id
       << std::endl;
 //  for (size_t i = 0; i < cloud_->points.size (); ++i)
 //    std::cout << "    " << cloud->points[i].x
@@ -34,71 +110,6 @@ bool MonocularVisualOdometry::readPointCloudFromPCDFile()
 //    << " "    << cloud->points[i].z << std::endl;
 
   return true;
-}
-
-MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  nh_(nh), 
-  nh_private_(nh_private),
-  initialized_(false),
-  frame_count_(0)
-{
-  ROS_INFO("Starting RGBD Visual Odometry");
-  // **** init parameters
-
-  initParams();
-
-  // **** init variables
-
-  f2b_.setIdentity();
-
-  // feature params
-  setFeatureDetector();
-  if(readPointCloudFromPCDFile()==false)
-    ROS_FATAL("The sky needs its point cloud to operate!");
-
-  // **** publishers
-  odom_publisher_ = nh_.advertise<OdomMsg>(
-    "odom", 5);
-
-  // **** subscribers
-  image_transport::ImageTransport rgb_it(nh_);
-  sub_rgb_.subscribe(
-    rgb_it, "/camera/rgb/image_rect_color", 1);
-  sub_info_.subscribe(
-    nh_, "/camera/rgb/camera_info", 1);
-
-  // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  int queue_size = 5;
-  sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
-  sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
-}
-
-MonocularVisualOdometry::~MonocularVisualOdometry()
-{
-  ROS_INFO("Destroying Monocular Visual Odometry");
-
-  delete feature_detector_;
-}
-
-void MonocularVisualOdometry::initParams()
-{
-  // PCD File
-  if(!nh_private_.getParam("PCD_filename", pcd_filename_))
-    pcd_filename_ = "cloud.pcd";
-
-  // **** frames
-  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
-    fixed_frame_ = "/odom";
-  if (!nh_private_.getParam ("base_frame", base_frame_))
-    base_frame_ = "/camera_link";
-
-  if (!nh_private_.getParam ("feature/detector_type", detector_type_))
-    detector_type_ = "GFT";
-
-  // FIXME: find the right values:
-  nh_private_.param("sensor_aperture_width", sensor_aperture_width_, 4.8); // Default for a 1/3" = 4.8 mm
-  nh_private_.param("sensor_aperture_height", sensor_aperture_height_, 3.6); // Default for a 1/3" = 3.6 mm
-
 }
 
 void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -118,44 +129,27 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     motion_estimation_->setBaseToCameraTf(b2c_);
   }
 
-  processCameraInfo(info_msg);
-
   // **** create frame *************************************************
 
   ros::WallTime start_frame = ros::WallTime::now();
-  RGBDFrame frame(rgb_msg, info_msg);
+  MonocularFrame frame(rgb_msg, info_msg);
+  frame.setCameraAperture(sensor_aperture_width_, sensor_aperture_height_);
+
   ros::WallTime end_frame = ros::WallTime::now();
 
   // **** find features ************************************************
 
   ros::WallTime start_features = ros::WallTime::now();
-  feature_detector_->findFeatures(frame);
+  feature_detector_->onlyFind2DFeatures(frame);
   ros::WallTime end_features = ros::WallTime::now();
 
   // ------- Perspective projection of cloud 3D points onto image plane
   ros::WallTime start_3D_cloud_projection = ros::WallTime::now();
-  // TODO
-  // projectPoints(InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray jacobian=noArray(), double aspectRatio=0 )
   // Assume known initial position of camera position at the origin of the world center of coordinates
   // TODO: needs a base2cam static transformation to correct for the camera coordinates in the world where +Z is point upwards
-  // ---------------------------------------------------------------
-  std::vector<cv::Point3f> objectPoints3D;
-  float cloud_point_x, cloud_point_y, cloud_point_z; // TODO: Get each 3D point from the cloud
-  cv::Point3f cloud_point(cloud_point_x, cloud_point_y, cloud_point_z);
-  objectPoints3D.push_back(cloud_point);
-
   // NOTE: the OpenNI driver publishes the static transformation (doing the rotation of the axis) between the rgb optical frame (/camera_rgb_optical_frame) and the /camera_link
-  std::vector<cv::Point2f> projectedPoints;
-  // With rectified image:
-//  cv::projectPoints(objectPoints3D, rvec, tvec, instrinsicRectifiedCamMatrix , distCoeffs, projectedPoints);
-  cv::projectPoints(objectPoints3D, rvec_, tvec_, K_, dist_coeffs_, projectedPoints);
-
-  for(unsigned int i = 0; i < projectedPoints.size(); ++i)
-    {
-    std::cout << "3D Object point: " << objectPoints3D[i] << " Projected to " << projectedPoints[i] << std::endl;
-    }
-
-
+  // ---------------------------------------------------------------
+  is_first_time_projecting_ = frame.project3DModelToCamera(model_ptr_, is_first_time_projecting_);
   ros::WallTime end_3D_cloud_projection = ros::WallTime::now();
 
   // **** registration *************************************************
@@ -198,95 +192,14 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   frame_count_++;
 
+  if(publish_cloud_model_)
+  {
+    printf("Publishing model cloud read from PCD\n");
+    pub_model_.publish(*model_ptr_);
+  }
+
   mutex_lock_.unlock();
 }
-
-// %Tag(CALLBACK)%
-void MonocularVisualOdometry::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam_info_ptr)
-{
-  static bool first_time = true;
-  //  cv::Mat cameraMatrix(cv::Size(4,3), CV_64FC1);
-  // Projection/camera matrix
-  //     [fx'  0  cx' Tx]
-  // P = [ 0  fy' cy' Ty]
-  //     [ 0   0   1   0]
-  // Note that calibrationMatrixValues doesn't require the Tx,Ty column (it only takes the 3x3 intrinsic parameteres)
-  if(first_time)
-  {
-  // Create the known projection matrix (obtained from Calibration)
-  cv::Mat P(3,4,cv::DataType<float>::type);
-  P.at<float>(0,0) = cam_info_ptr->P[0];
-  P.at<float>(1,0) = cam_info_ptr->P[4];
-  P.at<float>(2,0) = cam_info_ptr->P[8];
-
-  P.at<float>(0,1) = cam_info_ptr->P[1];
-  P.at<float>(1,1) = cam_info_ptr->P[5];
-  P.at<float>(2,1) = cam_info_ptr->P[9];
-
-  P.at<float>(0,2) = cam_info_ptr->P[2];
-  P.at<float>(1,2) = cam_info_ptr->P[6];
-  P.at<float>(2,2) = cam_info_ptr->P[10];
-
-  P.at<float>(0,3) = cam_info_ptr->P[3];
-  P.at<float>(1,3) = cam_info_ptr->P[7];
-  P.at<float>(2,3) = cam_info_ptr->P[11];
-
-  // Decompose the projection matrix into:
-  K_.create(3,3,cv::DataType<float>::type); // intrinsic parameter matrix
-  R_.create(3,3,cv::DataType<float>::type); // rotation matrix
-  T_.create(4,1,cv::DataType<float>::type); // translation vector
-  cv::decomposeProjectionMatrix(P, K_, R_, T_);
-
-  cv::Rodrigues(R_, rvec_);
-  tvec_.create(3,1,cv::DataType<float>::type);
-  for(unsigned int t=0; t<3; t++)
-     tvec_.at<float>(t) = T_.at<float> (t);
-
-  // Create zero distortion
-   dist_coeffs_.create(cam_info_ptr->D.size(),1,cv::DataType<float>::type);
-//  cv::Mat distCoeffs(4,1,cv::DataType<float>::type, &cam_info_ptr->D.front());
-   for(unsigned int d=0; d<cam_info_ptr->D.size(); d++)
-   {
-     dist_coeffs_.at<float>(d) = cam_info_ptr->D[d];
-   }
-   //   distCoeffs.at<float>(0) = cam_info_ptr->D[0];
-   //   distCoeffs.at<float>(1) = cam_info_ptr->D[1];
-   //   distCoeffs.at<float>(2) = cam_info_ptr->D[2];
-   //   distCoeffs.at<float>(3) = cam_info_ptr->D[3];
-
-   std::cout << "Decomposed Matrix" << std::endl;
-   std::cout << "P: " << P << std::endl;
-   std::cout << "R: " << R_ << std::endl;
-   std::cout << "rvec_: " << rvec_ << std::endl;
-   std::cout << "t: " << T_ << std::endl;
-   std::cout << "tvec: " << tvec_ << std::endl;
-   std::cout << "K: " << K_ << std::endl;
-   std::cout << "Distortion: " << dist_coeffs_ << std::endl;
-
-
-   // More:
-   cv::Size imageSize(cam_info_ptr->width, cam_info_ptr->height);
-   double fovx ,fovy, focalLength;
-   double aspectRatio;
-
-   std::cout << "Sensor apertures: width = " << sensor_aperture_width_ << " height = " << sensor_aperture_height_ << std::endl;  // passed as parameters
-   std::cout << "Image Size: " << imageSize.width << ", " << imageSize.height << std::endl;
-
-   cv::calibrationMatrixValues(K_, imageSize, sensor_aperture_width_, sensor_aperture_height_, fovx, fovy, focalLength, principal_point_, aspectRatio);
-
-   std::cout << "Camera intrinsic parameters: " << std::endl
-       << "fovx=" << fovx << ", fovy=" << fovy << ", Focal Length= " << focalLength << " mm"
-       << ", Principal Point=" <<  principal_point_ << ", Aspect Ratio=" << aspectRatio
-       << std::endl;
-
-   // FIXME: why was I doing this?
-//     principal_point_.x += imageSize.width /2.0;
-//     principal_point_.y += imageSize.height /2.0;
-
-   first_time = false;
-  }
-}
-// %EndTag(CALLBACK)%
 
 void MonocularVisualOdometry::publishTf(const std_msgs::Header& header)
 {

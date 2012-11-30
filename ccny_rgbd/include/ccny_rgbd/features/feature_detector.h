@@ -30,6 +30,7 @@ class FeatureDetector
     virtual ~FeatureDetector();
 
     void findFeatures(RGBDFrame& frame);
+    void onlyFind2DFeatures(RGBDFrame& frame);
     inline double findFeaturesTimed(RGBDFrame& frame);
 
     virtual void findFeatures(RGBDFrame& frame, const cv::Mat * input_img) = 0;

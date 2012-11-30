@@ -23,12 +23,12 @@ SurfDetector::~SurfDetector()
 void SurfDetector::findFeatures(RGBDFrame& frame, const cv::Mat * input_img)
 {
   surf_detector_->detect(*input_img, frame.keypoints);
-  frame.keypoints_computed = true;
+  frame.keypoints_computed_ = true;
 
   if(compute_descriptors_)
   {
     surf_descriptor_.compute(*input_img, frame.keypoints, frame.descriptors);
-    frame.descriptors_computed = true;
+    frame.descriptors_computed_ = true;
   }
 }
 

@@ -28,7 +28,7 @@
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
+#include "ccny_rgbd/structures/monocular_frame.h"
 
 #include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/features/orb_detector.h"
@@ -49,6 +49,7 @@ class MonocularVisualOdometry
   typedef nav_msgs::Odometry OdomMsg;
 
   public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~MonocularVisualOdometry();
@@ -79,8 +80,8 @@ class MonocularVisualOdometry
 
     // **** variables
     boost::mutex mutex_lock_; ///< Thread lock on subscribed input images
-    boost::mutex mutex_;
     bool initialized_;
+    bool is_first_time_projecting_; ///< To indicate the first instance when the complete cloud model gets projected to the camera
     int  frame_count_;
     ros::Time init_time_;
 
@@ -91,22 +92,19 @@ class MonocularVisualOdometry
 
     MotionEstimation * motion_estimation_;
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
+    PointCloudFeature::Ptr model_ptr_;
+
+    ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
+
+    bool publish_cloud_model_; ///< to indicate whether the model pointcloud will be published
+
 
     // Camera parameters
-    cv::Mat K_; ///< intrinsic parameter matrix
-    cv::Mat R_; ///< rotation matrix
-    cv::Mat T_; ///< translation vector
-    cv::Mat rvec_; //< rotation vector
-    cv::Mat tvec_; ///< translation vector
-    cv::Mat dist_coeffs_; ///< distortion coefficients
     double sensor_aperture_width_, sensor_aperture_height_; // TODO: find out values
-    cv::Point2d principal_point_; ///< Location of principal/optical center point in perspective camera (obtained from calibration)
 
     // **** private functions
-
     void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
-    void processCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam_info_ptr);
     void initParams();
     void publishTf(const std_msgs::Header& header);
 

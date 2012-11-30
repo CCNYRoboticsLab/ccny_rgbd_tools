@@ -22,8 +22,9 @@ class GftDetector: public FeatureDetector
 
   private:
 
-    int n_features_;
-    double min_distance_;
+    int n_features_;  ///< // maximum number of corners to be returned
+    double quality_level_; ///< quality level
+    double min_distance_;  ///< minimum allowed distance between points
     int grid_cells_;
 
     cv::GoodFeaturesToTrackDetector * gft_detector_;

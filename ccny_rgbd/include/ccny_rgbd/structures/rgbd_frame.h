@@ -40,7 +40,7 @@ class RGBDFrame
 
     image_geometry::PinholeCameraModel model_;
 
-    PointCloudFeature features; // no NaNs
+    PointCloudFeature features; // no NaNs (3D features from detected 2D keypoints)
       
     std::vector<cv::KeyPoint> keypoints;  // with NaNs
 
@@ -50,8 +50,8 @@ class RGBDFrame
 
     cv::Mat descriptors;
 
-    bool keypoints_computed;
-    bool descriptors_computed;
+    bool keypoints_computed_;
+    bool descriptors_computed_;
 
     cv::Mat * getRGBImage()   const { return &cv_ptr_rgb_->image; }
     cv::Mat * getDepthImage() const { return &cv_ptr_depth_->image; }

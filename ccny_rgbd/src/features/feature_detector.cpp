@@ -50,6 +50,7 @@ void FeatureDetector::findFeatures(RGBDFrame& frame)
 {
   cv::Mat * input_img = frame.getRGBImage();
 
+  // FIXME: a grayscale image is not necessary (Carlos)
   // convert from RGB to grayscale
   cv::Mat gray_img(input_img->rows, input_img->cols, CV_8UC1);
   cvtColor(*input_img, gray_img, CV_BGR2GRAY);
@@ -63,7 +64,7 @@ void FeatureDetector::findFeatures(RGBDFrame& frame)
 
   // find the 2D coordinates of keypoints
   findFeatures(frame, &gray_img);
-  frame.keypoints_computed = true;
+  frame.keypoints_computed_ = true;
 
   // calculates the 3D position and covariance of features
   frame.computeDistributions();
@@ -85,6 +86,31 @@ void FeatureDetector::findFeatures(RGBDFrame& frame)
 
   if (publish_covariances_)
     publishCovariances(frame);
+}
+
+void FeatureDetector::onlyFind2DFeatures(RGBDFrame& frame)
+{
+  cv::Mat * input_img = frame.getRGBImage();
+
+  // blur if needed
+  if(smooth_ > 0)
+  {
+    int blur_size = smooth_*2 + 1;
+    cv::GaussianBlur(*input_img, *input_img, cv::Size(blur_size, blur_size), 0);
+  }
+
+  // find the 2D coordinates of keypoints
+  findFeatures(frame, input_img);
+  frame.keypoints_computed_ = true;
+
+  if (show_keypoints_)
+  {
+    cv::namedWindow("Keypoints", CV_WINDOW_NORMAL);
+    cv::Mat kp_img;
+    cv::drawKeypoints(*input_img, frame.keypoints, kp_img);
+    cv::imshow("Keypoints", kp_img);
+    cv::waitKey(1);
+  }
 }
 
 void FeatureDetector::publishCovariances(RGBDFrame& frame)
