@@ -38,7 +38,7 @@ class RGBDFrame
     
     std_msgs::Header header_;
 
-    image_geometry::PinholeCameraModel model_;
+    image_geometry::PinholeCameraModel pihole_model_;
 
     PointCloudFeature features; // no NaNs (3D features from detected 2D keypoints)
       

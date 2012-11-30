@@ -72,7 +72,7 @@ void KeyframeLoopSolverSBA::setUp(
   // **** set up camera parameters ******************************
   // use camera info from first frame
 
-  image_geometry::PinholeCameraModel& model = keyframes[0].model_;
+  image_geometry::PinholeCameraModel& model = keyframes[0].pihole_model_;
 
   frame_common::CamParams cam_params;
   cam_params.fx = model.fx(); // Focal length in x

@@ -20,7 +20,7 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   cv_ptr_rgb_   = cv_bridge::toCvCopy(rgb_msg);
 
   // create camera model
-  model_.fromCameraInfo(info_msg);
+  pihole_model_.fromCameraInfo(info_msg);
 
   // record header - frame is from RGB camera
   header_ = rgb_msg->header;
@@ -39,7 +39,7 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   cv_ptr_depth_ = cv_bridge::toCvCopy(depth_msg);
 
   // create camera model
-  model_.fromCameraInfo(info_msg);
+  pihole_model_.fromCameraInfo(info_msg);
 
   // record header - frame is from RGB camera
   header_ = rgb_msg->header;
@@ -127,12 +127,12 @@ void RGBDFrame::computeDistributions()
   double s_v = 1.0;            // uncertainty in pixels
 
   // center point
-  double cx = model_.cx();
-  double cy = model_.cy();
+  double cx = pihole_model_.cx();
+  double cy = pihole_model_.cy();
 
   // focus length
-  double fx = model_.fx();
-  double fy = model_.fy();
+  double fx = pihole_model_.fx();
+  double fy = pihole_model_.fy();
 
   // precompute for convenience
   double var_u = s_u * s_u;

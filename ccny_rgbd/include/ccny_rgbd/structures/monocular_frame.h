@@ -15,17 +15,24 @@ class MonocularFrame : public RGBDFrame
     MonocularFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
               const sensor_msgs::CameraInfoConstPtr& info_msg);
 
+    ~MonocularFrame();
     
     // TODO:use this model
     // image_geometry::PinholeCameraModel model_;
 
+    bool isPointWithinFrame(const cv::Point2f &point) const;
+
     bool project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time); ///< Returns false after the first time projection
     void setCameraAperture(double width, double height);
+    void setFrame(const sensor_msgs::ImageConstPtr& rgb_msg);
+    void setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_msg);
+
 
   protected:
 
   private:
     // Camera parameters
+    cv::Size *image_size_; ///< Image size: width x height in pixels
     cv::Mat K_; ///< intrinsic parameter matrix
     cv::Mat R_; ///< rotation matrix
     cv::Mat T_; ///< translation vector
@@ -35,12 +42,20 @@ class MonocularFrame : public RGBDFrame
     cv::Point2d principal_point_; ///< Location of principal/optical center point in perspective camera (obtained from calibration)
     double sensor_aperture_width_, sensor_aperture_height_;
 
-    PointCloudFeature::Ptr model_;   ///< 3D point cloud model
+    PointCloudFeature::Ptr pointcloud_model_;   ///< 3D point cloud model
 
-    typedef struct{
+    typedef struct ModelFeaturePair{
       cv::Point2f keyframe;
       cv::Point3f model_point;
+
+      ModelFeaturePair(const cv::Point3f &point3D, const cv::Point2f & point2D)
+      {
+        model_point = point3D;
+        keyframe = point2D;
+      }
     } model_feature_pair_;
+
+    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points, std::vector<model_feature_pair_> &valid_points);
 
 //    cv::KDTree<cv::Point2f> tree_of_projections_to_2D_; // TODO: define properly for the structure FIXME: how to index it if it only takes points, but no structure?
 

@@ -15,14 +15,14 @@ RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
 void RGBDKeyframe::constructDataCloud()
 {
   // Use correct principal point from calibration
-  float cx = model_.cx();
-  float cy = model_.cy();
+  float cx = pihole_model_.cx();
+  float cy = pihole_model_.cy();
 
   // Scale by focal length for computing (X,Y)
-  float constant_x = 1.0 / model_.fx();
-  float constant_y = 1.0 / model_.fy();
+  float constant_x = 1.0 / pihole_model_.fx();
+  float constant_y = 1.0 / pihole_model_.fy();
 
-  printf("%f, %f, %f %f\n", cx, cy, model_.fx(), model_.fy());
+  printf("%f, %f, %f %f\n", cx, cy, pihole_model_.fx(), pihole_model_.fy());
 
   float bad_point = std::numeric_limits<float>::quiet_NaN();
 

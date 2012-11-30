@@ -66,6 +66,7 @@ class MonocularVisualOdometry
 
 //    boost::shared_ptr<image_transport::ImageTransport> rgb_it_;
     boost::shared_ptr<SynchronizerMonoVO> sync_;
+    boost::shared_ptr<MonocularFrame> frame_;
 
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;
@@ -79,7 +80,7 @@ class MonocularVisualOdometry
     std::string detector_type_;
 
     // **** variables
-    boost::mutex mutex_lock_; ///< Thread lock on subscribed input images
+    boost::mutex::scoped_lock mutex_lock_; ///< Thread lock on subscribed input images
     bool initialized_;
     bool is_first_time_projecting_; ///< To indicate the first instance when the complete cloud model gets projected to the camera
     int  frame_count_;
@@ -102,6 +103,9 @@ class MonocularVisualOdometry
 
     // Camera parameters
     double sensor_aperture_width_, sensor_aperture_height_; // TODO: find out values
+    // Topic names:
+    std::string topic_cam_info_;
+    std::string topic_image_;
 
     // **** private functions
     void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);

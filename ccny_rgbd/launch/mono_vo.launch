@@ -1,17 +1,13 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
-  <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
-  <arg name="BAG_NAME" value="apt_01_qvga" /> # Bag name only (Without extension)
-  <arg name="PATH_TO_PCD" value="$(env HOME)/ros/PCDs" />
-  <arg name="PCD_NAME" value="apt1.pcd" /> # PCD file name (with extension)
-  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
-  <arg name="FULL_PCD_NAME" value="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
-  <arg name="BAG_PLAY_DELAY" value="0.0" /> # Delay in seconds to start the bag's playback
+  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/PCDs" />
+  <arg name="PCD_NAME" default="apt1.pcd" /> # PCD file name (with extension)
+  <arg name="FULL_PCD_NAME" default="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
   
   # ORB, SURF, GTF, KLT
   <arg name="detector_type" default="GFT"/> 
-
+  
   <node pkg="ccny_rgbd" type="mono_vo_node" name="mono_vo_node" 
     output="screen">
 
@@ -19,6 +15,11 @@
     <param name="apps/mono_vo/PCD_filename" value="$(arg FULL_PCD_NAME)"/> 
     <param name="apps/mono_vo/publish_cloud_model" value="true"/> 
 
+    # Topics:
+    <param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" />
+    <param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_rect_color"/>
+    
+    # Frames
     <param name="fixed_frame" value="/odom"/>
     <param name="base_frame"  value="/camera_link"/>
        
@@ -46,18 +47,6 @@
     <param name="feature/ORB/n_features"     value = "300"/>
     <param name="feature/ORB/edge_threshold" value = "31"/>
   </node>
-
-  # NOTES:
-  # the openni's camera_nodelet_manager expects the 3 following topics:
-  #         /camera/depth_registered/image_raw
-  #         /camera/depth_registered/camera_info
-  #         /camera/rgb/image_raw
-  #         /camera/rgb/camera_info
-  <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
-      <arg name="path" value="$(arg PATH_TO_BAG)" />
-      <arg name="bag_name" value="$(arg BAG_NAME).bag" />
-      <arg name="play_delay" value="$(arg BAG_PLAY_DELAY)" />
-  </include>
 
 </launch>
 

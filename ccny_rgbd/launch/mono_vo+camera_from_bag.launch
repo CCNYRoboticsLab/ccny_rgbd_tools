@@ -1,0 +1,33 @@
+<!-- RGB-D Monocual Visual Odometry -->
+
+<launch>
+  <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="apt_01_qvga" /> # Bag name only (Without extension)
+  <arg name="PATH_TO_PCD" value="$(env HOME)/ros/PCDs" />
+  <arg name="PCD_NAME" value="apt1.pcd" /> # PCD file name (with extension)
+  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
+  <arg name="FULL_PCD_NAME" value="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
+  <arg name="BAG_PLAY_DELAY" value="0.0" /> # Delay in seconds to start the bag's playback
+  
+  # ORB, SURF, GTF, KLT
+  <arg name="detector_type" value="GFT"/> 
+
+  <include file="$(find ccny_rgbd)/launch/mono_vo.launch">
+      <arg name="detector_type" value="$(arg detector_type)" />
+      <arg name="FULL_PCD_NAME" value="$(arg FULL_PCD_NAME)" />
+  </include>
+
+  # NOTES:
+  # the openni's camera_nodelet_manager expects the 3 following topics:
+  #         /camera/depth_registered/image_raw
+  #         /camera/depth_registered/camera_info
+  #         /camera/rgb/image_raw
+  #         /camera/rgb/camera_info
+  <include file="$(find ccny_rgbd)/launch/play_bag.launch">
+      <arg name="PATH_TO_BAG" value="$(arg PATH_TO_BAG)" />
+      <arg name="BAG_NAME" value="$(arg BAG_NAME)" />
+      <arg name="BAG_PLAY_DELAY" value="$(arg BAG_PLAY_DELAY)" />
+  </include>
+
+</launch>
+
