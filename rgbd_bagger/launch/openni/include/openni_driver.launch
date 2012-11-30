@@ -1,0 +1,43 @@
+<launch>
+
+  # Name of nodelet manager, must be fully resolved
+  <arg name="manager" />
+
+  # Driver parameters
+  <arg name="device_id" />
+  <arg name="rgb_frame_id" />
+  <arg name="depth_frame_id" />
+  <arg name="rgb_camera_info_url" />
+  <arg name="depth_camera_info_url" />
+  
+  # Quality of driver manager
+  # Possible values are: SXGA_15Hz (1): 1280x1024@15Hz, VGA_30Hz (2): 640x480@30Hz, VGA_25Hz (3): 640x480@25Hz, QVGA_25Hz (4): 320x240@25Hz, QVGA_30Hz (5): 320x240@30Hz, QVGA_60Hz (6): 320x240@60Hz, QQVGA_25Hz (7): 160x120@25Hz, QQVGA_30Hz (8): 160x120@30Hz, QQVGA_60Hz (9): 160x120@60Hz 
+  <arg name="image_mode" default="8" />
+  <arg name="depth_mode" default="8" />  
+  
+  
+  <arg name="depth_registration" default="true" />
+  
+  # Remapping arguments
+  <arg name="rgb"              default="rgb" />
+  <arg name="ir"               default="ir" />
+  <arg name="depth"            default="depth" />
+  <arg name="depth_registered" default="depth_registered" />
+
+  <node pkg="nodelet" type="nodelet" name="driver" 
+        args="load openni_camera/driver $(arg manager)">
+    <param name="device_id" value="$(arg device_id)" />
+    <param name="rgb_camera_info_url"   value="$(arg rgb_camera_info_url)" />
+    <param name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
+    <param name="rgb_frame_id"   value="$(arg rgb_frame_id)" />
+    <param name="depth_frame_id" value="$(arg depth_frame_id)" />
+    <param name="image_mode" value="$(arg image_mode)" />
+    <param name="depth_mode" value="$(arg depth_mode)" />
+    <param name="depth_registration" value="$(arg depth_registration)" />
+    
+    <remap from="ir" to="$(arg ir)" />
+    <remap from="rgb" to="$(arg rgb)" />
+    <remap from="depth" to="$(arg depth)" />
+    <remap from="depth_registered" to="$(arg depth_registered)" />
+  </node>
+</launch>

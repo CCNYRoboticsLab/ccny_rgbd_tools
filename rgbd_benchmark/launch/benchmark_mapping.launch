@@ -1,0 +1,42 @@
+<launch>
+  <arg name="PATH_TO_FILE" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="rgbd_dataset_freiburg1_xyz_VGA" /> # Without extension
+  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_FILE)/$(arg BAG_NAME)" /> # Without extension
+  <arg name="BAG_PLAY_DELAY" value="6.0" /> # Delay in seconds to start the bag's playback
+  <arg name="DETECTOR_TYPE" value="GFT" /> ORB, SURF, or GFT (Good features to track)
+
+  <!--
+  <node pkg="rgbd_benchmark" name="comparator" type="comparator_node" cwd="node" output="screen"
+      respawn="false" >
+   	   # when cwd="ROS_HOME", the images will be saved under /home/user/.ros (hidden folder)
+   	   # when cwd="node", the images will be saved in the package's bin folder 
+        
+        <remap from="/dummy" to="/rgbd_vo"/>  # Remap the name of the topic that trigger the tf lookups.
+
+   	    <param name="save_to_file" value="false"/>   	 # Whether saving results to file
+
+        <param name="error_file_name" value="$(arg FULL_BAG_NAME)-error-$(arg DETECTOR_TYPE).txt"/>  
+
+		# Frame id's:
+   	    <param name="fixed_frame_gt" value="/world"/>   
+   	    <param name="fixed_frame_est" value="/odom"/>  
+   	    <param name="target_frame_gt" value="/openni_camera_gt"/>  
+   	    <param name="target_frame_est" value="/camera_link"/>  
+  </node> 
+  -->
+
+  # Launches both vo and mapping server:
+  <include file="$(find ccny_rgbd)/launch/vo.launch"> # DOES Mapping  
+     <arg name="detector_type"  value="$(arg DETECTOR_TYPE)" />
+  </include>
+  
+  <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
+      <arg name="path" value="$(arg PATH_TO_FILE)" />
+      <arg name="bag_name" value="$(arg BAG_NAME).bag" />
+      <arg name="play_delay" value="$(arg BAG_PLAY_DELAY)" />
+  </include>
+    
+  # To rxplot it type in a terminal:
+  # $  rxplot /error_m/data /error_a/data -t "RGBD Benchmark Error Analysis" --ymin 0 --legend "Translation","Angular"
+    
+</launch>

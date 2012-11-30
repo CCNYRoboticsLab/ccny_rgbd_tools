@@ -1,0 +1,46 @@
+<launch>
+  <arg name="PATH_TO_FILE" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="samleo" /> # Without extension
+  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_FILE)/$(arg BAG_NAME)" /> # Without extension
+  <arg name="BAG_PLAY_DELAY" value="4.0" /> # Delay in seconds to start the bag's playback
+  
+  <!--
+  <arg name="DETECTOR_TYPE" value="ORB" /> ORB, SURF, or GFT (Good features to track)
+
+  <node pkg="ccny_rgbd" type="vo_icp_node" name="vo_icp_node" 
+    output="screen">
+
+    <param name="history_size"      value="5"/>
+    <param name="publish_keyframes" value="true"/>
+
+    # Frame names (frame_id)    
+    <param name="fixed_frame" value="/odom"/>
+    <param name="base_frame" value="/camera_link"/>
+       
+    <param name="feature/detector_type"       value="$(arg DETECTOR_TYPE)"/> #  0 = ORB, 1=SURF, 2=GFT (Good features to track)
+    <param name="feature/smooth"              value="0"/>
+    <param name="feature/max_range"           value="7.0"/>
+
+    <param name="reg/max_iterations"          value="25"/>
+    <param name="reg/max_corresp_dist"        value="0.15"/>
+    <param name="reg/tf_epsilon"              value="1e-15"/>
+    <param name="reg/use_ransac_rejection"    value="true"/>
+    <param name="reg/ransac_inlier_threshold" value="0.15"/>
+  </node>
+  -->
+  # NOTES:
+  # the openni's camera_nodelet_manager expects the 3 following topics:
+  #         /camera/depth_registered/image_raw
+  #         /camera/depth_registered/camera_info
+  #         /camera/rgb/image_raw
+  #         /camera/rgb/camera_info
+  <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
+      <arg name="path" value="$(arg PATH_TO_FILE)" />
+      <arg name="bag_name" value="$(arg BAG_NAME).bag" />
+      <arg name="play_delay" value="$(arg BAG_PLAY_DELAY)" />
+  </include>
+    
+  # To rxplot it type in a terminal:
+  # $  rxplot /error_m/data /error_a/data -t "RGBD Benchmark Error Analysis" --ymin 0 --legend "Translation","Angular"
+    
+</launch>

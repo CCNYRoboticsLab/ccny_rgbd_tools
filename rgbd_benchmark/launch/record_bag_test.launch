@@ -1,0 +1,62 @@
+<launch>
+  <arg name="PATH_TO_FILE" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="samleo" /> # Without extension
+  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_FILE)/$(arg BAG_NAME).bag" /> 
+  <!--  
+  # LAUNCH KINECT DRIVER:
+  # ++++++++++++++++++++++++++++++++++++++++++++
+  <arg name="CAMERA" value="camera" />
+  <arg name="RGB" value="rgb" />
+  <arg name="DEPTH_REG" value="depth_registered" />
+  <arg name="IMAGE_MODE"         value="5" />
+  <arg name="DEPTH_MODE"         value="5" />
+  # Possible values are: SXGA_15Hz (1): 1280x1024@15Hz, VGA_30Hz (2): 640x480@30Hz, VGA_25Hz (3): 640x480@25Hz, QVGA_25Hz (4): 320x240@25Hz, QVGA_30Hz (5): 320x240@30Hz, QVGA_60Hz (6): 320x240@60Hz, QQVGA_25Hz (7): 160x120@25Hz, QQVGA_30Hz (8): 160x120@30Hz, QQVGA_60Hz (9): 160x120@60Hz 
+
+  <include file="$(find ccny_openni_launch)/launch/openni.launch">
+      <arg name="camera" value="$(arg CAMERA)" />
+      <arg name="rgb" value="$(arg RGB)" />
+      <arg name="depth_registered" value="$(arg DEPTH_REG)" />
+      <arg name="image_mode" value="$(arg IMAGE_MODE)" />
+      <arg name="depth_mode" value="$(arg DEPTH_MODE)" />
+  </include>
+  -->
+  # ++++++++++++++++++++++++++++++++++++++++++++
+  # LAUNCH MONOCULAR CAMERA DRIVERS:
+  <arg name="PGR_CAM_TOPIC" value="pgr_camera_node/image_raw" />
+  <include file="$(find pgr_camera_driver)/launch/camera_node.launch" />
+  <arg name="LOGITECH_CAM_TOPIC" value="ccny_opencv_cam_node/camera" />
+  <arg name="MONO_CAM_RES_WIDTH" value="1280" />
+  <arg name="MONO_CAM_RES_HEIGHT" value="960" />
+  <include file="$(find ccny_opencv_cam)/launch/camera.launch">
+      <arg name="width" value="$(arg MONO_CAM_RES_WIDTH)" />
+      <arg name="height" value="$(arg MONO_CAM_RES_HEIGHT)" />
+  </include>
+  # ++++++++++++++++++++++++++++++++++++++++++++
+  # LAUNCH XSENSE IMU DRIVER:  
+  <include file="$(find xsens_driver)/launch/xsens_driver.launch" />
+   
+   # ++++++++++++++++++++++++++++++++++++++++++++
+   # RECORD TOPICS IN BAG:
+   # the openni's camera_nodelet_manager expects the 4 following topics:
+   #         /camera/depth_registered/image_raw
+   #         /camera/depth_registered/camera_info
+   #         /camera/rgb/image_raw
+   #         /camera/rgb/camera_info
+   <node pkg="rosbag" type="record" name="record" output="screen"
+    args="/imu/data
+          /$(arg PGR_CAM_TOPIC)
+          /$(arg LOGITECH_CAM_TOPIC)
+          -O $(arg FULL_BAG_NAME)"/>    
+
+   # ++++++++++++++++++++++++++++++++++++++++++++
+   # VISUALIZATION:
+   <!--
+   <node pkg="image_view" type="image_view" name="kinect_image_viewer" >
+           <remap from="image" to="/$(arg CAMERA)/$(arg RGB)/image_color"/>
+   </node>     
+   <node pkg="image_view" type="image_view" name="mono_image_viewer" >
+        <remap from="image" to="/$(arg PGR_CAM_TOPIC)"/>
+   </node>  
+   -->
+        
+</launch>

@@ -1,0 +1,18 @@
+<package>
+  <description brief="rgbd_benchmark">
+
+     rgbd_benchmark
+
+  </description>
+  <author>Carlos</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rgbd_benchmark</url>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="tf"/>
+</package>
+
+

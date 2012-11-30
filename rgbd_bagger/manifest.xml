@@ -1,0 +1,31 @@
+<package>
+  <description brief="rgbd_bagger">
+
+     A tool that manipulates the rgbd-datasets provided by TUM in order to change image resolutions and repack as bags.
+
+  </description>
+  <author>Carlos Jaramillo</author>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rgbd_bagger</url>
+  <depend package="roscpp"/>
+  <depend package="rospy"/>
+  <depend package="rosbag"/>
+  <depend package="std_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="tf"/>
+  <depend package="visualization_msgs"/>
+  
+  <depend package="image_transport"/>
+  <depend package="camera_info_manager"/>
+  <depend package="dynamic_reconfigure"/>
+  <depend package="driver_base"/> 
+  <!-- Needed for the driver_base/SensorLevels Message used in dynamic_reconfigure .cfg file -->
+  
+  <depend package="cv_bridge" />
+  <rosdep name="opencv2.3"/>
+  
+
+</package>
+
+

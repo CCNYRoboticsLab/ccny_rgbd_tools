@@ -1,0 +1,26 @@
+<launch>
+  # Resizing registered RGBD images from/to ROS bag files
+
+  <!-- arg name="PATH_TO_BAG_IN" value="$(env HOME)/ros/bags/rgbd_external" / -->
+  <arg name="PATH_TO_BAG_IN" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="PATH_TO_BAG_OUT" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="rgbd_dataset_freiburg1_360" /> # Without extension
+
+  <node name="ccny_rebagger_node" pkg="rgbd_bagger" type="rebagger_node" output="screen" respawn="false">
+    <param name="input_bag_name_prefix" value="$(arg PATH_TO_BAG_IN)/$(arg BAG_NAME)"/> # Path and prefix of the input bag image
+    <param name="output_bag_name_prefix" value="$(arg PATH_TO_BAG_OUT)/$(arg BAG_NAME)"/> # Path and prefix of the output bag image
+    <param name="bag_name_suffix" value="bag"/> # Path and prefix of the output bag image
+    <param name="number_of_bags" value="1"/> 
+    
+    # Resizing parameters:
+    <param name="interpolation_mode" value="CV_INTER_NN"/> # OpenCV resizing interpolation modes: CV_INTER_LINEAR | CV_INTER_NN | CV_INTER_CUBIC | CV_INTER_AREA | CV_INTER_LANCZOS4 
+    <param name="image_resolution_mode" value="QQVGA"/> # VGA=640x480 | QVGA=320x240 | QQVGA=160x120
+    <param name="depth_image_encoding" value="CV_16UC1"/> # CV_32FC1(Original), CV_16UC1 
+    <param name="depth_resolution_factor" value="1000"/> # Value in the depth image that represents 1 meter (Ask the dataset provider, e.g. TUM)
+
+    # TF renaming (frame names)
+    <param name="ground_truth_frame_name" value="/openni_camera"/> # it will be suffixed with a "_gt"
+    # TODO: Pass a list of params (look into laser_scan_splitter from the scan_tools package)
+  </node>
+
+</launch>

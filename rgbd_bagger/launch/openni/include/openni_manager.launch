@@ -1,0 +1,22 @@
+<launch>
+  # ARGUMENTS:
+  # "camera" should uniquely identify the device. All topics are pushed down
+       into the "camera" namespace, and it is prepended to tf frame ids. 
+  <arg name="camera" default="camera" />
+  <arg name="manager" default="$(arg camera)_nodelet_manager" />
+  
+  #### DEBUG ###################################################################
+ <!-- Optionally launch manager in GDB, for debugging -->
+  <arg name="debug" default="false" />
+  <arg if="$(arg debug)" name="launch_prefix" value="xterm -e gdb --args" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <!-- Also globally disable bond heartbeat timeout in debug mode, so everything
+       doesn't die when you hit a break point -->
+  <param if="$(arg debug)" name="/bond_disable_heartbeat_timeout" value="true" />
+
+  #### MANAGER ###################################################################
+  # Nodelet manager, lives in top-level namespace
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager"
+        output="screen" launch-prefix="$(arg launch_prefix)" />
+
+</launch>

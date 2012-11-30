@@ -1,0 +1,30 @@
+<launch>
+  # Adding point clouds to ROS bag files
+  <!--
+  usage: add_pointclouds_to_bagfile.py [-h] [--start START]
+                                     [--duration DURATION] [--nth NTH]
+                                     [--skip SKIP] [--compress]
+                                     inputbag [outputbag]
+
+    This scripts reads a bag file containing RGBD data, adds the corresponding
+    PointCloud2 messages, and saves it again into a bag file. Optional arguments
+    allow to select only a portion of the original bag file.
+    
+    positional arguments:
+      inputbag             input bag file
+      outputbag            output bag file
+    
+    optional arguments:
+      -h, --help           show this help message and exit
+      --start START        skip the first N seconds of input bag file (default:
+                           0.0)
+      --duration DURATION  only process N seconds of input bag file (default: off)
+      --nth NTH            only process every N-th frame of input bag file
+                           (default: 15)
+      --skip SKIP          skip N blocks in the beginning (default: 1)
+      --compress           compress output bag file
+  -->
+  <node name="point_adder" pkg="rgbd_bagger" type="add_pointclouds_to_bagfile.py" output="screen" respawn="true">
+  </node>
+
+</launch>

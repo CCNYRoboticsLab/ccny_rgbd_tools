@@ -1,0 +1,59 @@
+<launch>
+  # "camera" should uniquely identify the device. All topics are pushed down
+  #     into the "camera" namespace, and it is prepended to tf frame ids.
+  <arg name="camera" default="camera" />
+  <arg name="rgb_frame_id"   default="/$(arg camera)_rgb_optical_frame" />
+  <arg name="depth_frame_id" default="/$(arg camera)_depth_optical_frame" />
+
+  # device_id can have the following formats:
+  #       "#1"              : Use first device found
+  #       "2@3"             : Use device on USB bus 2, address 3
+  #       "B00367707227042B": Use device with given serial number
+  #
+  <arg name="device_id" default="#1" />
+
+  # By default, calibrations are stored to file://${ROS_HOME}/camera_info/${NAME}.yaml,
+  #     where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+  #     See camera_info_manager docs for calibration URL details. 
+  <arg name="rgb_camera_info_url"   default="" />
+  <arg name="depth_camera_info_url" default="" />
+
+  # Arguments for remapping "rgb", "depth", "depth_registered" namespaces 
+  <arg name="rgb"              default="rgb" />
+  <arg name="ir"               default="ir" />
+  <arg name="depth"            default="depth" />
+  <arg name="depth_registered" default="depth_registered" />
+
+
+  # Nodelet manager, lives in top-level namespace -->
+  <arg name="manager" default="$(arg camera)_nodelet_manager" />
+
+  <include file="$(find rgbd_bagger)/launch/openni/include/openni_manager.launch">
+      <arg name="camera"   value="$(arg camera)" />
+      <arg name="manager"  value="$(arg manager)" /> # TODO: fully resolved? with a /
+  </include>    
+
+  # Push down all topics/nodelets into "camera" namespace
+  <group ns="$(arg camera)">
+  	  <include file="$(find rgbd_bagger)/launch/openni/include/openni_proc.launch">
+  	      <arg name="manager"               value="/$(arg manager)" /> <!-- Fully resolved -->
+	      <arg name="rgb"                   value="$(arg rgb)" />
+	      <!--
+	      <arg name="ir"                    value="$(arg ir)" />
+	      <arg name="depth"                 value="$(arg depth)" />
+	      -->
+	      <arg name="depth_registered"      value="$(arg depth_registered)" />
+	  </include>  
+	  
+  </group> # camera
+
+  ##### PLAY BAG  #####
+  <include file="$(find rgbd_bagger)/launch/openni/include/openni_play_bag.launch"/>  
+
+  #### FRAMES #########################################################
+  # Load reasonable defaults for the relative pose between cameras 
+  <include file="$(find rgbd_bagger)/launch/openni/include/kinect_frames.launch">
+    <arg name="camera" value="$(arg camera)" />
+  </include>
+
+</launch>

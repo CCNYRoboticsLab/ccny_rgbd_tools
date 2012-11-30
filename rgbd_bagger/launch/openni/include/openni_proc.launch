@@ -1,0 +1,45 @@
+<launch>
+
+  #### ARGUMENTS #################
+
+  <arg name="manager" />
+
+  # Remapping arguments 
+  <arg name="rgb"              default="rgb" />
+  <!--
+  <arg name="ir"               default="ir" />
+  <arg name="depth"            default="depth" />
+  -->
+  <arg name="depth_registered" default="depth_registered" />
+
+  # RGB processing
+  <include file="$(find openni_launch)/launch/includes/rgb.launch"
+	   ns="$(arg rgb)">
+    <arg name="manager" value="$(arg manager)" />
+  </include>
+
+  # IR processing 
+  <!--
+  <include file="$(find openni_launch)/launch/includes/ir.launch"
+	   ns="$(arg ir)">
+    <arg name="manager" value="$(arg manager)" />
+  </include>
+  -->
+
+  # Unregistered depth processing
+  <!-- # Not needed here because it's called by depth_registered.launch
+  <include file="$(find openni_launch)/launch/includes/depth.launch"
+	   ns="$(arg depth)">
+    <arg name="manager" value="$(arg manager)" />
+  </include>
+  -->
+
+  # Depth-to-RGB registration and processing 
+  <include file="$(find openni_launch)/launch/includes/depth_registered.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="rgb" value="$(arg rgb)" />
+    <!-- <arg name="depth" value="$(arg depth)" /> -->
+    <arg name="depth_registered" value="$(arg depth_registered)" />
+  </include>
+
+</launch>
