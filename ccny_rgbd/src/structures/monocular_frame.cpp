@@ -136,25 +136,38 @@ bool MonocularFrame::isPointWithinFrame(const cv::Point2f &point) const
   return (
       point.x > 0 && point.x < image_size_->width
       &&
-      point.y > 0 && point.x < image_size_->height
+      point.y > 0 && point.y < image_size_->height
       );
 }
 
-void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points, std::vector<model_feature_pair_> &valid_points)
+void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points)
 {
-  ROS_WARN("%d points in model", all_3D_points.size());
+  valid_2D_points_.clear();
+  valid_3D_points_.clear();
+
+#ifdef DEVELOP
+  ROS_DEBUG("%d points in model", all_3D_points.size());
+#endif
+
   for(unsigned int i = 0; i < all_2D_points.size(); ++i)
   {
     if(isPointWithinFrame(all_2D_points[i]))
     {
-      model_feature_pair_ valid_point_pair(all_3D_points[i], all_2D_points[i]);
-
-      valid_points.push_back(valid_point_pair);
-      std::cout << "3D Object point: " << valid_points.end()->model_point << " Projected to " << valid_points.end()->keyframe << std::endl;
+//      model_feature_pair_ valid_point_pair(all_3D_points[i], all_2D_points[i]);
+//      valid_points.push_back(valid_point_pair);
+//      std::cout << "3D Object point: " << valid_points.end()->model_point << " Projected to " << valid_points.end()->keyframe << std::endl;
+      valid_2D_points_.push_back(all_2D_points[i]);
+      valid_3D_points_.push_back(all_3D_points[i]);
     }
+
+    // FIXME: breaking with 10 points temporarily
+    if(valid_2D_points_.size()>10)
+      break;
   }
 
-  ROS_WARN("%d valid points projected to frame", valid_points.size());
+  for(unsigned int i = 0; i < valid_3D_points_.size(); ++i)
+    std::cout << "3D Object point: " << valid_3D_points_[i] << " Projected to " << valid_2D_points_[i] << std::endl;
+  ROS_DEBUG("%d valid points projected to frame", all_2D_points.size());
 }
 
 bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time)
@@ -163,7 +176,7 @@ bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3
 //  std::vector<cv::Point3f> model_in_frustum; // TODO: define a valid frustum volume for 2nd time frame (instead of projecting the whole cloud)
 
   std::vector<cv::Point2f> projected_model_2D_points;
-  std::vector<model_feature_pair_> valid_projected_points;
+//  std::vector<model_feature_pair_> valid_projected_points;
 
 //  if(is_first_time)
 //  {  // Project entire cloud:
@@ -177,10 +190,91 @@ bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3
 //  }
   cv::projectPoints(cv_model_3D_points, rvec_, tvec_, K_, dist_coeffs_, projected_model_2D_points);
 
-  filterPointsWithinFrame(cv_model_3D_points, projected_model_2D_points, valid_projected_points);
+  filterPointsWithinFrame(cv_model_3D_points, projected_model_2D_points);
 
   // TODO: if they are within the camera's frustum
-  // TODO: save into a KD-tree for fast search
+  // Save into a KD-tree for fast search
+//  tree_2D_points_from_cloud_ = boost::shared_ptr<flann::KDTreeSingleIndex> (new flann::KDTreeSingleIndex());
+
+
+  // ---------------------------------- TEST KD Trees -------------------------------------
+  // KdTree with 5 random trees
+//  cv::flann::KDTreeIndexParams indexParams(5);
+
+  // You can also use LinearIndex
+//  cv::flann::LinearIndexParams indexParams;
+
+  // Create the Index
+  cv::Mat valid_2D_points(valid_2D_points_);
+    std::cout << "Valid 2D Points as Matrix:" << valid_2D_points << std::endl
+        << " with: " << valid_2D_points.rows << " rows, " << valid_2D_points.cols << " cols" << std::endl;
+
+  cv::KDTree my_tree;
+  /*
+//  my_tree.build(valid_2D_points_, false);
+//  cv::Mat test(3,5, CV_32F);
+  std::vector<cv::Point2f> test(5);
+//  test.at<float>(0,0) = 6.6;
+//  test.at<float>(0,1) = 7.6;
+//  test.at<float>(0,4) = 8.6;
+  test.push_back(cv::Point2f(3.2,4.4));
+  test.push_back(cv::Point2f(3.2,4.4));
+  test.push_back(cv::Point2f(3.2,4.4));
+
+  cv::Mat fuck(test);
+
+  my_tree.build(fuck, false);
+  */
+//  my_tree.build(valid_2D_points, false);
+//  std::cout << "The search space dimensionality: " << my_tree.dims() << std::endl;
+//  std::cout << "Tree points:" << my_tree.points << std::endl;
+//  std::cout << "Valid 2D Points as Matrix:" << valid_2D_points << std::endl
+//      << " with: " << valid_2D_points.rows << " rows, " << valid_2D_points.cols << " cols" << std::endl;
+
+//  cv::Mat query(numQueries,numDimensions,CV_32F);
+
+//  cv::flann::Index kdtree(valid_2D_points, indexParams);
+
+  // Perform single search for mean
+  std::cout << "Performing single search to find closest data point to mean:" << std::endl;
+  /*
+  vector<float> singleQuery;
+  vector<int> index(1);
+  vector<float> dist(1);
+
+  // Searching for the Mean
+  for(int i = 0 ; i < numDimensions ;i++)
+          singleQuery.push_back(Mean);
+
+  // Invoke the function
+  kdtree.knnSearch(singleQuery, index, dist, 1, cv::flann::SearchParams(64));
+
+  // Print single search results
+  cout << "(index,dist):" << index[0] << "," << dist[0]<< endl;
+
+  // Batch: Call knnSearch
+  cout << "Batch search:"<< endl;
+  Mat indices;//(numQueries, k, CV_32S);
+  Mat dists;//(numQueries, k, CV_32F);
+
+  // Invoke the function
+  kdtree.knnSearch(query, indices, dists, k, cv::flann::SearchParams(64));
+
+  cout << indices.rows << "\t" << indices.cols << endl;
+  cout << dists.rows << "\t" << dists.cols << endl;
+
+  // Print batch results
+  cout << "Output::"<< endl;
+  for(int row = 0 ; row < indices.rows ; row++){
+          cout << "(index,dist):";
+          for(int col = 0 ; col < indices.cols ; col++){
+                  cout << "(" << indices.at<int>(row,col) << "," << dists.at<float>(row,col) << ")" << "\t";
+          }
+          cout << endl;
+  }
+
+*/
+
   /*
         pcl::KdTreeFLANN<PointTV>::Ptr tree =
         boost::make_shared<pcl::KdTreeFLANN<PointTV> > ();

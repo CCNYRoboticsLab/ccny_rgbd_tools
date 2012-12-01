@@ -4,6 +4,7 @@
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
+
 namespace ccny_rgbd
 {
 class MonocularFrame : public RGBDFrame
@@ -26,7 +27,7 @@ class MonocularFrame : public RGBDFrame
     void setCameraAperture(double width, double height);
     void setFrame(const sensor_msgs::ImageConstPtr& rgb_msg);
     void setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_msg);
-
+//    boost::shared_ptr<cv::flann::KDTreeIndexParams flann::KDTreeSingleIndex> tree_2D_points_from_cloud_;
 
   protected:
 
@@ -44,6 +45,7 @@ class MonocularFrame : public RGBDFrame
 
     PointCloudFeature::Ptr pointcloud_model_;   ///< 3D point cloud model
 
+    // Not being used for now
     typedef struct ModelFeaturePair{
       cv::Point2f keyframe;
       cv::Point3f model_point;
@@ -55,7 +57,12 @@ class MonocularFrame : public RGBDFrame
       }
     } model_feature_pair_;
 
-    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points, std::vector<model_feature_pair_> &valid_points);
+    std::vector<cv::Point3f> valid_3D_points_; ///< 3D points that project within frame
+    std::vector<cv::Point2f> valid_2D_points_; ///< Valid 2D points projected from 3D model
+//    boost::shared_ptr<flann::Matrix<cv::Point2f> > valid_2D_points_;
+
+    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points);
+//    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points, std::vector<model_feature_pair_> &valid_points);
 
 //    cv::KDTree<cv::Point2f> tree_of_projections_to_2D_; // TODO: define properly for the structure FIXME: how to index it if it only takes points, but no structure?
 

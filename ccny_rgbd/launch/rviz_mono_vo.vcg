@@ -1,11 +1,11 @@
-Axes.Enabled=1
+Axes.Enabled=0
 Axes.Length=1
 Axes.Radius=0.1
 Axes.Reference\ Frame=<Fixed Frame>
 Background\ ColorB=0
 Background\ ColorG=0
 Background\ ColorR=0
-Camera\ Config=0.995398 3.1354 14.3104 0 0 0
+Camera\ Config=0.785398 0.785398 7.87589 0 0 0
 Camera\ Type=rviz::OrbitViewController
 Fixed\ Frame=/odom
 Grid.Alpha=0.5
@@ -56,10 +56,10 @@ PointCloud2.Queue\ Size=10
 PointCloud2.Selectable=1
 PointCloud2.Style=0
 PointCloud2.Topic=/mono_vo_node/sparse_model
-Property\ Grid\ Splitter=492,0
-Property\ Grid\ State=expanded=.Global Options,.Global Status,TF.Enabled,TF.Tree,TF.Tree./camera_link,TF.Tree./camera_rgb_frame,TF.Tree./camera_depth_frame,PointCloud2.Enabled,Image.Enabled;splitterratio=0.5
-QMainWindow=000000ff00000000fd00000003000000000000013100000372fc0200000003fb000000100044006900730070006c006100790073010000001d0000023e000000ee00fffffffb0000000a0056006900650077007301000002610000012e000000bb00fffffffb0000000a0049006d006100670065000000029b000000ac0000001900ffffff0000000100000115000002befc0200000002fb0000001e0054006f006f006c002000500072006f0070006500720074006900650073000000001d000003de0000006700fffffffb0000001200530065006c0065006300740069006f006e000000001d000002be0000006700ffffff00000003000005af0000003efc0100000001fb0000000800540069006d00650100000000000005af000002bf00ffffff000004780000037200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
-TF.All\ Enabled=1
+Property\ Grid\ Splitter=753,0
+Property\ Grid\ State=expanded=.Global Options,.Global Status,TF.Enabled,TF.Frames,TF.Frames./camera_depth_frame,TF.Frames./camera_depth_optical_frame,TF.Frames./camera_link,TF.Frames./camera_rgb_frame,TF.Frames./camera_rgb_optical_frame,TF.Frames./odom,TF.Tree,TF.Tree./odom,TF.Tree./camera_link,TF.Tree./camera_rgb_frame,TF.Tree./camera_depth_frame,PointCloud2.Enabled,Image.Enabled;splitterratio=0.5
+QMainWindow=000000ff00000000fd000000030000000000000131000004d4fc0200000003fb000000100044006900730070006c006100790073010000001d00000343000000ee00fffffffb0000000a0056006900650077007301000003660000018b000000bb00fffffffb0000000a0049006d0061006700650000000307000000ac0000001900ffffff0000000100000115000004d4fc0200000002fb0000001e0054006f006f006c002000500072006f0070006500720074006900650073010000001d000004d40000006700fffffffb0000001200530065006c0065006300740069006f006e000000001d000002be0000006700ffffff00000003000008d20000003efc0100000001fb0000000800540069006d00650100000000000008d2000002bf00ffffff00000680000004d400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+TF.All\ Enabled=0
 TF.Enabled=1
 TF.Frame\ Timeout=15
 TF.Marker\ Scale=1
@@ -86,14 +86,14 @@ Name=Axes
 ClassName=rviz::ImageDisplay
 Name=Image
 [TF.Frames.]
-camera_depth_frame.Enabled=1
-camera_depth_optical_frame.Enabled=1
-camera_link.Enabled=1
-camera_rgb_frame.Enabled=1
-camera_rgb_optical_frame.Enabled=1
+camera_depth_frame.Enabled=0
+camera_depth_optical_frame.Enabled=0
+camera_link.Enabled=0
+camera_rgb_frame.Enabled=0
+camera_rgb_optical_frame.Enabled=0
 odom.Enabled=1
 [Window]
-Height=1015
-Width=1471
+Height=1369
+Width=2274
 X=-219
 Y=-1247

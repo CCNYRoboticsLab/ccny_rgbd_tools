@@ -208,7 +208,7 @@ void KeyframeLoopDetector::prepareFeaturesForRANSAC(
       detector.detect(*keyframe.getRGBImage(), keyframe.keypoints);
 
       printf("\t[%d] %d keypoints detecting with %.1f\n", 
-        kf_idx, (int)keyframe.keypoints.size(), surf_threshold); 
+        kf_idx, (int)keyframe.keypoints.size(), surf_threshold);
 
       if ((int)keyframe.keypoints.size() < desired_keypoints)
         surf_threshold /= 2.0;
@@ -414,8 +414,8 @@ void KeyframeLoopDetector::simplifiedRingAssociations(
         if (save)
         {
           cv::Mat img_matches;
-          cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                          *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+          cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints,
+                          *(keyframe_a.getRGBImage()), keyframe_a.keypoints,
                           inlier_matches, img_matches);
           std::stringstream ss1;
           ss1 << kf_idx_a << "_to_" << kf_idx_b;
@@ -432,8 +432,8 @@ void KeyframeLoopDetector::simplifiedRingAssociations(
         if (save)
         {
           cv::Mat img_matches;
-          cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                          *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+          cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints,
+                          *(keyframe_a.getRGBImage()), keyframe_a.keypoints,
                           all_matches, img_matches);
           std::stringstream ss1;
           ss1 << kf_idx_a << "_xx_" << kf_idx_b;
@@ -498,8 +498,8 @@ void KeyframeLoopDetector::ringAssociations(
       if (save)
       {
         cv::Mat img_matches;
-        cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                        *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+        cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints,
+                        *(keyframe_a.getRGBImage()), keyframe_a.keypoints,
                         inlier_matches, img_matches);
         std::stringstream ss1;
         ss1 << kf_idx_a << "_to_" << kf_idx_b;
@@ -516,8 +516,8 @@ void KeyframeLoopDetector::ringAssociations(
       if (save)
       {
         cv::Mat img_matches;
-        cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                        *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+        cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints,
+                        *(keyframe_a.getRGBImage()), keyframe_a.keypoints,
                         all_matches, img_matches);
         std::stringstream ss1;
         ss1 << kf_idx_a << "_xx_" << kf_idx_b;
