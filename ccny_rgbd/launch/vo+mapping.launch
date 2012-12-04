@@ -17,6 +17,7 @@
 
   #### OCTREE MAPPING #####################################
 
+
   <node pkg="ccny_rgbd" type="octree_mapper_node" name="octree_mapper_node" 
     output="screen">
     <param name="resolution" value="0.05"/>
@@ -24,6 +25,7 @@
 
   #### KEYFRAME MAPPING ###################################
 
+  <!--
   <node pkg="ccny_rgbd" type="keyframe_loop_mapper_node" name="keyframe_loop_mapper_node" 
     output="screen">
 
@@ -31,7 +33,19 @@
     <param name="kf/kf_angle_eps" value="0.30"/> 
 
   </node>
+-->
 
+  #### OCTOMAP MAPPING #####################################
+  
+  <node pkg="octomap_server" name="octomap_server" type="octomap_server_node"
+    output="screen">
+  
+    <remap from="cloud_in" to="/camera/depth_registered/points"/>
+    
+    <param name="frame_id"   value="odom"/>
+    <param name="resolution" value="0.05"/>
+  </node>
+  
 </launch>
 
 
