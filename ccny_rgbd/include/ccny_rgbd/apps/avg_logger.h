@@ -41,7 +41,8 @@ class AvgLogger
     // state variables
     int count_;
     bool logging_;
-
+    bool rgb_saved_;
+    
     cv::Mat depth_cnt_img_;
     cv::Mat depth_sum_img_;
     

@@ -89,15 +89,10 @@ def processFile(filename):
   file = open("plot/data.txt","r")
   lines = file.readlines()
   file.close()
-  
+
   for u in range(10, 630, 40):
     for v in range(10, 470, 40):
       coeff = fitLine(u, v, lines)
-
-#  coeff = fitLine(20, 450)
-#  coeff = fitLine(600, 450)
-#  coeff = fitLine(400, 120)
-#  coeff = fitLine(320, 240)
    
   return
   

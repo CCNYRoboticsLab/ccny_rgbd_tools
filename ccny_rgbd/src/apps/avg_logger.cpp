@@ -3,7 +3,8 @@
 namespace ccny_rgbd {
 
 AvgLogger::AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  nh_(nh), nh_private_(nh_private), count_(0), logging_(false)
+  nh_(nh), nh_private_(nh_private), count_(0), logging_(false),
+  rgb_saved_(false)
 {
   // **** parameters
   
@@ -121,10 +122,23 @@ void AvgLogger::RGBDCallback(
   if (!logging_) return;
 
   ROS_INFO("RGBD Callback [%d of %d]", count_+1, n_depth_);
-   
+  
+  std::stringstream ss_filename;
+  ss_filename << std::setw(4) << std::setfill('0') << id_ << ".png";
+    
   // accumulate depth images
   if (count_< n_depth_)
   {
+    if (found && !rgb_saved_)
+    {     
+      // write out the current rgb image     
+      std::string rgb_filename = ss_rgb_path_.str() + ss_filename.str();
+      cv::imwrite(rgb_filename, rgb_ptr->image);
+      ROS_INFO("RGB %s saved", rgb_filename.c_str());
+      
+      rgb_saved_ = true;
+    }
+    
     cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depth_msg);
 
     cv::Mat& depth_img = depth_ptr->image;
@@ -147,8 +161,13 @@ void AvgLogger::RGBDCallback(
   {
     ROS_INFO("Logging finished");
     
-    std::stringstream ss_filename;
-    ss_filename << std::setw(4) << std::setfill('0') << id_ << ".png";
+    if (!rgb_saved_)
+    {
+      // write out the current rgb image     
+      std::string rgb_filename = ss_rgb_path_.str() + ss_filename.str();
+      cv::imwrite(rgb_filename, rgb_ptr->image);
+      ROS_WARN("RGB %s saved, but might be unusable", rgb_filename.c_str());
+    }
     
     // create average depth image
     cv::Mat depth_avg_img = cv::Mat::zeros(480, 640, CV_16UC1);
@@ -176,16 +195,12 @@ void AvgLogger::RGBDCallback(
     std::string depth_filename = ss_depth_path_.str() + ss_filename.str();
     cv::imwrite(depth_filename, depth_avg_img);
     ROS_INFO("Depth %s saved", depth_filename.c_str());
-    
-    // write out the current rgb image     
-    std::string rgb_filename = ss_rgb_path_.str() + ss_filename.str();
-    cv::imwrite(rgb_filename, rgb_ptr->image);
-    ROS_INFO("RGB %s saved", rgb_filename.c_str());
-    
+      
     // stop logging, bump up image id, and reset counter
     count_ = 0;
     id_++;
     logging_ = false;
+    rgb_saved_ = false;
   }
 }
 
