@@ -1,6 +1,8 @@
 #ifndef CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
 #define CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
 
+#include <gsl/gsl_multifit.h>
+
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
@@ -24,6 +26,7 @@ class DepthCalibrator
     uint16_t measured;
   } ReadingPair;
   
+  typedef std::vector<double> DoubleVector;
   typedef std::vector<ReadingPair> ReadingVector;
     
   public:
@@ -94,6 +97,13 @@ class DepthCalibrator
       const cv::Mat& depth_img,
       cv::Mat& depth_img_g,
       cv::Mat& depth_img_m);
+
+    bool polynomialFit(
+      int degree, 
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+    
+    void testDepthCalibration();
 };
 
 } //namespace ccny_rgbd

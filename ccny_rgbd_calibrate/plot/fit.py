@@ -5,17 +5,21 @@ import pylab
 import numpy as np
  
 def processLine(line):
-  "Process a line in the form of u v g1 m1 g2 m2 ..." 
+  "Process a line in the form of u v c1 c2 c3 g1 m1 g2 m2 ..." 
   
   array = [float(x) for x in line.split()]
    
   u = int(array[0])
   v = int(array[1])
-
-  g = array[2::2]
-  m = array[3::2]
+  
+  c = array[2:5]
+    
+  g = array[5::2]
+  m = array[6::2]
+  
+  c = c[::-1]
    
-  return u, v, g, m
+  return u, v, c, g, m
   
 def plotLine(line):
   "Plots the data from a line in the file"
@@ -28,29 +32,48 @@ def plotLine(line):
   
   return
   
-def fitLine(line):
-  "fits the data to a polynomial"
+def fitLine(u, v, lines):
+  "fits a data at a fiven pixel to a polynomial"
 
-  u, v, g, m = processLine(line)
+  w = 5
   
-  deg = 3
-  coeff = np.polyfit(g, m, deg)
+  acc_g = []
+  acc_m = []
+  
+  for uu in range(u-w,u+w):
+    for vv in range(v-w,v+w):
+      if uu >= 0 and uu < 640 and vv > 0 and vv <= 640:
+        idx_n = vv * 640 + uu
+        
+        line = lines[idx_n]
+        nu, nv, nc, ng, nm = processLine(line)
+        
+        acc_g.extend(ng)
+        acc_m.extend(nm)
+       
+  deg = 2
+  coeff = np.polyfit(acc_m, acc_g, deg)
   print coeff
     
-  g2 = np.arange(0, 4000, 5) #more points for a smoother plot
-  m2 = np.polyval(coeff, g2) 
+  x = np.arange(0, 5000, 5) #more points for a smoother plot
+  y2 = np.polyval(coeff, x) 
   
-  g3 = np.arange(0, 4000, 5) #more points for a smoother plot
-  m3 = np.polyval([1,0], g3) 
+  # as recovered by gsl
+  #u, v, c, g, m = processLine(line)
+  #y3 = np.polyval(c, x)
   
+  #linear
+  y4 = np.polyval([1,0], x) 
+    
   lbl = '(' + `u` + ', ' + `v` + ') data'
   print lbl
   
-  plt.plot(g, m, 'ro', label=lbl) # ro = red points
-  plt.plot(g2, m2, label='fit')
-  plt.plot(g3, m3, label="linear")
-  
-  plt.axis([0, 4000, 0, 4000])
+  plt.plot(acc_m, acc_g, 'ro', label=lbl) # ro = red points
+  plt.plot(x, y2, label='python fit')
+  #plt.plot(x, y3, label="gsl fit")
+  plt.plot(x, y4, label="linear")
+
+  plt.axis([0, 5000, 0, 5000])
   ax = plt.gca()
   ax.set_autoscale_on(False)
   ax.set_aspect('equal')
@@ -59,6 +82,7 @@ def fitLine(line):
   
   return coeff
   
+  
 def processFile(filename):
   "Process a data file with pixel calibration values"
   
@@ -66,21 +90,15 @@ def processFile(filename):
   lines = file.readlines()
   file.close()
   
-  u,v  = 20, 20
-  index = u * 640 + v 
-  coeff = fitLine(lines[index])
-  
-  u,v  = 320, 240
-  index = u * 640 + v 
-  coeff = fitLine(lines[index])
-  
-  
-  #index = 198700
-  #index = 100 * 640 + 220
-  #index = 120 * 640 + 100
-  
+  for u in range(10, 630, 40):
+    for v in range(10, 470, 40):
+      coeff = fitLine(u, v, lines)
 
-  
+#  coeff = fitLine(20, 450)
+#  coeff = fitLine(600, 450)
+#  coeff = fitLine(400, 120)
+#  coeff = fitLine(320, 240)
+   
   return
   
 # main

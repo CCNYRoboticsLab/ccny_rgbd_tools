@@ -1,5 +1,7 @@
 #include "ccny_rgbd_calibrate/calib_util.h"
 
+#include <ros/ros.h>
+
 namespace ccny_rgbd {
   
 void create8bImage(
@@ -48,29 +50,31 @@ void buildPointCloud(
   const cv::Mat& intr_rect_rgb,
   PointCloudT& cloud)
 {
-  int w = depth_img_rect_reg.cols;
-  int h = depth_img_rect_reg.rows;
+  int w = rgb_img_rect.cols;
+  int h = rgb_img_rect.rows;
   
-  cv::Mat p(3, 1, CV_64FC1);
-  PointT pt;
+  double cx = intr_rect_rgb.at<double>(0,2);
+  double cy = intr_rect_rgb.at<double>(1,2);
+  double fx_inv = 1.0 / intr_rect_rgb.at<double>(0,0);
+  double fy_inv = 1.0 / intr_rect_rgb.at<double>(1,1);
+
+  cloud.resize(w*h);
   
   for (int u = 0; u < w; ++u)
   for (int v = 0; v < h; ++v)
   {
-    uint16_t  z = depth_img_rect_reg.at<uint16_t>(v, u);
+    uint16_t z = depth_img_rect_reg.at<uint16_t>(v, u);
     const cv::Vec3b& c = rgb_img_rect.at<cv::Vec3b>(v, u);
+    
+    PointT& pt = cloud.points[v*w + u];
     
     if (z != 0)
     {  
-      p.at<double>(0,0) = u;
-      p.at<double>(1,0) = v;
-      p.at<double>(2,0) = 1.0;
-      
-      cv::Mat P = z * intr_rect_rgb.inv() * p;   
-        
-      pt.x = P.at<double>(0);
-      pt.y = P.at<double>(1);
-      pt.z = P.at<double>(2);
+      double z_metric = z * 0.001;
+             
+      pt.x = z_metric * ((u - cx) * fx_inv);
+      pt.y = z_metric * ((v - cy) * fy_inv);
+      pt.z = z_metric;
   
       pt.r = c[2];
       pt.g = c[1];
@@ -80,9 +84,11 @@ void buildPointCloud(
     {
       pt.x = pt.y = pt.z = std::numeric_limits<float>::quiet_NaN();
     }
-
-    cloud.points.push_back(pt);
   }  
+  
+  cloud.width = w;
+  cloud.height = h;
+  cloud.is_dense = true;
 }
 
 void buildRegisteredDepthImage(
@@ -91,53 +97,80 @@ void buildRegisteredDepthImage(
   const cv::Mat& rgb2ir,
   const cv::Mat& depth_img_rect,
         cv::Mat& depth_img_rect_reg)
-{ 
+{  
   int w = depth_img_rect.cols;
   int h = depth_img_rect.rows;
       
-  // **** reproject
+  depth_img_rect_reg = cv::Mat::zeros(h, w, CV_16UC1); 
   
-  depth_img_rect_reg = cv::Mat::zeros(h, w, CV_16UC1);
+  cv::Mat intr_rect_ir_inv = intr_rect_ir.inv();
   
-  cv::Mat p(3, 1, CV_64FC1); 
-  cv::Mat M = intr_rect_rgb * rgb2ir;
+  // Eigen intr_rect_rgb (3x3)
+  Eigen::Matrix<double, 3, 3> intr_rect_rgb_eigen;  
+  for (int u = 0; u < 3; ++u)
+  for (int v = 0; v < 3; ++v)
+    intr_rect_rgb_eigen(v,u) =  intr_rect_rgb.at<double>(v, u); 
   
-  for (int u = 0; u < w; ++u)
-  for (int v = 0; v < h; ++v)
-  {
-    double z = (double) depth_img_rect.at<uint16_t>(v,u);
+  // Eigen rgb2ir_eigen (3x4)
+  Eigen::Matrix<double, 3, 4> rgb2ir_eigen;
+  for (int u = 0; u < 4; ++u)
+  for (int v = 0; v < 3; ++v)
+    rgb2ir_eigen(v,u) =  rgb2ir.at<double>(v, u);
+   
+ // Eigen intr_rect_ir_inv (4x4)
+  Eigen::Matrix4d intr_rect_ir_inv_eigen;  
+  for (int v = 0; v < 3; ++v)
+  for (int u = 0; u < 3; ++u)
+    intr_rect_ir_inv_eigen(v,u) = intr_rect_ir_inv.at<double>(v,u);
+  
+  intr_rect_ir_inv_eigen(0, 3) = 0;
+  intr_rect_ir_inv_eigen(1, 3) = 0;
+  intr_rect_ir_inv_eigen(2, 3) = 0;
+  intr_rect_ir_inv_eigen(3, 0) = 0;
+  intr_rect_ir_inv_eigen(3, 1) = 0;
+  intr_rect_ir_inv_eigen(3, 2) = 0;
+  intr_rect_ir_inv_eigen(3, 3) = 1;
+    
+  // multiply into single (3x4) matrix
+  Eigen::Matrix<double, 3, 4> H_eigen = 
+    intr_rect_rgb_eigen * (rgb2ir_eigen * intr_rect_ir_inv_eigen);
 
-    p.at<double>(0,0) = u;
-    p.at<double>(1,0) = v;
-    p.at<double>(2,0) = 1.0;
+  // *** reproject  
+  
+  Eigen::Vector3d p_rgb;
+  Eigen::Vector4d p_depth;
+  
+  for (int v = 0; v < h; ++v)
+  for (int u = 0; u < w; ++u)
+  {
+    uint16_t z = depth_img_rect.at<uint16_t>(v,u);
     
-    cv::Mat P = z * intr_rect_ir.inv() * p;    
-       
-    cv::Mat PP(4, 1, CV_64FC1);
-    PP.at<double>(0,0) = P.at<double>(0,0);
-    PP.at<double>(1,0) = P.at<double>(1,0);
-    PP.at<double>(2,0) = P.at<double>(2,0);
-    PP.at<double>(3,0) = 1; 
+    if (z != 0)
+    {    
+      p_depth(0,0) = u * z;
+      p_depth(1,0) = v * z;
+      p_depth(2,0) = z;
+      p_depth(3,0) = 1.0; 
+      p_rgb = H_eigen * p_depth;
+         
+      double px = p_rgb(0,0);
+      double py = p_rgb(1,0);
+      double pz = p_rgb(2,0);
+            
+      int qu = (int)(px / pz);
+      int qv = (int)(py / pz);  
+        
+      // skip outside of image 
+      if (qu < 0 || qu >= w || qv < 0 || qv >= h) continue;
     
-    cv::Mat q = M * PP; 
+      uint16_t& val = depth_img_rect_reg.at<uint16_t>(qv, qu);
     
-    double qx = q.at<double>(0,0);
-    double qy = q.at<double>(1,0);
-    double qz = q.at<double>(2,0);
-    
-    int qu = qx / qz;
-    int qv = qy / qz;  
-    
-    // skip outside of image 
-    if (qu < 0 || qu >= w || qv < 0 || qv >= h) continue;
-    
-    uint16_t& val = depth_img_rect_reg.at<uint16_t>(qv, qu);
-    
-    // z buffering
-    if (val == 0 || val > qz) val = qz;
+      // z buffering
+      if (val == 0 || val > pz) val = pz;
+    }
   }
 }
-  
+
 void matrixFromRvecTvec(
   const cv::Mat& rvec,
   const cv::Mat& tvec,
@@ -288,5 +321,44 @@ void buildCheckerboardDepthImage(
     } 
   }
 }
+
+void unwarpDepthImage(
+  cv::Mat& depth_img,
+  const cv::Mat& coeff0,
+  const cv::Mat& coeff1,
+  const cv::Mat& coeff2)
+{
+  /*
+  // TODO: This is faster (5ms vs 4 ms)
+  // BUT images need to be passed as CV_64FC1 or CV_32FC1
+  // currently the conversion to float messes up 0 <-> nan values
+  
+  cv::Mat temp;
+  depth_img.convertTo(temp, CV_64FC1);
+  temp = coeff0 + temp.mul(coeff1 + temp.mul(coeff2));   
+  temp.convertTo(depth_img, CV_16UC1);
+  
+  return;
+  */
+
+  for (int u = 0; u < depth_img.cols; ++u)
+  for (int v = 0; v < depth_img.rows; ++v)    
+  {
+    //printf("%d %d\n", u, v);
+    uint16_t d = depth_img.at<uint16_t>(v, u);
+    
+    if (d != 0)
+    {
+      double c0 = coeff0.at<double>(v, u);
+      double c1 = coeff1.at<double>(v, u);
+      double c2 = coeff2.at<double>(v, u);
+    
+      uint16_t res = (int)(c0 + d*(c1 + d*c2));
+      depth_img.at<uint16_t>(v, u) = res;
+    }
+  }
+}
+
+
 
 } // namespace ccny_rgbd

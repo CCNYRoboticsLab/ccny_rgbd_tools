@@ -21,8 +21,16 @@ pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
+# gsl
+pkg_check_modules(GSL REQUIRED gsl)
+include_directories(${GSL_INCLUDE_DIRS})
+link_directories(${GSL_LIBRARY_DIRS})
+
 # boost
 rosbuild_add_boost_directories()
+
+rosbuild_add_library(ccny_rgbd_calibrate
+  src/calib_util.cpp)
 
 rosbuild_add_executable(rgb_ir_calibrator_node 
   src/calib_util.cpp
@@ -42,6 +50,7 @@ target_link_libraries (rgb_ir_calibrator_node
 
 target_link_libraries (depth_calibrator_node 
   ${OPENCV_LIBRARIES}
+  ${GSL_LIBRARIES}
   boost_signals 
   boost_system
   boost_filesystem)

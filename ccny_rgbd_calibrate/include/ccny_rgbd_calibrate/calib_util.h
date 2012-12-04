@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <Eigen/Core>
 
 namespace ccny_rgbd {
     
@@ -16,6 +17,7 @@ typedef std::vector<cv::Point3f> Point3fVector;
 /* reprojects a depth image to another depth image,
  * registered in the rgb camera's frame
  */
+
 void buildRegisteredDepthImage(
   const cv::Mat& intr_rect_ir,
   const cv::Mat& intr_rect_rgb,
@@ -101,6 +103,16 @@ void buildCheckerboardDepthImage(
   const cv::Mat& rvec, const cv::Mat& tvec,
   const cv::Mat& intr_rect_rgb,
   cv::Mat& depth_img);
+
+/* given a depth image, uwarps it according to a polynomial model
+ * d = c0 + c1*d + c2*d^2
+ */
+
+void unwarpDepthImage(
+  cv::Mat& depth_img_in,
+  const cv::Mat& coeff0,
+  const cv::Mat& coeff1,
+  const cv::Mat& coeff2);
 
 } // namespace ccny_rgbd
 

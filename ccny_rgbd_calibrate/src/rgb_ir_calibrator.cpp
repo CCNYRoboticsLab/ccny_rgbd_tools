@@ -124,10 +124,10 @@ void RGBIRCalibrator::buildRectMaps()
   
   cv::Size size_rgb_rect(640, 480);
   cv::Size size_ir_rect (640, 480);
-  
+   
   intr_rect_rgb_ = getOptimalNewCameraMatrix(
     intr_rgb_, dist_rgb_, size_rgb, alpha, size_rgb_rect);
-
+  
   intr_rect_ir_ = getOptimalNewCameraMatrix(
     intr_ir_, dist_ir_, size_ir, alpha, size_ir_rect);
      
