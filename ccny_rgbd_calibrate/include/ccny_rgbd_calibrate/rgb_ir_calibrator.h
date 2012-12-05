@@ -53,16 +53,13 @@ class RGBIRCalibrator
     
     cv::Mat intr_rgb_, intr_ir_;
     cv::Mat dist_rgb_, dist_ir_;
-    
-    // output of calibration
-    cv::Mat extr_rgb_, extr_ir_;
-    
+       
     cv::Mat intr_rect_rgb_, intr_rect_ir_;
     
     cv::Mat map_rgb_1_, map_rgb_2_;
     cv::Mat map_ir_1_,  map_ir_2_;
     
-    cv::Mat rgb2ir_;
+    cv::Mat ir2rgb_;
     
     void calibrate();
     void build3dCornerVector();

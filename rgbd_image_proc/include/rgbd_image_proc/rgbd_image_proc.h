@@ -92,7 +92,7 @@ class RGBDImageProc
     cv::Mat coeff_0_;
     cv::Mat coeff_1_;
     cv::Mat coeff_2_;   // depth warp polynomial coeff
-    cv::Mat rgb2ir_;                        // extrinsic matrix between rgb and depth
+    cv::Mat ir2rgb_;    
     
     cv::Mat intr_rect_rgb_, intr_rect_depth_;  // optimal intrinsics after rectification
     

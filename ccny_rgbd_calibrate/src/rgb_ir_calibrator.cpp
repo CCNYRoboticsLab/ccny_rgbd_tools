@@ -33,7 +33,7 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   // output to screen and file to file
   ROS_INFO("Writing to %s", calib_extrinsic_filename_.c_str()); 
   cv::FileStorage fs(calib_extrinsic_filename_, cv::FileStorage::WRITE);
-  fs << "rgb2ir" << rgb2ir_;
+  fs << "ir2rgb" << ir2rgb_;
 }
 
 RGBIRCalibrator::~RGBIRCalibrator()
@@ -191,7 +191,7 @@ void RGBIRCalibrator::calibrate()
                      corner_result_rgb, "RGB Corners");
     showCornersImage(ir_img_rect, patternsize_, corners_2d_ir, 
                      corner_result_ir, "IR Corners");   
-    cv::waitKey(0);
+    cv::waitKey(500);
    
     // add corners to vectors
     v_corners_3d.push_back(corners_3d_);
@@ -217,7 +217,7 @@ void RGBIRCalibrator::calibrate()
   
   ROS_INFO("Reprojection error: %f", reproj_error);
   
-  matrixFromRT(R, t, rgb2ir_);
+  ir2rgb_ = matrixFromRT(R, t);
 }
 
 void RGBIRCalibrator::testExtrinsicCalibration()
@@ -233,7 +233,7 @@ void RGBIRCalibrator::testExtrinsicCalibration()
   
   // **** reproject
   cv::Mat depth_img_rect_reg;
-  buildRegisteredDepthImage(intr_rect_ir_, intr_rect_rgb_, rgb2ir_,
+  buildRegisteredDepthImage(intr_rect_ir_, intr_rect_rgb_, ir2rgb_,
                             depth_img_rect, depth_img_rect_reg);
   
   // **** visualize

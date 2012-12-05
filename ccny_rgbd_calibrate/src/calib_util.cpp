@@ -1,9 +1,12 @@
 #include "ccny_rgbd_calibrate/calib_util.h"
 
-#include <ros/ros.h>
-
 namespace ccny_rgbd {
   
+double getMsDuration(const ros::WallTime& start)
+{
+  return (ros::WallTime::now() - start).toSec() * 1000.0;
+}
+
 void create8bImage(
   const cv::Mat depth_img,
   cv::Mat& depth_img_u)
@@ -11,7 +14,7 @@ void create8bImage(
   int w = depth_img.cols;
   int h = depth_img.rows;
   
-  depth_img_u = cv::Mat::zeros(h,w, CV_8UC1);
+  depth_img_u = cv::Mat::zeros(h, w, CV_8UC1);
   
   for (int u = 0; u < w; ++u)
   for (int v = 0; v < h; ++v)
@@ -44,6 +47,46 @@ void blendImages(
   }
 }
   
+void buildPointCloud(
+  const cv::Mat& depth_img_rect,
+  const cv::Mat& intr_rect_ir,
+  PointCloudT& cloud)
+{
+  int w = depth_img_rect.cols;
+  int h = depth_img_rect.rows;
+  
+  double cx = intr_rect_ir.at<double>(0,2);
+  double cy = intr_rect_ir.at<double>(1,2);
+  double fx_inv = 1.0 / intr_rect_ir.at<double>(0,0);
+  double fy_inv = 1.0 / intr_rect_ir.at<double>(1,1);
+
+  cloud.resize(w*h);
+
+  for (int u = 0; u < w; ++u)
+  for (int v = 0; v < h; ++v)
+  {
+    uint16_t z = depth_img_rect.at<uint16_t>(v, u);   
+    PointT& pt = cloud.points[v*w + u];
+    
+    if (z != 0)
+    {  
+      double z_metric = z * 0.001;
+             
+      pt.x = z_metric * ((u - cx) * fx_inv);
+      pt.y = z_metric * ((v - cy) * fy_inv);
+      pt.z = z_metric;  
+    }
+    else
+    {
+      pt.x = pt.y = pt.z = std::numeric_limits<float>::quiet_NaN();
+    }
+  }  
+  
+  cloud.width = w;
+  cloud.height = h;
+  cloud.is_dense = true;
+}
+
 void buildPointCloud(
   const cv::Mat& depth_img_rect_reg,
   const cv::Mat& rgb_img_rect,
@@ -94,7 +137,7 @@ void buildPointCloud(
 void buildRegisteredDepthImage(
   const cv::Mat& intr_rect_ir,
   const cv::Mat& intr_rect_rgb,
-  const cv::Mat& rgb2ir,
+  const cv::Mat& ir2rgb,
   const cv::Mat& depth_img_rect,
         cv::Mat& depth_img_rect_reg)
 {  
@@ -112,12 +155,12 @@ void buildRegisteredDepthImage(
     intr_rect_rgb_eigen(v,u) =  intr_rect_rgb.at<double>(v, u); 
   
   // Eigen rgb2ir_eigen (3x4)
-  Eigen::Matrix<double, 3, 4> rgb2ir_eigen;
+  Eigen::Matrix<double, 3, 4> ir2rgb_eigen;
   for (int u = 0; u < 4; ++u)
   for (int v = 0; v < 3; ++v)
-    rgb2ir_eigen(v,u) =  rgb2ir.at<double>(v, u);
+    ir2rgb_eigen(v,u) =  ir2rgb.at<double>(v, u);
    
- // Eigen intr_rect_ir_inv (4x4)
+  // Eigen intr_rect_ir_inv (4x4)
   Eigen::Matrix4d intr_rect_ir_inv_eigen;  
   for (int v = 0; v < 3; ++v)
   for (int u = 0; u < 3; ++u)
@@ -133,7 +176,7 @@ void buildRegisteredDepthImage(
     
   // multiply into single (3x4) matrix
   Eigen::Matrix<double, 3, 4> H_eigen = 
-    intr_rect_rgb_eigen * (rgb2ir_eigen * intr_rect_ir_inv_eigen);
+    intr_rect_rgb_eigen * (ir2rgb_eigen * intr_rect_ir_inv_eigen);
 
   // *** reproject  
   
@@ -171,22 +214,16 @@ void buildRegisteredDepthImage(
   }
 }
 
-void matrixFromRvecTvec(
-  const cv::Mat& rvec,
-  const cv::Mat& tvec,
-  cv::Mat& E)
+cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec)
 {
   cv::Mat rmat;
   cv::Rodrigues(rvec, rmat);
-  matrixFromRT(rmat, tvec, E);
+  return matrixFromRT(rmat, tvec);
 }
 
-void matrixFromRT(
-  const cv::Mat& rmat,
-  const cv::Mat& tvec,
-  cv::Mat& E)
+cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec)
 {   
-  E = cv::Mat::zeros(3, 4, CV_64FC1);
+  cv::Mat E = cv::Mat::zeros(3, 4, CV_64FC1);
   
   E.at<double>(0,0) = rmat.at<double>(0,0);
   E.at<double>(0,1) = rmat.at<double>(0,1);
@@ -201,6 +238,8 @@ void matrixFromRT(
   E.at<double>(0,3) = tvec.at<double>(0,0);
   E.at<double>(1,3) = tvec.at<double>(1,0);
   E.at<double>(2,3) = tvec.at<double>(2,0);
+
+  return E;
 }
 
 bool getCorners(
@@ -241,8 +280,8 @@ void showBlendedImage(
 
 void showCornersImage(
   const cv::Mat& img, 
-  const cv::Size pattern_size, 
-  const Point2fVector corners_2d, 
+  const cv::Size& pattern_size, 
+  const Point2fVector& corners_2d, 
   bool corner_result,
   const std::string title)
 { 
@@ -267,37 +306,28 @@ void getCheckerBoardPolygon(
 }
 
 void buildCheckerboardDepthImage(
-  const Point3fVector& corners_3d,
+  const Point3fVector& corners_3d_depth,
   const Point2fVector& vertices,
-  int rows, int cols,
-  const cv::Mat& rvec, const cv::Mat& tvec,
-  const cv::Mat& intr_rect_rgb,
-  cv::Mat& depth_img)
+  const cv::Mat& intr_rect_ir,
+  cv::Mat& depth_img_g)
 {
-  depth_img = cv::Mat::zeros(rows, cols, CV_16UC1);
+  int rows = depth_img_g.rows;
+  int cols = depth_img_g.cols;
   
   // calculate vertices
-  cv::Mat v0(corners_3d[0]);
-  cv::Mat v1(corners_3d[1]);
-  cv::Mat v2(corners_3d[corners_3d.size()-1]);
+  cv::Mat v0(corners_3d_depth[0]);
+  cv::Mat v1(corners_3d_depth[1]);
+  cv::Mat v2(corners_3d_depth[corners_3d_depth.size()-1]);
   
   v0.convertTo(v0, CV_64FC1);
   v1.convertTo(v1, CV_64FC1);
   v2.convertTo(v2, CV_64FC1);
-  
-  cv::Mat rmat;
-  cv::Rodrigues(rvec, rmat);
-  
-  // rotate into camera frame
-  v0 = rmat * v0 + tvec;
-  v1 = rmat * v1 + tvec;
-  v2 = rmat * v2 + tvec;
-  
+    
   // calculate normal
   cv::Mat n = (v1 - v0).cross(v2 - v0);
  
   // cache inverted intrinsics
-  cv::Mat intr_inv = intr_rect_rgb.inv();
+  cv::Mat intr_inv = intr_rect_ir.inv();
   
   cv::Mat q = cv::Mat::zeros(3, 1, CV_64FC1);
   PointT pt;
@@ -317,7 +347,7 @@ void buildCheckerboardDepthImage(
       cv::Mat p = d * q;
 
       double z = p.at<double>(2,0);
-      depth_img.at<uint16_t>(v, u) = (int)z;
+      depth_img_g.at<uint16_t>(v, u) = (int)z;
     } 
   }
 }
@@ -326,39 +356,80 @@ void unwarpDepthImage(
   cv::Mat& depth_img,
   const cv::Mat& coeff0,
   const cv::Mat& coeff1,
-  const cv::Mat& coeff2)
+  const cv::Mat& coeff2,
+  int fit_mode)
 {
   /*
   // TODO: This is faster (5ms vs 4 ms)
   // BUT images need to be passed as CV_64FC1 or CV_32FC1
   // currently the conversion to float messes up 0 <-> nan values
+  // Alternatively, coeff0 needs to be 0
   
   cv::Mat temp;
   depth_img.convertTo(temp, CV_64FC1);
   temp = coeff0 + temp.mul(coeff1 + temp.mul(coeff2));   
   temp.convertTo(depth_img, CV_16UC1);
-  
-  return;
   */
 
-  for (int u = 0; u < depth_img.cols; ++u)
-  for (int v = 0; v < depth_img.rows; ++v)    
+  if (fit_mode == DEPTH_FIT_QUADRATIC)
   {
-    //printf("%d %d\n", u, v);
-    uint16_t d = depth_img.at<uint16_t>(v, u);
-    
-    if (d != 0)
+    for (int u = 0; u < depth_img.cols; ++u)
+    for (int v = 0; v < depth_img.rows; ++v)    
     {
-      double c0 = coeff0.at<double>(v, u);
-      double c1 = coeff1.at<double>(v, u);
-      double c2 = coeff2.at<double>(v, u);
-    
-      uint16_t res = (int)(c0 + d*(c1 + d*c2));
-      depth_img.at<uint16_t>(v, u) = res;
+      uint16_t d = depth_img.at<uint16_t>(v, u);    
+      if (d != 0)
+      {
+        double c0 = coeff0.at<double>(v, u);
+        double c1 = coeff1.at<double>(v, u);
+        double c2 = coeff2.at<double>(v, u);
+      
+        uint16_t res = (int)(c0 + d*(c1 + d*c2));
+        depth_img.at<uint16_t>(v, u) = res;
+      }
     }
+  }
+  else if(fit_mode == DEPTH_FIT_LINEAR)
+  {
+    for (int u = 0; u < depth_img.cols; ++u)
+    for (int v = 0; v < depth_img.rows; ++v)    
+    {
+      uint16_t d = depth_img.at<uint16_t>(v, u);    
+      if (d != 0)
+      {
+        double c0 = coeff0.at<double>(v, u);
+        double c1 = coeff1.at<double>(v, u);
+      
+        uint16_t res = (int)(c0 + d*c1);
+        depth_img.at<uint16_t>(v, u) = res;
+      }
+    }
+  }
+  else if (fit_mode == DEPTH_FIT_LINEAR_ZERO)
+  {
+    cv::Mat temp;
+    depth_img.convertTo(temp, CV_64FC1);
+    temp = temp.mul(coeff1);   
+    temp.convertTo(depth_img, CV_16UC1);
+  }
+  else if (fit_mode == DEPTH_FIT_QUADRATIC_ZERO)
+  {
+    cv::Mat temp;
+    depth_img.convertTo(temp, CV_64FC1);
+    temp = temp.mul(coeff1 + temp.mul(coeff2));   
+    temp.convertTo(depth_img, CV_16UC1);
   }
 }
 
+cv::Mat m4(const cv::Mat& m3)
+{
+  cv::Mat m4 = cv::Mat::zeros(4, 4, CV_64FC1);
 
+  for (int i = 0; i < 4; ++i)
+  for (int j = 0; j < 3; ++j) 
+    m4.at<double>(j,i) = m3.at<double>(j,i);
+
+  m4.at<double>(3,3) = 1.0;
+  return m4;
+}
 
 } // namespace ccny_rgbd

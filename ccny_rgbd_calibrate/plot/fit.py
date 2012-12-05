@@ -35,8 +35,9 @@ def plotLine(line):
 def fitLine(u, v, lines):
   "fits a data at a fiven pixel to a polynomial"
 
-  w = 5
-  
+  # gather points
+
+  w = 5 
   acc_g = []
   acc_m = []
   
@@ -51,27 +52,22 @@ def fitLine(u, v, lines):
         acc_g.extend(ng)
         acc_m.extend(nm)
        
-  deg = 2
-  coeff = np.polyfit(acc_m, acc_g, deg)
-  print coeff
-    
   x = np.arange(0, 5000, 5) #more points for a smoother plot
-  y2 = np.polyval(coeff, x) 
-  
-  # as recovered by gsl
-  #u, v, c, g, m = processLine(line)
-  #y3 = np.polyval(c, x)
+ 
+  #as recovered by gsl
+  file_u, file_v, coeff_gsl, file_g, file_m = processLine(line)
+  y_gsl = np.polyval(coeff_gsl, x)
   
   #linear
-  y4 = np.polyval([1,0], x) 
+  y_linear = np.polyval([1,0], x) 
     
   lbl = '(' + `u` + ', ' + `v` + ') data'
   print lbl
   
   plt.plot(acc_m, acc_g, 'ro', label=lbl) # ro = red points
-  plt.plot(x, y2, label='python fit')
-  #plt.plot(x, y3, label="gsl fit")
-  plt.plot(x, y4, label="linear")
+  #plt.plot(x, y_fit, label='python fit')
+  plt.plot(x, y_gsl, label="gsl fit")
+  plt.plot(x, y_linear, label="linear")
 
   plt.axis([0, 5000, 0, 5000])
   ax = plt.gca()
@@ -80,7 +76,7 @@ def fitLine(u, v, lines):
   plt.legend(loc='lower right')
   plt.show()
   
-  return coeff
+  return coeff_gsl
   
   
 def processFile(filename):

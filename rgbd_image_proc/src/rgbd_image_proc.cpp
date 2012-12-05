@@ -54,7 +54,7 @@ bool RGBDImageProc::loadCalibration()
   if (!boost::filesystem::exists(calib_extr_filename_))
   {
     ROS_ERROR("Could not open %s", calib_extr_filename_.c_str());
-    // TODO: handle this with default rgb2_ir
+    // TODO: handle this with default ir2rgb
     return false;
   }
   if (!boost::filesystem::exists(calib_warp_filename_))
@@ -69,7 +69,7 @@ bool RGBDImageProc::loadCalibration()
   cv::FileStorage fs_extr(calib_extr_filename_, cv::FileStorage::READ);
   cv::FileStorage fs_warp(calib_warp_filename_, cv::FileStorage::READ);   
   
-  fs_extr["rgb2ir"] >> rgb2ir_;
+  fs_extr["ir2rgb"] >> ir2rgb_;
   fs_warp["c0"] >> coeff_0_;
   fs_warp["c1"] >> coeff_1_;
   fs_warp["c2"] >> coeff_2_;
@@ -138,15 +138,13 @@ void RGBDImageProc::initMaps(
   ROS_INFO("Initializing rectification maps");
   
   // **** get OpenCV matrices from CameraInfo messages
-    
   cv::Mat intr_rgb, intr_depth;
   cv::Mat dist_rgb, dist_depth;
   
   convertCameraInfoToMats(rgb_info_msg, intr_rgb, dist_rgb);
   convertCameraInfoToMats(depth_info_msg, intr_depth, dist_depth); 
   
-  // **** sizes TODO: support resizing here?
-
+  // **** sizes 
   double alpha = 0.0;
     
   size_in_.width  = rgb_info_msg->width;
@@ -156,7 +154,6 @@ void RGBDImageProc::initMaps(
   size_out_.height = size_in_.height * scale_;
    
   // **** get optimal camera matrices
-  
   intr_rect_rgb_ = cv::getOptimalNewCameraMatrix(
     intr_rgb, dist_rgb, size_in_, alpha, size_out_);
  
@@ -164,7 +161,6 @@ void RGBDImageProc::initMaps(
     intr_depth, dist_depth, size_in_, alpha, size_out_);
       
   // **** create undistortion maps
-  
   cv::initUndistortRectifyMap(
     intr_rgb, dist_rgb, cv::Mat(), intr_rect_rgb_, 
     size_out_, CV_16SC2, map_rgb_1_, map_rgb_2_);
@@ -173,8 +169,16 @@ void RGBDImageProc::initMaps(
     intr_depth, dist_depth, cv::Mat(), intr_rect_depth_, 
     size_out_, CV_16SC2, map_depth_1_, map_depth_2_);  
   
-  // **** save new intrinsics as camera models
+  // **** rectify the coeefficient images
+  cv::Mat t0 = coeff_0_.clone();
+  cv::Mat t1 = coeff_1_.clone();
+  cv::Mat t2 = coeff_2_.clone();
 
+  cv::remap(t0, coeff_0_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  cv::remap(t1, coeff_1_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  cv::remap(t2, coeff_2_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+
+  // **** save new intrinsics as camera models
   rgb_rect_info_msg_.header = rgb_info_msg->header;
   rgb_rect_info_msg_.width  = size_out_.width;
   rgb_rect_info_msg_.height = size_out_.height;  
@@ -213,36 +217,36 @@ void RGBDImageProc::RGBDCallback(
   
   // **** rectify
   ros::WallTime start_rectify = ros::WallTime::now();
-  cv::Mat rgb_img_rect, depth_img_rect; // rectified images 
+  cv::Mat rgb_img_rect, depth_img_rect;
   cv::remap(rgb_img, rgb_img_rect, map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
   cv::remap(depth_img, depth_img_rect, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
-  double dur_rectify = (ros::WallTime::now() - start_rectify).toSec() * 1000.0;
+  double dur_rectify = getMsDuration(start_rectify);
   
   //cv::imshow("RGB Rect", rgb_img_rect);
   //cv::imshow("Depth Rect", depth_img_rect);
   //cv::waitKey(1);
   
+  // **** unwarp 
+  ros::WallTime start_unwarp = ros::WallTime::now();
+  unwarpDepthImage(depth_img_rect, coeff_0_, coeff_1_, coeff_2_);
+  double dur_unwarp = getMsDuration(start_unwarp);
+   
   // **** reproject
   ros::WallTime start_reproject = ros::WallTime::now();
   cv::Mat depth_img_rect_reg;
-  buildRegisteredDepthImage(intr_rect_depth_, intr_rect_rgb_, rgb2ir_,
+  buildRegisteredDepthImage(intr_rect_depth_, intr_rect_rgb_, ir2rgb_,
                             depth_img_rect, depth_img_rect_reg);
-  double dur_reproject = (ros::WallTime::now() - start_reproject).toSec() * 1000.0;
-    
-  // **** unwarp 
-  ros::WallTime start_unwarp = ros::WallTime::now();
-  unwarpDepthImage(depth_img_rect_reg, coeff_0_, coeff_1_, coeff_2_);
-  double dur_unwarp = (ros::WallTime::now() - start_unwarp).toSec() * 1000.0;
-   
+  double dur_reproject = getMsDuration(start_reproject);
+
+
   // **** point cloud
-  
   ros::WallTime start_cloud = ros::WallTime::now();
   PointCloudT::Ptr cloud;
   cloud.reset(new PointCloudT());
   buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud);
   cloud->header = rgb_info_msg->header;
   cloud_publisher_.publish(cloud);
-  double dur_cloud = (ros::WallTime::now() - start_cloud).toSec() * 1000.0;
+  double dur_cloud = getMsDuration(start_cloud);
   
   // **** allocate registered rgb image
   ros::WallTime start_allocate = ros::WallTime::now();
@@ -257,7 +261,7 @@ void RGBDImageProc::RGBDCallback(
   // **** update camera info (single, since both images are in rgb frame)
   rgb_rect_info_msg_.header = rgb_info_msg->header;
   
-  double dur_allocate = (ros::WallTime::now() - start_allocate).toSec() * 1000.0; 
+  double dur_allocate = getMsDuration(start_allocate); 
 
   ROS_INFO("Rect: %.1f Reproj: %.1f Unwarp: %.1f Cloud %.1f Alloc: %.1f ms", 
     dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate);

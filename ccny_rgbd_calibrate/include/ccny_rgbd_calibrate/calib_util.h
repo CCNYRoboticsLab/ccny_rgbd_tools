@@ -8,29 +8,50 @@
 
 namespace ccny_rgbd {
     
+enum DepthFitMode { 
+  DEPTH_FIT_LINEAR,
+  DEPTH_FIT_LINEAR_ZERO,
+  DEPTH_FIT_QUADRATIC,
+  DEPTH_FIT_QUADRATIC_ZERO
+};
+
 typedef pcl::PointXYZRGB PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 typedef std::vector<cv::Point2f> Point2fVector;
 typedef std::vector<cv::Point3f> Point3fVector;
-  
-/* reprojects a depth image to another depth image,
- * registered in the rgb camera's frame
- */
 
+/* returns the duration, in ms, from a given time
+ */
+double getMsDuration(const ros::WallTime& start);
+
+/* reprojects a depth image to another depth image,
+ * registered in the rgb camera's frame. Both images 
+ * need to be rectified first. ir2rgb is a matrix such that 
+ * for any point P_IR in the depth camera frame
+ * P_RGB = ir2rgb * P
+ */
 void buildRegisteredDepthImage(
   const cv::Mat& intr_rect_ir,
   const cv::Mat& intr_rect_rgb,
-  const cv::Mat& rgb2ir,
+  const cv::Mat& ir2rgb,
   const cv::Mat& depth_img_rect,
   cv::Mat& depth_img_rect_reg);
 
-/*
- * Constructs a point cloud, given a depth image which
- * has been undistorted and registered in the rgb frame, 
- * and an rgb image.
- * The intinsic matrix is the RGB matrix after rectification
- * The depth image is uint16_t, in mm
+/* Constructs a point cloud, given:
+ *  - a depth image (uint16_t, mm) which has been undistorted
+ *  - the intinsic matrix of the depth image after rectification
+ */
+void buildPointCloud(
+  const cv::Mat& depth_img_rect,
+  const cv::Mat& intr_rect_ir,
+  PointCloudT& cloud);
+
+/* Constructs a point cloud with color, given: 
+ *  - a depth image (uint16_t, mm) which has been undistorted 
+ *    and registeredin the rgb frame, 
+ *  - an an rgb image which has been undistorted
+ *  - the intinsic matrix of the RGB image after rectification
  */
 void buildPointCloud(
   const cv::Mat& depth_img_rect_reg,
@@ -38,18 +59,25 @@ void buildPointCloud(
   const cv::Mat& intr_rect_rgb,
   PointCloudT& cloud);
   
-  
+/* overlays an RGB and depth image, used for 
+ * testing registration
+ */
 void blendImages(const cv::Mat& rgb_img,
                  const cv::Mat depth_img,
                  cv::Mat& blend_img);
   
-void matrixFromRvecTvec(const cv::Mat& rvec,
-                        const cv::Mat& tvec,
-                        cv::Mat& E);
+/* get a 4x3 matrix from OpenCV r vector and t vector
+ */
+cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);
 
-void matrixFromRT(const cv::Mat& rmat,
-                  const cv::Mat& tvec,
-                  cv::Mat& E);
+/* get a 4x3 matrix from OpenCV R matrix and t vector
+ */
+cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
+
+/* get a 4x4 matrix from a 3x3 matrix, 
+ * 4th row is 0 0 0 1
+ */
+cv::Mat m4(const cv::Mat& m3);
 
 /* creates an 8-bit depth image from a 
  * 16-bit depth image in mm
@@ -74,10 +102,12 @@ void showBlendedImage(
   const cv::Mat& rgb_img,
   const std::string& title);
 
+/* displays an image with checkerboard corners
+ */
 void showCornersImage(
   const cv::Mat& img, 
-  const cv::Size pattern_size, 
-  const Point2fVector corners_2d, 
+  const cv::Size& pattern_size, 
+  const Point2fVector& corners_2d, 
   bool corner_result,
   const std::string title);
 
@@ -97,22 +127,20 @@ void getCheckerBoardPolygon(
  * checkerboard 
  */
 void buildCheckerboardDepthImage(
-  const Point3fVector& corners_3d,
+  const Point3fVector& corners_3d_depth,
   const Point2fVector& vertices,
-  int width, int height,
-  const cv::Mat& rvec, const cv::Mat& tvec,
-  const cv::Mat& intr_rect_rgb,
+  const cv::Mat& intr_rect_depth,
   cv::Mat& depth_img);
 
 /* given a depth image, uwarps it according to a polynomial model
  * d = c0 + c1*d + c2*d^2
  */
-
 void unwarpDepthImage(
   cv::Mat& depth_img_in,
   const cv::Mat& coeff0,
   const cv::Mat& coeff1,
-  const cv::Mat& coeff2);
+  const cv::Mat& coeff2,
+  int fit_mode=DEPTH_FIT_QUADRATIC);
 
 } // namespace ccny_rgbd
 

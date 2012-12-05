@@ -2,6 +2,7 @@
 #define CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
 
 #include <gsl/gsl_multifit.h>
+#include <gsl/gsl_fit.h>
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
@@ -20,7 +21,6 @@ namespace ccny_rgbd
 
 class DepthCalibrator
 {
- 
   typedef struct  {
     uint16_t ground_truth;
     uint16_t measured;
@@ -43,7 +43,9 @@ class DepthCalibrator
     float square_size_;
     int n_cols_;
     int n_rows_;
-    
+    int fit_window_size_;
+    int fit_mode_;    
+
     cv::Size patternsize_;
     
     // input filenames
@@ -54,24 +56,19 @@ class DepthCalibrator
     
     std::string rgb_test_filename_;
     std::string depth_test_filename_;
-       
-    //output filenames
-        
+              
     // input to calibration       
     std::vector<cv::Point3f> corners_3d_;
     
     cv::Mat intr_rgb_, intr_ir_;
     cv::Mat dist_rgb_, dist_ir_;
-    
-    // output of calibration
-    cv::Mat extr_rgb_, extr_ir_;
-    
+        
     cv::Mat intr_rect_rgb_, intr_rect_ir_;
     
     cv::Mat map_rgb_1_, map_rgb_2_;
     cv::Mat map_ir_1_,  map_ir_2_;
     
-    cv::Mat rgb2ir_;
+    cv::Mat ir2rgb_;
     
     void calibrate();
     void build3dCornerVector();
@@ -98,11 +95,26 @@ class DepthCalibrator
       cv::Mat& depth_img_g,
       cv::Mat& depth_img_m);
 
-    bool polynomialFit(
-      int degree, 
+    void fitData(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void quadraticFit(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void quadraticFitZero(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void linearFit(
       const ReadingVector& v, 
       std::vector<double>& coeff);
     
+    void linearFitZero(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
     void testDepthCalibration();
 };
 
