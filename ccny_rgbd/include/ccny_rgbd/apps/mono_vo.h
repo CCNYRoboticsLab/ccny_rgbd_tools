@@ -53,6 +53,20 @@ class MonocularVisualOdometry
 
     MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~MonocularVisualOdometry();
+    /**
+     * @brief Fitness function for RANSAC used to find the initial camera pose
+     *
+     * @param M the intrinsic 3x3 camera matrix
+     * @param E the extrinsic 3x4 camera matrix (composed by rotation and translation parameters)
+     * @param distance_threshold Fitness criterion for determining a good fit if distance (in pixels) between a nearest-neighbors pair is less than or equal to this threshold
+     * @param sample_3D_points Random sample of 6 3D points from the sparse cloud  mode
+     * @param feature_2D_points Detected 2D features in input image
+     * @param inliers_3D_points Resulting inliers from the 3D point cloud model (pointer as member variable $model_ptr_$)
+     * @param inliers_2D_points Resulting inliers from the set of 2D point features
+     *
+     * @return True if the fitness falls under certain threshold criteria of number of inliers
+     */
+    bool fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const std::vector<cv::Point3f> &sample_3D_points, const std::vector<cv::Point2f> & feature_2D_points, std::vector<cv::Point3f> &inliers_3D_points, std::vector<cv::Point2f> & inliers_2D_points);
 
   private:
 
