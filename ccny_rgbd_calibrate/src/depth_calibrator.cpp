@@ -9,12 +9,17 @@ DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
   
   // parameters
-  square_size_ = 100.0; // in mm
-  n_cols_ = 9;
-  n_rows_ = 6;
-  fit_window_size_ = 10;
-  fit_mode_ = DEPTH_FIT_QUADRATIC_ZERO;
-  
+  if (!nh_private_.getParam ("fit_window_size", fit_window_size_))
+    fit_window_size_ = 10;
+  if (!nh_private_.getParam ("fit_mode_", fit_mode_))
+    fit_mode_ = DEPTH_FIT_QUADRATIC_ZERO;
+  if (!nh_private_.getParam ("n_cols", n_cols_))
+    n_cols_ = 9;
+  if (!nh_private_.getParam ("n_rows", n_rows_))
+    n_rows_ = 6;
+  if (!nh_private_.getParam ("square_size", square_size_))
+    square_size_ = 100.0; // in mm
+
   patternsize_ = cv::Size(n_cols_, n_rows_);
   
   // input   
@@ -584,7 +589,7 @@ void DepthCalibrator::testDepthCalibration()
       depth_img_warped, depth_img_rect_warped_reg);
   printf("Reprojecting: %.1fms\n", getMsDuration(start));
     
-  // uwarp
+  // unwarp
   start = ros::WallTime::now();
   cv::Mat depth_img_unwarped = depth_img_rect.clone();
   unwarpDepthImage(depth_img_unwarped, coeff0, coeff1, coeff2);

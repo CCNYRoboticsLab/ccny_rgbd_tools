@@ -29,7 +29,7 @@ class RGBIRCalibrator
     ros::NodeHandle nh_private_;
 
     // parameters
-    float square_size_;
+    double square_size_;
     int n_cols_;
     int n_rows_;
     

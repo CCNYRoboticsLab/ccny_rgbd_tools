@@ -9,9 +9,12 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
   
   // parameters
-  square_size_ = 23.0;
-  n_cols_ = 8;
-  n_rows_ = 6;
+  if (!nh_private_.getParam ("n_cols", n_cols_))
+    n_cols_ = 8;
+  if (!nh_private_.getParam ("n_rows", n_rows_))
+    n_rows_ = 6;
+  if (!nh_private_.getParam ("square_size", square_size_))
+    square_size_ = 23.0; // in mm
   
   patternsize_ = cv::Size(n_cols_, n_rows_);
   
