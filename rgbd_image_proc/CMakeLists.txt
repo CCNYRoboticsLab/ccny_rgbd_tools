@@ -11,8 +11,15 @@ set(ROS_BUILD_TYPE RelWithDebInfo)
 
 rosbuild_init()
 
+#set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+#set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+
+# Generate dynamic parameters
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()
 
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
@@ -21,36 +28,17 @@ pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
-# gsl
-pkg_check_modules(GSL REQUIRED gsl)
-include_directories(${GSL_INCLUDE_DIRS})
-link_directories(${GSL_LIBRARY_DIRS})
-
 # boost
 rosbuild_add_boost_directories()
 
-rosbuild_add_library(ccny_rgbd_calibrate
-  src/calib_util.cpp)
+rosbuild_add_executable(rgbd_image_proc_node 
+  src/rgbd_image_proc_node.cpp
+  src/rgbd_image_proc.cpp)
 
-rosbuild_add_executable(extrinsics_calibrator_node 
-  src/extrinsics_calibrator_node.cpp
-  src/extrinsics_calibrator.cpp)
-  
-rosbuild_add_executable(depth_calibrator_node 
-  src/depth_calibrator_node.cpp
-  src/depth_calibrator.cpp)
-  
-target_link_libraries (depth_calibrator_node 
-  ${OPENCV_LIBRARIES}
-  ${GSL_LIBRARIES}
+target_link_libraries (rgbd_image_proc_node
   ccny_rgbd_calibrate
   boost_signals 
   boost_system
-  boost_filesystem)
-
-target_link_libraries (extrinsics_calibrator_node 
+  boost_filesystem
   ${OPENCV_LIBRARIES}
-  ccny_rgbd_calibrate
-  boost_signals 
-  boost_system
-  boost_filesystem)
+)
