@@ -11,7 +11,10 @@
   <depend package="roscpp"/>
   <depend package="ccny_rgbd_calibrate"/>
   <depend package="ccny_rgbd"/>
+  <depend package="nodelet"/>
+  <depend package="message_filters"/>
+  <depend package="dynamic_reconfigure" />
 
-</package>
+  </package>
 
 

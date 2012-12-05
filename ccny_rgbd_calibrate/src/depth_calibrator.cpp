@@ -22,9 +22,9 @@ DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   patternsize_ = cv::Size(n_cols_, n_rows_);
  
   // directories
-  cloud_path_ = path_ + "/depth_train/clouds";   
-  train_path_ = path_ + "/depth_train";
-  test_path_  = path_ + "/depth_test";
+  cloud_path_ = path_ + "/warp_train/clouds";   
+  train_path_ = path_ + "/warp_train";
+  test_path_  = path_ + "/warp_test";
 
   // prepare directories
   boost::filesystem::create_directory(cloud_path_); 
@@ -282,6 +282,7 @@ void DepthCalibrator::calibrate()
   // **** write to yaml file
   ROS_INFO("Writing to %s", calib_warp_filename_.c_str()); 
   cv::FileStorage fs(calib_warp_filename_, cv::FileStorage::WRITE);
+  fs << "fit_mode" << fit_mode_;
   fs << "c0" << c0;
   fs << "c1" << c1;
   fs << "c2" << c2;

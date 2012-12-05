@@ -2,7 +2,6 @@
 #define RGBD_IMAGE_PROC_RGBD_IMAGE_PROC_H
 
 #include <ros/ros.h>
-//#include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -18,8 +17,10 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
+#include <ccny_rgbd_calibrate/calib_util.h>
+#include <dynamic_reconfigure/server.h>
 
-#include "ccny_rgbd_calibrate/calib_util.h"
+#include "rgbd_image_proc/RGBDImageProcConfig.h"
 
 namespace ccny_rgbd
 {
@@ -37,6 +38,9 @@ typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, Came
 typedef message_filters::Synchronizer<RGBDSyncPolicy> RGBDSynchronizer;
   
 typedef image_transport::Publisher ImagePublisher;
+
+typedef rgbd_image_proc::RGBDImageProcConfig ProcConfig;
+typedef dynamic_reconfigure::Server<ProcConfig> ProcConfigServer;
 
 class RGBDImageProc 
 {
@@ -73,6 +77,8 @@ class RGBDImageProc
     ros::Publisher info_publisher_;
     ros::Publisher cloud_publisher_;
     
+    ProcConfigServer config_server_;
+    
     // parameters
     
     std::string calib_path_;
@@ -84,14 +90,19 @@ class RGBDImageProc
     // **** state variables
     
     bool initialized_;
+    boost::mutex mutex_;
     
     // **** calibration
     
+    int fit_mode_;
     cv::Size size_in_, size_out_;
-
-    cv::Mat coeff_0_;
-    cv::Mat coeff_1_;
-    cv::Mat coeff_2_;   // depth warp polynomial coeff
+    
+    // depth warp polynomial coeff
+    cv::Mat coeff_0_, coeff_1_, coeff_2_;   
+    
+    // depth warp polynomial coeff, after recitfication and resizing
+    cv::Mat coeff_0_rect_, coeff_1_rect_, coeff_2_rect_;  
+    
     cv::Mat ir2rgb_;    
     
     cv::Mat intr_rect_rgb_, intr_rect_depth_;  // optimal intrinsics after rectification
@@ -99,8 +110,8 @@ class RGBDImageProc
     CameraInfoMsg rgb_rect_info_msg_;   // derived from optimal matrices
     CameraInfoMsg depth_rect_info_msg_; // derived from optimal matrices
         
-    cv::Mat map_rgb_1_, map_rgb_2_;         // rectification maps
-    cv::Mat map_depth_1_,  map_depth_2_;
+    cv::Mat map_rgb_1_,   map_rgb_2_;         // rectification maps
+    cv::Mat map_depth_1_, map_depth_2_;
     
     void initMaps(
       const CameraInfoMsg::ConstPtr& rgb_info_msg,
@@ -116,6 +127,8 @@ class RGBDImageProc
     void convertMatToCameraInfo(
       const cv::Mat& intr,
       CameraInfoMsg& camera_info);
+    
+    void reconfigCallback(ProcConfig& config, uint32_t level);
 };
 
 } //namespace ccny_rgbd

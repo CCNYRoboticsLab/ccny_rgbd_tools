@@ -11,20 +11,25 @@ RGBDImageProc::RGBDImageProc(ros::NodeHandle nh, ros::NodeHandle nh_private):
   // parameters 
   if (!nh_private_.getParam ("scale", scale_))
     scale_ = 1.0;
-
+  
   std::string home_path = getenv("HOME");
   calib_path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
+
   calib_extr_filename_ = calib_path_ + "extr.yml";
   calib_warp_filename_ = calib_path_ + "warp.yml";
-
-  // load calibration (extrinsics, depth uwarp params) from files
+  
+  // load calibration (extrinsics, depth unwarp params) from files
   loadCalibration();
-   
+  
   // publishers
   rgb_publisher_   = rgb_image_transport_.advertise("rgbd/rgb", 1);
   depth_publisher_ = depth_image_transport_.advertise("rgbd/depth", 1);
   info_publisher_  = nh_.advertise<CameraInfoMsg>("rgbd/info", 1);
   cloud_publisher_ = nh_.advertise<PointCloudT>("rgbd/cloud", 1);
+
+  // dynamic reconfigure
+  ProcConfigServer::CallbackType f = boost::bind(&RGBDImageProc::reconfigCallback, this, _1, _2);
+  config_server_.setCallback(f);
   
   // subscribers
   int queue_size = 5;
@@ -73,6 +78,7 @@ bool RGBDImageProc::loadCalibration()
   fs_warp["c0"] >> coeff_0_;
   fs_warp["c1"] >> coeff_1_;
   fs_warp["c2"] >> coeff_2_;
+  fs_warp["fit_mode"] >> fit_mode_;
 
   return true;
 }
@@ -126,7 +132,7 @@ void RGBDImageProc::convertMatToCameraInfo(
   std::fill(camera_info_msg.P.begin(), camera_info_msg.P.end(), 0.0);  
   for (int i = 0; i < 3; ++i)
   for (int j = 0; j < 3; ++j)
-    camera_info_msg.P[j*3 + i] = intr.at<double>(j,i);
+    camera_info_msg.P[j*4 + i] = intr.at<double>(j,i);
 }
 
 void RGBDImageProc::initMaps(
@@ -169,14 +175,10 @@ void RGBDImageProc::initMaps(
     intr_depth, dist_depth, cv::Mat(), intr_rect_depth_, 
     size_out_, CV_16SC2, map_depth_1_, map_depth_2_);  
   
-  // **** rectify the coeefficient images
-  cv::Mat t0 = coeff_0_.clone();
-  cv::Mat t1 = coeff_1_.clone();
-  cv::Mat t2 = coeff_2_.clone();
-
-  cv::remap(t0, coeff_0_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
-  cv::remap(t1, coeff_1_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
-  cv::remap(t2, coeff_2_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  // **** rectify the coefficient images
+  cv::remap(coeff_0_, coeff_0_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  cv::remap(coeff_1_, coeff_1_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  cv::remap(coeff_2_, coeff_2_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
 
   // **** save new intrinsics as camera models
   rgb_rect_info_msg_.header = rgb_info_msg->header;
@@ -197,6 +199,8 @@ void RGBDImageProc::RGBDCallback(
   const CameraInfoMsg::ConstPtr& rgb_info_msg,
   const CameraInfoMsg::ConstPtr& depth_info_msg)
 {  
+  boost::mutex::scoped_lock(mutex_);
+  
   // **** initialize if needed
   if (!initialized_)
   {
@@ -228,7 +232,7 @@ void RGBDImageProc::RGBDCallback(
   
   // **** unwarp 
   ros::WallTime start_unwarp = ros::WallTime::now();
-  unwarpDepthImage(depth_img_rect, coeff_0_, coeff_1_, coeff_2_);
+  unwarpDepthImage(depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
   double dur_unwarp = getMsDuration(start_unwarp);
    
   // **** reproject
@@ -270,6 +274,14 @@ void RGBDImageProc::RGBDCallback(
   rgb_publisher_.publish(rgb_out_msg);
   depth_publisher_.publish(depth_out_msg);
   info_publisher_.publish(rgb_rect_info_msg_);
+}
+
+void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
+{
+  boost::mutex::scoped_lock(mutex_);
+  initialized_ = false;
+  scale_ = config.scale;
+  ROS_INFO("Resampling scale set to %.2f", scale_);
 }
 
 } //namespace ccny_rgbd
