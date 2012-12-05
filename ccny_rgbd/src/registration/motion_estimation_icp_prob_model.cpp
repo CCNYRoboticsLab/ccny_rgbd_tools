@@ -11,8 +11,11 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   // **** init variables
 
   f2b_.setIdentity();
-
-  // *** init params
+  
+  I_ = cv::Mat(3, 3, CV_64F);
+  cv::setIdentity(I_);
+  
+  // **** init params
 
   max_association_dist_ = 0.03;
   max_association_dist_sq_ = max_association_dist_ * max_association_dist_;
@@ -106,42 +109,6 @@ void MotionEstimationICPProbModel::addToModel(
   model_idx_++;
 }
 
-
-// extrats the rotation component of a transform and converts it 
-// to an opencv 3x3 matrix
-/*
-void MotionEstimationICPProbModel::transformToRotationCV(
-  const tf::Transform& transform,
-  cv::Mat& rotation)
-{
-  tf::Matrix3x3 rotation_tf(transform.getRotation());
-
-  rotation = cv::Mat(3, 3, CV_64F);
-  for(int i = 0; i < 3; ++i)
-  for(int j = 0; j < 3; ++j)     
-    rotation.at<double>(j,i) = rotation_tf[j][i];
-}*/
-
-void MotionEstimationICPProbModel::transformToRotationCV(
-  const tf::Transform& transform,
-  cv::Mat& translation,
-  cv::Mat& rotation)
-{
-  // extract translation
-  tf::Vector3 translation_tf = transform.getOrigin();
-  translation = cv::Mat(3, 1, CV_64F);
-  translation.at<double>(0,0) = translation_tf.getX();
-  translation.at<double>(1,0) = translation_tf.getY();
-  translation.at<double>(2,0) = translation_tf.getZ();
-
-  // extract rotation
-  tf::Matrix3x3 rotation_tf(transform.getRotation());
-  rotation = cv::Mat(3, 3, CV_64F);
-  for(int i = 0; i < 3; ++i)
-  for(int j = 0; j < 3; ++j)     
-    rotation.at<double>(j,i) = rotation_tf[j][i];
-}
-
 bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   RGBDFrame& frame,
   const tf::Transform& prediction,
@@ -150,8 +117,6 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   bool result;
 
   // TODO - move out
-  cv::Mat I(3, 3, CV_64F);
-  cv::setIdentity(I);
 
   PointCloudFeature::Ptr features_ptr =
     boost::shared_ptr<PointCloudFeature> (new PointCloudFeature());
@@ -262,7 +227,7 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
         
         // updated state estimate (mean and cov)
         cv::Mat model_mean_upd = model_mean_pred + K * y;
-        cv::Mat model_cov_upd  = (I - K) * model_cov_pred;
+        cv::Mat model_cov_upd  = (I_ - K) * model_cov_pred;
         
         // update in model
         means_[mah_nn_idx] = model_mean_upd;
