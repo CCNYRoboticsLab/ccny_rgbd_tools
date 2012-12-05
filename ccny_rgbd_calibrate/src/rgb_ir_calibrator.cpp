@@ -19,8 +19,8 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   patternsize_ = cv::Size(n_cols_, n_rows_);
   
   // input  
-  rgb_test_filename_   = path_ + "test/rgb/0001.png";
-  depth_test_filename_ = path_ + "test/depth/0001.png";
+  rgb_test_filename_   = path_ + "test_extr/rgb/0001.png";
+  depth_test_filename_ = path_ + "test_extr/depth/0001.png";
   
   calib_rgb_filename_ = path_ + "rgb.yml";
   calib_ir_filename_  = path_ + "depth.yml";
@@ -28,7 +28,7 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   //output
   calib_extrinsic_filename_ = path_ + "extr.yml";
   
-  cloud_filename_ = path_ + "cloud.pcd";
+  cloud_filename_ = path_ + "test_extr/cloud.pcd";
 
   calibrate();
   testExtrinsicCalibration();
@@ -68,11 +68,9 @@ bool RGBIRCalibrator::loadCalibrationImagePair(
   ss_filename << std::setw(4) << std::setfill('0') << idx << ".png";
 
   // construct the rgb and ir file paths
-  std::string rgb_filename = path_ + "train/rgb/" + ss_filename.str();
-  std::string ir_filename  = path_ + "train/ir/"  + ss_filename.str();
+  std::string rgb_filename = path_ + "train_extr/rgb/" + ss_filename.str();
+  std::string ir_filename  = path_ + "train_extr/ir/"  + ss_filename.str();
 
-  ROS_INFO("Trying images \n\t%s\n\t%s", rgb_filename.c_str(), ir_filename.c_str());
-  
   // check that both exist
   if (!boost::filesystem::exists(rgb_filename))
   {

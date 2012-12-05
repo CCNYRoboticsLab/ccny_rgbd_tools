@@ -5,29 +5,41 @@ namespace ccny_rgbd {
 DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), nh_private_(nh_private)
 {  
-  std::string home_path = getenv("HOME");
-  path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
-  
   // parameters
   if (!nh_private_.getParam ("fit_window_size", fit_window_size_))
     fit_window_size_ = 10;
-  if (!nh_private_.getParam ("fit_mode_", fit_mode_))
+  if (!nh_private_.getParam ("fit_mode", fit_mode_))
     fit_mode_ = DEPTH_FIT_QUADRATIC_ZERO;
   if (!nh_private_.getParam ("n_cols", n_cols_))
-    n_cols_ = 9;
+    ROS_ERROR("n_cols param needs to be set");
   if (!nh_private_.getParam ("n_rows", n_rows_))
-    n_rows_ = 6;
+    ROS_ERROR("n_rows param needs to be set");
   if (!nh_private_.getParam ("square_size", square_size_))
-    square_size_ = 100.0; // in mm
+    ROS_ERROR("square_size needs to be set");
+  if (!nh_private_.getParam ("path", path_))
+    ROS_ERROR("path param needs to be set");
 
   patternsize_ = cv::Size(n_cols_, n_rows_);
-  
-  // input   
-  calib_rgb_filename_  = path_ + "rgb.yml";
-  calib_ir_filename_   = path_ + "depth.yml";
-  calib_extr_filename_ = path_ + "extr.yml";
-   
-  //calibrate();
+ 
+  // directories
+  cloud_path_ = path_ + "/depth_train/clouds";   
+  train_path_ = path_ + "/depth_train";
+  test_path_  = path_ + "/depth_test";
+
+  // prepare directories
+  boost::filesystem::create_directory(cloud_path_); 
+
+  // calibration filenames   
+  calib_rgb_filename_  = path_ + "/rgb.yml";
+  calib_ir_filename_   = path_ + "/depth.yml";
+  calib_extr_filename_ = path_ + "/extr.yml";
+  calib_warp_filename_ = path_ + "/warp.yml";
+
+  depth_test_filename_ = test_path_ + "/depth/0000.png";
+  rgb_test_filename_   = test_path_ + "/rgb/0000.png";
+
+  // perform calibration and test it
+  calibrate();
   testDepthCalibration();
 }
 
@@ -60,8 +72,8 @@ bool DepthCalibrator::loadCalibrationImagePair(
   ss_filename << std::setw(4) << std::setfill('0') << idx << ".png";
 
   // construct the rgb and ir file paths
-  std::string rgb_filename   = path_ + "train_depth/rgb/"   + ss_filename.str();
-  std::string depth_filename = path_ + "train_depth/depth/" + ss_filename.str();
+  std::string rgb_filename   = train_path_ + "/rgb/"   + ss_filename.str();
+  std::string depth_filename = train_path_ + "/depth/" + ss_filename.str();
 
   // check that both exist
   if (!boost::filesystem::exists(rgb_filename))
@@ -200,7 +212,7 @@ void DepthCalibrator::calibrate()
       }
     }
     
-    cv::imshow("count", count_img);
+    cv::imshow("Observation density", count_img);
     cv::waitKey(1);
        
     // increment image index
@@ -242,7 +254,7 @@ void DepthCalibrator::calibrate()
   // **** write to file filename
   ROS_INFO("Writing to file...");
   std::ofstream datafile;
-  std::string data_filename = path_ + "data.txt";
+  std::string data_filename = train_path_ + "/data.txt";
   datafile.open(data_filename.c_str());
   
   for (int idx = 0; idx < 640*480; ++idx)
@@ -268,7 +280,7 @@ void DepthCalibrator::calibrate()
   datafile.close();
   
   // **** write to yaml file
-  cv::FileStorage fs(path_ + "warp.yml", cv::FileStorage::WRITE);
+  cv::FileStorage fs(calib_warp_filename_, cv::FileStorage::WRITE);
   fs << "c0" << c0;
   fs << "c1" << c1;
   fs << "c2" << c2;
@@ -392,8 +404,8 @@ bool DepthCalibrator::processTrainingImagePair(
   std::stringstream ss_filename;
   ss_filename << std::setw(4) << std::setfill('0') << img_idx << ".pcd";
   
-  std::string m_cloud_filename = path_  + "m_" +  ss_filename.str();
-  std::string g_cloud_filename = path_  + "g_" +  ss_filename.str();
+  std::string m_cloud_filename = cloud_path_ + "/m_" + ss_filename.str();
+  std::string g_cloud_filename = cloud_path_ + "/g_" + ss_filename.str();
   
   pcl::io::savePCDFileBinary<PointT>(m_cloud_filename, m_cloud);
   pcl::io::savePCDFileBinary<PointT>(g_cloud_filename, g_cloud); 
@@ -544,67 +556,50 @@ void DepthCalibrator::testDepthCalibration()
   buildRectMaps();
   build3dCornerVector();
   
-  cv::FileStorage fs_coeff(path_ + "warp.yml",  cv::FileStorage::READ);
+  cv::FileStorage fs_coeff(calib_warp_filename_,  cv::FileStorage::READ);
   
   cv::Mat coeff0, coeff1, coeff2;
   
   fs_coeff["c0"] >> coeff0;
   fs_coeff["c1"] >> coeff1;
   fs_coeff["c2"] >> coeff2;
-
-  cv::Mat t0 = coeff0 * 1e0 + 128.0;
-  cv::Mat t1 = coeff1 * 1e2 + 0.0;
-  cv::Mat t2 = coeff2 * 1e6 + 128.0;
-
-  cv::Mat coeff0_uint, coeff1_uint, coeff2_uint;
-  t0.convertTo(coeff0_uint, CV_8UC1);
-  t1.convertTo(coeff1_uint, CV_8UC1);
-  t2.convertTo(coeff2_uint, CV_8UC1);
-
-  cv::imshow("c0", coeff0_uint);
-  cv::imshow("c1", coeff1_uint);
-  cv::imshow("c2", coeff2_uint);
-  cv::waitKey(0);
     
   // load test image
   ROS_INFO("Loading test images...");
   cv::Mat depth_img, rgb_img;
-  rgb_img   = cv::imread(path_ + "train_depth/rgb/0030.png");
-  depth_img = cv::imread(path_ + "train_depth/depth/0030.png", -1);
+  rgb_img   = cv::imread(rgb_test_filename_);
+  depth_img = cv::imread(depth_test_filename_, -1);
   
   // rectify
   start = ros::WallTime::now();
-  printf("Rectifying...\n");
-  cv::Mat rgb_img_rect, depth_img_rect; // rectified images 
+  cv::Mat rgb_img_rect, depth_img_rect; 
   cv::remap(rgb_img,   rgb_img_rect,   map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
   cv::remap(depth_img, depth_img_rect, map_ir_1_,  map_ir_2_,  cv::INTER_NEAREST);
-  printf("Rectifying: %.1fms\n", getMsDuration(start));
+  ROS_INFO("Rectifying: %.1fms", getMsDuration(start));
  
   // reproject warped
-  start = ros::WallTime::now();
   cv::Mat depth_img_warped = depth_img_rect.clone(); 
   cv::Mat depth_img_rect_warped_reg;
   buildRegisteredDepthImage(
     intr_rect_ir_, intr_rect_rgb_, ir2rgb_,
-      depth_img_warped, depth_img_rect_warped_reg);
-  printf("Reprojecting: %.1fms\n", getMsDuration(start));
+    depth_img_warped, depth_img_rect_warped_reg);
     
   // unwarp
   start = ros::WallTime::now();
   cv::Mat depth_img_unwarped = depth_img_rect.clone();
-  unwarpDepthImage(depth_img_unwarped, coeff0, coeff1, coeff2);
-  printf("Unwarping: %.1fms\n", getMsDuration(start));
+  unwarpDepthImage(depth_img_unwarped, coeff0, coeff1, coeff2, fit_mode_);
+  ROS_INFO("Unwarping: %.1fms", getMsDuration(start));
   
   // reproject unwarped
   start = ros::WallTime::now();
   cv::Mat depth_img_rect_unwarped_reg;
   buildRegisteredDepthImage(
     intr_rect_ir_, intr_rect_rgb_, ir2rgb_,
-      depth_img_unwarped, depth_img_rect_unwarped_reg);
-  printf("Reprojecting: %.1fms\n", getMsDuration(start));
+    depth_img_unwarped, depth_img_rect_unwarped_reg);
+  ROS_INFO("Reprojecting: %.1fms", getMsDuration(start));
 
   // build point clouds
-  ROS_INFO("building point clouds...");
+  ROS_INFO("Building point clouds...");
   
   PointCloudT cloud_warped, cloud_unwarped;
     
@@ -614,11 +609,13 @@ void DepthCalibrator::testDepthCalibration()
     depth_img_rect_unwarped_reg, rgb_img_rect, intr_rect_rgb_, cloud_unwarped);
   
   // save point clouds
-  std::string w_cloud_filename = path_  + "warped.pcd";
-  std::string u_cloud_filename = path_  + "unwarped.pcd";
+  std::string w_cloud_filename = test_path_ + "/warped.pcd";
+  std::string u_cloud_filename = test_path_ + "/unwarped.pcd";
   
   pcl::io::savePCDFileBinary<PointT>(w_cloud_filename, cloud_warped);
   pcl::io::savePCDFileBinary<PointT>(u_cloud_filename, cloud_unwarped); 
+
+  ROS_INFO("Done.");
 }
 
 } //namespace ccny_rgbd

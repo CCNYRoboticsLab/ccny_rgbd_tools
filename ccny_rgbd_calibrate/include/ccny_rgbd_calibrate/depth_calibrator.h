@@ -40,24 +40,29 @@ class DepthCalibrator
     ros::NodeHandle nh_private_;
 
     // parameters
+    std::string path_;
     double square_size_;
     int n_cols_;
     int n_rows_;
     int fit_window_size_;
     int fit_mode_;    
 
-    cv::Size patternsize_;
-    
-    // input filenames
-    std::string path_;
+    // paths & filenames
+    std::string cloud_path_;
+    std::string train_path_;
+    std::string test_path_;
+
     std::string calib_rgb_filename_;
     std::string calib_ir_filename_;
     std::string calib_extr_filename_;
+    std::string calib_warp_filename_;
     
     std::string rgb_test_filename_;
     std::string depth_test_filename_;
               
-    // input to calibration       
+    // calibration variables
+    cv::Size patternsize_;
+   
     std::vector<cv::Point3f> corners_3d_;
     
     cv::Mat intr_rgb_, intr_ir_;
