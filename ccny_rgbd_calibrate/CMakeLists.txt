@@ -43,6 +43,7 @@ rosbuild_add_executable(depth_calibrator_node
 target_link_libraries (depth_calibrator_node 
   ${OPENCV_LIBRARIES}
   ${GSL_LIBRARIES}
+  ccny_rgbd_util
   ccny_rgbd_calibrate
   boost_signals 
   boost_system
@@ -50,6 +51,7 @@ target_link_libraries (depth_calibrator_node
 
 target_link_libraries (extrinsics_calibrator_node 
   ${OPENCV_LIBRARIES}
+  ccny_rgbd_util
   ccny_rgbd_calibrate
   boost_signals 
   boost_system

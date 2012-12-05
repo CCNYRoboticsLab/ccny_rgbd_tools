@@ -58,6 +58,8 @@ class MotionEstimationICPProbModel: public MotionEstimation
     double max_association_dist_sq_;
     double max_association_dist_mah_;
     
+    cv::Mat I_; // identity matrix
+    
     ICPReg reg_;
     PointCloudFeature::Ptr model_ptr_;   
     MatVector covariances_;
@@ -72,10 +74,6 @@ class MotionEstimationICPProbModel: public MotionEstimation
       const cv::Mat& f_cov,
       double& mah_dist,
       int& mah_nn_idx);
-
-  void transformToRotationCV(const tf::Transform& transform,
-                             cv::Mat& translation,
-                             cv::Mat& rotation);
 
     void addToModel(const cv::Mat& feature_mean,
                     const cv::Mat& feature_cov);
