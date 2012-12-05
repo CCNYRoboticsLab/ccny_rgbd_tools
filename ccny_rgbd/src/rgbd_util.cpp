@@ -71,4 +71,69 @@ bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
   return false;
 }
 
+void transformToRotationCV(
+  const tf::Transform& transform,
+  cv::Mat& translation,
+  cv::Mat& rotation)
+{
+  // extract translation
+  tf::Vector3 translation_tf = transform.getOrigin();
+  translation = cv::Mat(3, 1, CV_64F);
+  translation.at<double>(0,0) = translation_tf.getX();
+  translation.at<double>(1,0) = translation_tf.getY();
+  translation.at<double>(2,0) = translation_tf.getZ();
+
+  // extract rotation
+  tf::Matrix3x3 rotation_tf(transform.getRotation());
+  rotation = cv::Mat(3, 3, CV_64F);
+  for(int i = 0; i < 3; ++i)
+  for(int j = 0; j < 3; ++j)     
+    rotation.at<double>(j,i) = rotation_tf[j][i];
+}
+
+cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec)
+{
+  cv::Mat rmat;
+  cv::Rodrigues(rvec, rmat);
+  return matrixFromRT(rmat, tvec);
+}
+
+cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec)
+{   
+  cv::Mat E = cv::Mat::zeros(3, 4, CV_64FC1);
+  
+  E.at<double>(0,0) = rmat.at<double>(0,0);
+  E.at<double>(0,1) = rmat.at<double>(0,1);
+  E.at<double>(0,2) = rmat.at<double>(0,2);
+  E.at<double>(1,0) = rmat.at<double>(1,0);
+  E.at<double>(1,1) = rmat.at<double>(1,1);
+  E.at<double>(1,2) = rmat.at<double>(1,2);
+  E.at<double>(2,0) = rmat.at<double>(2,0);
+  E.at<double>(2,1) = rmat.at<double>(2,1);
+  E.at<double>(2,2) = rmat.at<double>(2,2);
+
+  E.at<double>(0,3) = tvec.at<double>(0,0);
+  E.at<double>(1,3) = tvec.at<double>(1,0);
+  E.at<double>(2,3) = tvec.at<double>(2,0);
+
+  return E;
+}
+
+cv::Mat m4(const cv::Mat& m3)
+{
+  cv::Mat m4 = cv::Mat::zeros(4, 4, CV_64FC1);
+
+  for (int i = 0; i < 4; ++i)
+  for (int j = 0; j < 3; ++j) 
+    m4.at<double>(j,i) = m3.at<double>(j,i);
+
+  m4.at<double>(3,3) = 1.0;
+  return m4;
+}
+
+double getMsDuration(const ros::WallTime& start)
+{
+  return (ros::WallTime::now() - start).toSec() * 1000.0;
+}
+
 } //namespace ccny_rgbd

@@ -6,6 +6,8 @@
 #include <pcl/point_cloud.h>
 #include <Eigen/Core>
 
+#include <ccny_rgbd/rgbd_util.h>
+
 namespace ccny_rgbd {
     
 enum DepthFitMode { 
@@ -14,16 +16,6 @@ enum DepthFitMode {
   DEPTH_FIT_QUADRATIC,
   DEPTH_FIT_QUADRATIC_ZERO
 };
-
-typedef pcl::PointXYZRGB PointT;
-typedef pcl::PointCloud<PointT> PointCloudT;
-
-typedef std::vector<cv::Point2f> Point2fVector;
-typedef std::vector<cv::Point3f> Point3fVector;
-
-/* returns the duration, in ms, from a given time
- */
-double getMsDuration(const ros::WallTime& start);
 
 /* reprojects a depth image to another depth image,
  * registered in the rgb camera's frame. Both images 
@@ -66,19 +58,6 @@ void blendImages(const cv::Mat& rgb_img,
                  const cv::Mat depth_img,
                  cv::Mat& blend_img);
   
-/* get a 4x3 matrix from OpenCV r vector and t vector
- */
-cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);
-
-/* get a 4x3 matrix from OpenCV R matrix and t vector
- */
-cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
-
-/* get a 4x4 matrix from a 3x3 matrix, 
- * 4th row is 0 0 0 1
- */
-cv::Mat m4(const cv::Mat& m3);
-
 /* creates an 8-bit depth image from a 
  * 16-bit depth image in mm
  */
