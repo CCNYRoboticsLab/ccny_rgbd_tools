@@ -1,5 +1,5 @@
-#ifndef CCNY_RGBD_CALIBRATE_RGB_IR_CALIBRATOR_H
-#define CCNY_RGBD_CALIBRATE_RGB_IR_CALIBRATOR_H
+#ifndef CCNY_RGBD_CALIBRATE_EXTRINSICS_CALIBRATOR_H
+#define CCNY_RGBD_CALIBRATE_EXTRINSICS_CALIBRATOR_H
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
@@ -16,12 +16,12 @@
 namespace ccny_rgbd
 {
 
-class RGBIRCalibrator
+class ExtrinsicsCalibrator
 {
   public:
 
-    RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
-    virtual ~RGBIRCalibrator();
+    ExtrinsicsCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    virtual ~ExtrinsicsCalibrator();
 
   private:
 
@@ -32,23 +32,23 @@ class RGBIRCalibrator
     double square_size_;
     int n_cols_;
     int n_rows_;
-    
-    cv::Size patternsize_;
-    
-    // input filenames
+       
+    // directories & filenames
     std::string path_;
+    std::string train_path_;
+    std::string test_path_;
+
     std::string calib_rgb_filename_;
     std::string calib_ir_filename_;
+    std::string calib_extr_filename_;
 
     std::string rgb_test_filename_;
-    std::string depth_test_filename_;
-       
-    //output filenames
-    std::string calib_extrinsic_filename_;
-   
+    std::string depth_test_filename_;   
     std::string cloud_filename_;
     
-    // input to calibration       
+    // calibration variables    
+    cv::Size patternsize_;
+    
     std::vector<cv::Point3f> corners_3d_;
     
     cv::Mat intr_rgb_, intr_ir_;
@@ -76,4 +76,4 @@ class RGBIRCalibrator
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_CALIBRATE_RGB_IR_CALIBRATOR_H
+#endif // CCNY_RGBD_CALIBRATE_EXTRINSICS_CALIBRATOR_H

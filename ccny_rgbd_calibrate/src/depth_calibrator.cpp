@@ -280,6 +280,7 @@ void DepthCalibrator::calibrate()
   datafile.close();
   
   // **** write to yaml file
+  ROS_INFO("Writing to %s", calib_warp_filename_.c_str()); 
   cv::FileStorage fs(calib_warp_filename_, cv::FileStorage::WRITE);
   fs << "c0" << c0;
   fs << "c1" << c1;

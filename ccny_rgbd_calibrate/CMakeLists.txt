@@ -32,25 +32,25 @@ rosbuild_add_boost_directories()
 rosbuild_add_library(ccny_rgbd_calibrate
   src/calib_util.cpp)
 
-rosbuild_add_executable(rgb_ir_calibrator_node 
-  src/calib_util.cpp
-  src/rgb_ir_calibrator_node.cpp
-  src/rgb_ir_calibrator.cpp)
+rosbuild_add_executable(extrinsics_calibrator_node 
+  src/extrinsics_calibrator_node.cpp
+  src/extrinsics_calibrator.cpp)
   
 rosbuild_add_executable(depth_calibrator_node 
-  src/calib_util.cpp
   src/depth_calibrator_node.cpp
   src/depth_calibrator.cpp)
   
-target_link_libraries (rgb_ir_calibrator_node 
+target_link_libraries (depth_calibrator_node 
   ${OPENCV_LIBRARIES}
+  ${GSL_LIBRARIES}
+  ccny_rgbd_calibrate
   boost_signals 
   boost_system
   boost_filesystem)
 
-target_link_libraries (depth_calibrator_node 
+target_link_libraries (extrinsics_calibrator_node 
   ${OPENCV_LIBRARIES}
-  ${GSL_LIBRARIES}
+  ccny_rgbd_calibrate
   boost_signals 
   boost_system
   boost_filesystem)

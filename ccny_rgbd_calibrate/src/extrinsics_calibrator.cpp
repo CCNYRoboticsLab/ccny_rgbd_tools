@@ -1,14 +1,13 @@
-#include "ccny_rgbd_calibrate/rgb_ir_calibrator.h"
+#include "ccny_rgbd_calibrate/extrinsics_calibrator.h"
 
 namespace ccny_rgbd {
 
-RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private):
+ExtrinsicsCalibrator::ExtrinsicsCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), nh_private_(nh_private)
 {  
-  std::string home_path = getenv("HOME");
-  path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
-  
   // parameters
+  if (!nh_private_.getParam ("path", path_))
+    ROS_ERROR("path param needs to be set");
   if (!nh_private_.getParam ("n_cols", n_cols_))
     n_cols_ = 8;
   if (!nh_private_.getParam ("n_rows", n_rows_))
@@ -18,33 +17,30 @@ RGBIRCalibrator::RGBIRCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   
   patternsize_ = cv::Size(n_cols_, n_rows_);
   
-  // input  
-  rgb_test_filename_   = path_ + "test_extr/rgb/0001.png";
-  depth_test_filename_ = path_ + "test_extr/depth/0001.png";
-  
-  calib_rgb_filename_ = path_ + "rgb.yml";
-  calib_ir_filename_  = path_ + "depth.yml";
- 
-  //output
-  calib_extrinsic_filename_ = path_ + "extr.yml";
-  
-  cloud_filename_ = path_ + "test_extr/cloud.pcd";
+  // directories 
+  train_path_ = path_ + "/extr_train";
+  test_path_  = path_ + "/extr_test";
 
+  // filenames
+  calib_rgb_filename_  = path_ + "/rgb.yml";
+  calib_ir_filename_   = path_ + "/depth.yml"; 
+  calib_extr_filename_ = path_ + "/extr.yml";
+  
+  rgb_test_filename_   = test_path_ + "/rgb/0001.png";
+  depth_test_filename_ = test_path_ + "/depth/0001.png";
+  cloud_filename_      = test_path_ + "/cloud.pcd";
+
+  // perform and test calibration
   calibrate();
   testExtrinsicCalibration();
- 
-  // output to screen and file to file
-  ROS_INFO("Writing to %s", calib_extrinsic_filename_.c_str()); 
-  cv::FileStorage fs(calib_extrinsic_filename_, cv::FileStorage::WRITE);
-  fs << "ir2rgb" << ir2rgb_;
 }
 
-RGBIRCalibrator::~RGBIRCalibrator()
+ExtrinsicsCalibrator::~ExtrinsicsCalibrator()
 {
  
 }
 
-void RGBIRCalibrator::build3dCornerVector()
+void ExtrinsicsCalibrator::build3dCornerVector()
 {
   // fill in 3d points
   ROS_INFO("Creating vector of 3D corners...");
@@ -58,7 +54,7 @@ void RGBIRCalibrator::build3dCornerVector()
   }
 }
 
-bool RGBIRCalibrator::loadCalibrationImagePair(
+bool ExtrinsicsCalibrator::loadCalibrationImagePair(
   int idx,
   cv::Mat& rgb_img,
   cv::Mat& ir_img)
@@ -68,8 +64,8 @@ bool RGBIRCalibrator::loadCalibrationImagePair(
   ss_filename << std::setw(4) << std::setfill('0') << idx << ".png";
 
   // construct the rgb and ir file paths
-  std::string rgb_filename = path_ + "train_extr/rgb/" + ss_filename.str();
-  std::string ir_filename  = path_ + "train_extr/ir/"  + ss_filename.str();
+  std::string rgb_filename = train_path_ + "/rgb/" + ss_filename.str();
+  std::string ir_filename  = train_path_ + "/ir/"  + ss_filename.str();
 
   // check that both exist
   if (!boost::filesystem::exists(rgb_filename))
@@ -89,7 +85,7 @@ bool RGBIRCalibrator::loadCalibrationImagePair(
   return true;
 }
 
-bool RGBIRCalibrator::loadCameraParams()
+bool ExtrinsicsCalibrator::loadCameraParams()
 {
   // check that both exist
   if (!boost::filesystem::exists(calib_rgb_filename_))
@@ -116,7 +112,7 @@ bool RGBIRCalibrator::loadCameraParams()
   return true;
 }
 
-void RGBIRCalibrator::buildRectMaps()
+void ExtrinsicsCalibrator::buildRectMaps()
 {
   // determine new matrix
   cv::Size size_rgb(640, 480);
@@ -142,7 +138,7 @@ void RGBIRCalibrator::buildRectMaps()
     size_ir_rect, CV_16SC2, map_ir_1_, map_ir_2_);
 }
 
-void RGBIRCalibrator::calibrate()
+void ExtrinsicsCalibrator::calibrate()
 {
   if (!loadCameraParams()) return;
   buildRectMaps();
@@ -219,9 +215,14 @@ void RGBIRCalibrator::calibrate()
   ROS_INFO("Reprojection error: %f", reproj_error);
   
   ir2rgb_ = matrixFromRT(R, t);
+
+  // output to screen and file to file
+  ROS_INFO("Writing to %s", calib_extr_filename_.c_str()); 
+  cv::FileStorage fs(calib_extr_filename_, cv::FileStorage::WRITE);
+  fs << "ir2rgb" << ir2rgb_;
 }
 
-void RGBIRCalibrator::testExtrinsicCalibration()
+void ExtrinsicsCalibrator::testExtrinsicCalibration()
 {
   // **** load images
   cv::Mat rgb_img    = cv::imread(rgb_test_filename_);
