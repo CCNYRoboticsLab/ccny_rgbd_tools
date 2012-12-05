@@ -65,6 +65,8 @@ class MotionEstimationICPProbModel: public MotionEstimation
     MatVector covariances_;
     MatVector means_;
     tf::Transform f2b_; // Fixed frame to Base (moving) frame
+    
+    pcl::KdTreeFLANN<PointFeature> tree_model_;
 
     void publishCovariances();
 
@@ -75,6 +77,9 @@ class MotionEstimationICPProbModel: public MotionEstimation
       double& mah_dist,
       int& mah_nn_idx);
 
+    void updateModelFromFrame(const RGBDFrame& frame);
+    void initializeModelFromFrame(const RGBDFrame& frame);
+    
     void addToModel(const cv::Mat& feature_mean,
                     const cv::Mat& feature_cov);
 };

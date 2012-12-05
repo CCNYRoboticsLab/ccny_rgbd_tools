@@ -20,7 +20,6 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   max_association_dist_ = 0.03;
   max_association_dist_sq_ = max_association_dist_ * max_association_dist_;
 
-
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
@@ -112,8 +111,6 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
 {
   bool result;
 
-  // TODO - move out
-
   PointCloudFeature::Ptr features_ptr =
     boost::shared_ptr<PointCloudFeature> (new PointCloudFeature());
 
@@ -130,123 +127,49 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   if (model_size_ == 0)
   {
     ROS_WARN("No points in model");
-    motion.setIdentity();
-
-    // calculate rotation and translation matrices
-    cv::Mat t, R;
-    transformToRotationCV(f2b_ * b2c_, t, R);
-    
-    for (unsigned int kp_idx = 0; kp_idx < frame.kp_covariance.size(); ++kp_idx)
-    {
-      if (!frame.kp_valid[kp_idx]) continue;
-
-      const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
-      const cv::Mat& feature_cov  = frame.kp_covariance[kp_idx];
-
-      cv::Mat feature_mean_tf = R * feature_mean + t;
-      cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
-
-      addToModel(feature_mean_tf, feature_cov_tf);
-    }      
+    motion = prediction;
+    constrainMotion(motion);
+    f2b_ = motion * f2b_;
+    initializeModelFromFrame(frame);
   }
   else
   {
     // **** icp ***********************************************************
 
     pcl::KdTreeFLANN<PointFeature> tree_data;
-    pcl::KdTreeFLANN<PointFeature> tree_model;
 
     tree_data.setInputCloud(features_ptr);
-    tree_model.setInputCloud(model_ptr_);
-
     reg_.setDataCloud  (&*features_ptr);
-    reg_.setModelCloud (&*model_ptr_);
-
     reg_.setDataTree  (&tree_data);
-    reg_.setModelTree (&tree_model);
-
+    
     result = reg_.align();
     
     if (result)
     { 
       tf::Transform correction = tfFromEigen(reg_.getFinalTransformation());
-
       motion = correction * prediction;
-      constrainMotion(motion);
-
-      f2b_ = motion * f2b_;
     }
     else
     {
-      // TODO - clean this up
-      f2b_ = predicted_f2b;
       motion = prediction;
     }
-  
-    // **** update model
-    for (unsigned int kp_idx = 0; kp_idx < frame.keypoints.size(); ++kp_idx)
-    {
-      // skip invalid
-      if (!frame.kp_valid[kp_idx]) continue;  
 
-      // decompose transform
-      cv::Mat t, R;
-      transformToRotationCV(f2b_ * b2c_, t, R);
-
-      // rotate to fixed frame
-      const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
-      const cv::Mat& feature_cov = frame.kp_covariance[kp_idx];
-       
-      cv::Mat feature_mean_tf = R * feature_mean + t;
-      cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
- 
-      // find nearest neighbor in model 
-      double mah_dist;
-      int mah_nn_idx;   
-      getNNMahalanobis(tree_model, feature_mean_tf, feature_cov_tf, 
-                       mah_dist, mah_nn_idx);
-   
-      if (mah_dist < max_association_dist_mah_)
-      {
-        // **** KF update *********************************
-
-        // predicted state
-        const cv::Mat& model_mean_pred = means_[mah_nn_idx];
-        const cv::Mat& model_cov_pred  = covariances_[mah_nn_idx];
-       
-        // calculate measurement and cov residual
-        cv::Mat y = feature_mean_tf - model_mean_pred;
-        cv::Mat S = feature_cov_tf + model_cov_pred;
-
-        // calculate Kalman gain
-        cv::Mat K = model_cov_pred * S.inv();
-        
-        // updated state estimate (mean and cov)
-        cv::Mat model_mean_upd = model_mean_pred + K * y;
-        cv::Mat model_cov_upd  = (I_ - K) * model_cov_pred;
-        
-        // update in model
-        means_[mah_nn_idx] = model_mean_upd;
-        covariances_[mah_nn_idx] = model_cov_upd;
-
-        PointFeature updated_point;
-        updated_point.x = model_mean_upd.at<double>(0,0);
-        updated_point.y = model_mean_upd.at<double>(1,0);
-        updated_point.z = model_mean_upd.at<double>(2,0);
-
-        model_ptr_->points[mah_nn_idx] = updated_point;
-      }
-      else
-      {
-        addToModel(feature_mean_tf, feature_cov_tf);
-      }
-    }
+    constrainMotion(motion);
+    f2b_ = motion * f2b_;
+    
+    // update model: inserts new features and updates old ones with KF
+    updateModelFromFrame(frame);
   }
 
-  model_ptr_->header.stamp = ros::Time::now(); // TODO - change to actual timestamp
+  // update the model tree
+  tree_model_.setInputCloud(model_ptr_);
+  reg_.setModelCloud (&*model_ptr_);
+  reg_.setModelTree (&tree_model_);
+  
+  // update model pointcloud and publish
+  model_ptr_->header.stamp = frame.header.stamp;
   model_ptr_->width = model_ptr_->points.size();
   model_publisher_.publish(model_ptr_);
-  //printf("Model size: %d\n", (int)model_ptr_->points.size()); 
 
   publishCovariances();
 
@@ -311,6 +234,89 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
   if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
   mah_dist   = best_mah_dist;
   mah_nn_idx = best_mah_nn_idx;
+}
+
+void MotionEstimationICPProbModel::initializeModelFromFrame(
+  const RGBDFrame& frame)
+{
+  // calculate rotation and translation matrices
+  cv::Mat t, R;
+  transformToRotationCV(f2b_ * b2c_, t, R);
+  
+  for (unsigned int kp_idx = 0; kp_idx < frame.kp_covariance.size(); ++kp_idx)
+  {
+    if (!frame.kp_valid[kp_idx]) continue;
+
+    const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
+    const cv::Mat& feature_cov  = frame.kp_covariance[kp_idx];
+
+    cv::Mat feature_mean_tf = R * feature_mean + t;
+    cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
+
+    addToModel(feature_mean_tf, feature_cov_tf);
+  }
+}
+
+void MotionEstimationICPProbModel::updateModelFromFrame(
+  const RGBDFrame& frame)
+{
+  // decompose transform
+  cv::Mat t, R;
+  transformToRotationCV(f2b_ * b2c_, t, R);
+  
+  for (unsigned int kp_idx = 0; kp_idx < frame.keypoints.size(); ++kp_idx)
+  {
+    // skip invalid
+    if (!frame.kp_valid[kp_idx]) continue;  
+
+    const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
+    const cv::Mat& feature_cov = frame.kp_covariance[kp_idx];
+
+    // rotate to fixed frame
+    cv::Mat feature_mean_tf = R * feature_mean + t;
+    cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
+
+    // find nearest neighbor in model 
+    double mah_dist;
+    int mah_nn_idx;   
+    getNNMahalanobis(tree_model_, feature_mean_tf, feature_cov_tf, 
+                     mah_dist, mah_nn_idx);
+  
+    if (mah_dist < max_association_dist_mah_)
+    {
+      // **** KF update *********************************
+
+      // predicted state
+      const cv::Mat& model_mean_pred = means_[mah_nn_idx];
+      const cv::Mat& model_cov_pred  = covariances_[mah_nn_idx];
+      
+      // calculate measurement and cov residual
+      cv::Mat y = feature_mean_tf - model_mean_pred;
+      cv::Mat S = feature_cov_tf + model_cov_pred;
+
+      // calculate Kalman gain
+      cv::Mat K = model_cov_pred * S.inv();
+      
+      // updated state estimate (mean and cov)
+      cv::Mat model_mean_upd = model_mean_pred + K * y;
+      cv::Mat model_cov_upd  = (I_ - K) * model_cov_pred;
+      
+      // update in model
+      means_[mah_nn_idx] = model_mean_upd;
+      covariances_[mah_nn_idx] = model_cov_upd;
+
+      PointFeature updated_point;
+      updated_point.x = model_mean_upd.at<double>(0,0);
+      updated_point.y = model_mean_upd.at<double>(1,0);
+      updated_point.z = model_mean_upd.at<double>(2,0);
+
+      model_ptr_->points[mah_nn_idx] = updated_point;
+    }
+    else
+    {
+      addToModel(feature_mean_tf, feature_cov_tf);
+    }
+  }
 }
 
 void MotionEstimationICPProbModel::publishCovariances()
