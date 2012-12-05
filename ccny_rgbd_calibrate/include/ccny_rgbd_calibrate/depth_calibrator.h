@@ -1,6 +1,9 @@
 #ifndef CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
 #define CCNY_RGBD_CALIBRATE_DEPTH_CALIBRATOR_H
 
+#include <gsl/gsl_multifit.h>
+#include <gsl/gsl_fit.h>
+
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
@@ -11,17 +14,21 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 
+#include "ccny_rgbd_calibrate/calib_util.h"
+
 namespace ccny_rgbd
 {
 
 class DepthCalibrator
 {
-  typedef pcl::PointXYZRGB PointT;
-  typedef pcl::PointCloud<PointT> PointCloudT;
-
-  typedef std::vector<cv::Point2f> Point2fVector;
-  typedef std::vector<cv::Point3f> Point3fVector;
+  typedef struct  {
+    uint16_t ground_truth;
+    uint16_t measured;
+  } ReadingPair;
   
+  typedef std::vector<double> DoubleVector;
+  typedef std::vector<ReadingPair> ReadingVector;
+    
   public:
 
     DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private);
@@ -33,49 +40,45 @@ class DepthCalibrator
     ros::NodeHandle nh_private_;
 
     // parameters
-    float square_size_;
+    std::string path_;
+    double square_size_;
     int n_cols_;
     int n_rows_;
-    
-    cv::Size patternsize_;
-    
-    // input filenames
-    std::string path_;
+    int fit_window_size_;
+    int fit_mode_;    
+
+    // paths & filenames
+    std::string cloud_path_;
+    std::string train_path_;
+    std::string test_path_;
+
     std::string calib_rgb_filename_;
     std::string calib_ir_filename_;
-
+    std::string calib_extr_filename_;
+    std::string calib_warp_filename_;
+    
     std::string rgb_test_filename_;
     std::string depth_test_filename_;
-       
-    //output filenames
-    std::string calib_extrinsic_filename_;
+              
+    // calibration variables
+    cv::Size patternsize_;
    
-    std::string cloud_filename_;
-    
-    // input to calibration       
     std::vector<cv::Point3f> corners_3d_;
     
     cv::Mat intr_rgb_, intr_ir_;
     cv::Mat dist_rgb_, dist_ir_;
-    
-    // output of calibration
-    cv::Mat extr_rgb_, extr_ir_;
-    
+        
     cv::Mat intr_rect_rgb_, intr_rect_ir_;
     
     cv::Mat map_rgb_1_, map_rgb_2_;
     cv::Mat map_ir_1_,  map_ir_2_;
     
-    cv::Mat rgb2ir_;
+    cv::Mat ir2rgb_;
     
     void calibrate();
     void build3dCornerVector();
     void buildRectMaps();
     bool loadCameraParams();
- 
-    bool getCorners(
-      const cv::Mat& img, 
-      std::vector<cv::Point2f>& corners);
 
     void testExtrinsicCalibration();
     
@@ -83,10 +86,6 @@ class DepthCalibrator
       int idx,
       cv::Mat& rgb_img,
       cv::Mat& depth_img);
-
-    void create8bImage(
-      const cv::Mat depth_img,
-      cv::Mat& depth_img_u);
     
     void testPlaneDetection(
       const cv::Mat& rgb_img_rect,
@@ -94,23 +93,34 @@ class DepthCalibrator
       const cv::Mat& rvec,
       const cv::Mat& tvec);
     
-    void buildPouintCloud(
-      const cv::Mat& depth_img_rect_reg,
-      const cv::Mat& rgb_img_rect,
-      const cv::Mat& intr_rect_rgb,
-      PointCloudT& cloud);
-    
-    void blendImages(const cv::Mat& rgb_img,
-                     const cv::Mat depth_img,
-                     cv::Mat& blend_img);
-    
-    void matrixFromRvecTvec(const cv::Mat& rvec,
-                            const cv::Mat& tvec,
-                            cv::Mat& E);
+    bool processTrainingImagePair(
+      int img_idx,
+      const cv::Mat& rgb_img,
+      const cv::Mat& depth_img,
+      cv::Mat& depth_img_g,
+      cv::Mat& depth_img_m);
 
-    void matrixFromRT(const cv::Mat& rmat,
-                      const cv::Mat& tvec,
-                      cv::Mat& E);
+    void fitData(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void quadraticFit(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void quadraticFitZero(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void linearFit(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+    
+    void linearFitZero(
+      const ReadingVector& v, 
+      std::vector<double>& coeff);
+
+    void testDepthCalibration();
 };
 
 } //namespace ccny_rgbd

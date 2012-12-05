@@ -1,0 +1,20 @@
+<package>
+  <description brief="rgbd_image_proc">
+
+     rgbd_image_proc
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rgbd_image_proc</url>
+  <depend package="roscpp"/>
+  <depend package="ccny_rgbd_calibrate"/>
+  <depend package="ccny_rgbd"/>
+  <depend package="nodelet"/>
+  <depend package="message_filters"/>
+  <depend package="dynamic_reconfigure" />
+
+  </package>
+
+
