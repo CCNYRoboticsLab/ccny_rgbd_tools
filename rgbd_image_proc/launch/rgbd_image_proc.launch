@@ -1,15 +1,23 @@
 <!-- RGB-D Visual odometry -->
-
+<!-- todo: nodelets -->
 <launch>
 
-  <!-- todo: nodelets -->
+  <!-- Debayered images -->
+  <node pkg="nodelet" type="nodelet" name="debayer"
+        args="standalone image_proc/debayer">
+        
+    <remap from="image_raw"   to="/camera/rgb/image_raw"/>
+    <remap from="image_color" to="/camera/rgb/image_color"/>
+        
+  </node>
+
   <node pkg="rgbd_image_proc" type="rgbd_image_proc_node" name="rgbd_image_proc_node"
-    output="log">
+    output="screen">
     
     <!-- Resample by a factor of 2-->
     <param name="scale" value="0.5"/>
     
-  <node>
+  </node>
   
 </launch>
 

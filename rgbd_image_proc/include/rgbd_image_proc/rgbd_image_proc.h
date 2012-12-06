@@ -17,8 +17,10 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
-#include <ccny_rgbd_calibrate/calib_util.h>
 #include <dynamic_reconfigure/server.h>
+
+#include <ccny_rgbd/rgbd_util.h>
+#include <ccny_rgbd_calibrate/calib_util.h>
 
 #include "rgbd_image_proc/RGBDImageProcConfig.h"
 

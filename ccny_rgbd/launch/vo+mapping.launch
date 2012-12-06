@@ -2,6 +2,10 @@
 
 <launch>
 
+  #### RGBD PROCESSING ####################################
+  
+  <include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch"/>
+
   #### VISUAL ODOMETRY ####################################
 
   # ORB, SURF, GTF, KLT
@@ -16,7 +20,6 @@
   </include>
 
   #### OCTREE MAPPING #####################################
-
 
   <node pkg="ccny_rgbd" type="octree_mapper_node" name="octree_mapper_node" 
     output="screen">
