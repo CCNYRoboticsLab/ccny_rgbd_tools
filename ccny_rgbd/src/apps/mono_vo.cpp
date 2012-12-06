@@ -1,4 +1,5 @@
 #include "ccny_rgbd/apps/mono_vo.h"
+#include <opencv2/opencv.hpp>
 
 namespace ccny_rgbd {
 
@@ -246,6 +247,74 @@ bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
 
   ROS_INFO("Successfully transformed Base to Camera");
   return true;
+}
+
+/** min_inliers - sufficient number of inliers to terminate
+  */
+cv::Mat MonocularVisualOdometry::estimateFirstPose(
+	const cv::Mat& intrinsic_matrix,
+	const std::vector<cv::Point3f>& model, 
+        const std::vector<cv::Point2f>& image_2d_points, 
+        int min_inliers, 
+        int max_iteration,
+        int distance_threshold)
+
+{
+  ROS_INFO("Estimating the First Camera Pose");
+
+  srand(time(NULL));
+
+  std::vector<cv::Point3f> vector_3d;
+  std::vector<cv::Point2f> vector_2d;
+  std::vector<cv::Point3f> cloud_vector_3d;
+  std::vector<cv::Point2f> cloud_vector_2d;
+  std::vector<cv::Point3f> best_3d_vector;
+  std::vector<cv::Point2f> best_2d_vector;
+  
+  vector_3d.resize(6);
+  vector_2d.resize(6);
+  bool valid_inliers = false;
+
+  //gets 2 vectors of 6 random points from the model(3d map) and from the camera image(2d points)
+
+  for (int i = 0; i <= max_iteration ; ++i)
+  {
+    for (int j = 0; j < 7; ++j)  
+    {  
+      int index1 = rand() % model.size();
+      vector_3d[j] = model[index1];
+      int index2 = rand() % image_2d_points.size();
+      vector_2d[j] = image_2d_points[index2];
+    }
+    
+  cv::Mat rvec;
+  cv::Mat tvec;
+  cv::Mat extrinsic_matrix;
+  
+  cv::solvePnP(vector_3d, vector_2d, intrinsic_matrix, cv::Mat(), rvec, tvec);
+  extrinsic_matrix = matrixFromRvecTvec(rvec, tvec);
+   
+    
+  std::vector<cv::Point3f> cloud_vector_3d;
+  std::vector<cv::Point2f> cloud_vector_2d;
+
+  valid_inliers = fitness(intrinsic_matrix, extrinsic_matrix, distance_threshold, vector_3d, vector_2d, cloud_vector_3d, cloud_vector_2d); //include min_inliers,
+  
+
+  if (valid_inliers)
+  {  
+    best_3d_vector = cloud_vector_3d;
+    best_2d_vector = cloud_vector_2d;
+    break;
+  }
+  
+ } 
+  //refine the transformation after getting the best fitting vectors
+
+  cv::Mat rvec_ref;
+  cv::Mat tvec_ref;
+  cv::solvePnP(best_3d_vector, best_2d_vector, intrinsic_matrix, cv::Mat(), rvec_ref, tvec_ref);
+  return matrixFromRvecTvec(rvec_ref, tvec_ref);
 }
 
 } //namespace ccny_rgbd

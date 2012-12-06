@@ -67,6 +67,15 @@ class MonocularVisualOdometry
      * @return True if the fitness falls under certain threshold criteria of number of inliers
      */
     bool fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const std::vector<cv::Point3f> &sample_3D_points, const std::vector<cv::Point2f> & feature_2D_points, std::vector<cv::Point3f> &inliers_3D_points, std::vector<cv::Point2f> & inliers_2D_points);
+   // estimate the first camera pose
+
+   cv::Mat estimateFirstPose(
+     const cv::Mat& intrinsic_matrix, 
+     const std::vector<cv::Point3f>& model, 
+     const std::vector<cv::Point2f>& image_2d_points, 
+     int min_inliers, 
+     int max_iteration, 
+     int distance_threshold);
 
   private:
 
@@ -129,6 +138,9 @@ class MonocularVisualOdometry
     bool getBaseToCameraTf(const std_msgs::Header& header);
     void setFeatureDetector();
     bool readPointCloudFromPCDFile(); ///< Returns true if PCD file was read successfully.
+    
+    
+    
 };
 
 } //namespace ccny_rgbd
