@@ -28,19 +28,13 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   int icp_max_iterations;
   double icp_tf_epsilon;
   double icp_max_corresp_dist;
-  bool use_ransac_rejection;
-  double ransac_inlier_threshold;
 
   if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", icp_max_iterations))
     icp_max_iterations = 30;
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon", icp_tf_epsilon))
     icp_tf_epsilon = 0.000001;
-  if (!nh_private_.getParam ("reg/ICPProbModel/use_ransac_rejection", use_ransac_rejection))
-    use_ransac_rejection = false;
   if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist", icp_max_corresp_dist))
     icp_max_corresp_dist = 0.15;
-  if (!nh_private_.getParam ("reg/ICPProbModel/ransac_inlier_threshold", ransac_inlier_threshold))
-    ransac_inlier_threshold = 0.10;
 
   if (!nh_private_.getParam ("reg/ICPProbModel/max_model_size", max_model_size_))
     max_model_size_ = 3000;
@@ -54,10 +48,9 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   reg_.setMaxIterations(icp_max_iterations);
   reg_.setTransformationEpsilon(icp_tf_epsilon);
   reg_.setMaxCorrDist(icp_max_corresp_dist);
-  reg_.setUseRANSACRejection(use_ransac_rejection);
-  reg_.setRANSACThreshold(ransac_inlier_threshold);
 
   model_ptr_.reset(new PointCloudFeature());
+  tree_model_.reset(new KdTree());
 
   model_ptr_->header.frame_id = fixed_frame_;
 
@@ -65,6 +58,13 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
     "model", 1);
   covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
     "model_covariances", 1);
+
+  // **** services
+
+  save_service_ = nh_.advertiseService(
+    "save_sparse_map", &MotionEstimationICPProbModel::saveSrvCallback, this);
+  load_service_ = nh_.advertiseService(
+    "load_sparse_map", &MotionEstimationICPProbModel::loadSrvCallback, this);
 }
 
 MotionEstimationICPProbModel::~MotionEstimationICPProbModel()
@@ -122,26 +122,21 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   pcl::transformPointCloud(frame.features , *features_ptr, eigenFromTf(predicted_f2b * b2c_));
   features_ptr->header.frame_id = fixed_frame_;
 
-  // **** build model ***************************************************
+  // **** perform registration
 
   if (model_size_ == 0)
   {
-    ROS_WARN("No points in model");
+    ROS_INFO("No points in model: initializing from features.");
     motion = prediction;
     constrainMotion(motion);
     f2b_ = motion * f2b_;
     initializeModelFromFrame(frame);
+    result = true;
   }
   else
   {
-    // **** icp ***********************************************************
-
-    pcl::KdTreeFLANN<PointFeature> tree_data;
-
-    tree_data.setInputCloud(features_ptr);
-    reg_.setDataCloud  (&*features_ptr);
-    reg_.setDataTree  (&tree_data);
-    
+    // **** icp 
+    reg_.setDataCloud (features_ptr); 
     result = reg_.align();
     
     if (result)
@@ -162,9 +157,9 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   }
 
   // update the model tree
-  tree_model_.setInputCloud(model_ptr_);
-  reg_.setModelCloud (&*model_ptr_);
-  reg_.setModelTree (&tree_model_);
+  tree_model_->setInputCloud(model_ptr_);
+  reg_.setModelCloud(model_ptr_);
+  reg_.setModelTree(tree_model_);
   
   // update model pointcloud and publish
   model_ptr_->header.stamp = frame.header.stamp;
@@ -177,11 +172,9 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
 }
 
 void MotionEstimationICPProbModel::getNNMahalanobis(
-  const pcl::KdTreeFLANN<PointFeature>& model_tree,
-  const cv::Mat& f_mean,
-  const cv::Mat& f_cov,
-  double& mah_dist,
-  int& mah_nn_idx)
+  const KdTree& model_tree,
+  const cv::Mat& f_mean, const cv::Mat& f_cov,
+  double& mah_dist, int& mah_nn_idx)
 {
   // precalculate inverse matrix
   cv::Mat f_cov_inv;
@@ -279,7 +272,7 @@ void MotionEstimationICPProbModel::updateModelFromFrame(
     // find nearest neighbor in model 
     double mah_dist;
     int mah_nn_idx;   
-    getNNMahalanobis(tree_model_, feature_mean_tf, feature_cov_tf, 
+    getNNMahalanobis(*tree_model_, feature_mean_tf, feature_cov_tf, 
                      mah_dist, mah_nn_idx);
   
     if (mah_dist < max_association_dist_mah_)
@@ -375,6 +368,82 @@ void MotionEstimationICPProbModel::publishCovariances()
   }
 
   covariances_publisher_.publish(marker);
+}
+
+bool MotionEstimationICPProbModel::saveSrvCallback(
+  ccny_rgbd::Save::Request& request,
+  ccny_rgbd::Save::Response& response)
+{
+  ROS_INFO("Saving model to %s", request.filename.c_str());
+
+  bool result = saveModel(request.filename);
+
+  if (result)
+    ROS_INFO("Successfully saved model.");
+  else
+    ROS_ERROR("Failed to save model.");
+
+  return result;
+}
+
+bool MotionEstimationICPProbModel::loadSrvCallback(
+  ccny_rgbd::Save::Request& request,
+  ccny_rgbd::Save::Response& response)
+{
+  ROS_INFO("Loading model from %s...", request.filename.c_str());
+
+  bool result = loadModel(request.filename);
+
+  if (result)
+    ROS_INFO("Successfully loaded model.");
+  else
+    ROS_ERROR("Failed to load model.");
+
+  return result;
+}
+
+bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
+{
+  // save as OpenCV yml matrix
+  std::string filename_yml = filename + ".yml";
+
+  cv::FileStorage fs(filename_yml, cv::FileStorage::WRITE);
+  fs << "means"       << means_;
+  fs << "covariances" << covariances_; 
+  fs << "model_idx"   << model_idx_;  
+  fs << "model_size"  << model_size_;       
+
+  // save as pcd
+  std::string filename_pcd = filename + ".pcd";
+  pcl::PCDWriter writer;
+  int result_pcd = writer.writeBinary<PointFeature>(filename_pcd, *model_ptr_);
+
+  return (result_pcd == 0); // TODO: also OpenCV result
+}
+
+bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
+{
+  // load OpenCV yml matrix
+  std::string filename_yml = filename + ".yml";
+
+  cv::FileStorage fs(filename_yml, cv::FileStorage::READ);
+  fs["means"] >> means_;
+  fs["covariances"] >> covariances_;
+  fs["model_idx"] >> model_idx_;
+  fs["model_size"] >> model_size_;
+
+  // load pcd
+  std::string filename_pcd = filename + ".pcd";
+  pcl::PCDReader reader;
+  int result_pcd = reader.read<PointFeature>(filename_pcd, *model_ptr_);
+  model_ptr_->header.frame_id = fixed_frame_;
+
+  // update the model tree
+  tree_model_->setInputCloud(model_ptr_);
+  reg_.setModelCloud(model_ptr_);
+  reg_.setModelTree(tree_model_);
+
+  return (result_pcd == 0); // TODO: also OpenCV result
 }
 
 } // namespace ccny_rgbd

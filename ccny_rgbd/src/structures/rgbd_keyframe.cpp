@@ -22,8 +22,6 @@ void RGBDKeyframe::constructDataCloud()
   float constant_x = 1.0 / model_.fx();
   float constant_y = 1.0 / model_.fy();
 
-  printf("%f, %f, %f %f\n", cx, cy, model_.fx(), model_.fy());
-
   float bad_point = std::numeric_limits<float>::quiet_NaN();
 
   data.points.clear();

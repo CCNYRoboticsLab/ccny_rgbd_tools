@@ -13,10 +13,8 @@
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <pcl_ros/transforms.h>
-#include <pcl/registration/transformation_estimation_svd.h>
 
 #include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/registration/icp_kd.h"
 
 namespace ccny_rgbd
 {

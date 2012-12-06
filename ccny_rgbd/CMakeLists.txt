@@ -54,6 +54,7 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation_icp.cpp
   src/registration/motion_estimation_icp_prob_model.cpp
   src/registration/motion_prediction_imu.cpp
+  src/registration/iterative_closest_point.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_mapping
