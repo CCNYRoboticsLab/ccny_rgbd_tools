@@ -47,21 +47,21 @@ class MonocularFrame : public RGBDFrame
 
     // Not being used for now
     typedef struct ModelFeaturePair{
-      cv::Point2f keyframe;
-      cv::Point3f model_point;
+      cv::Point2d keyframe;
+      cv::Point3d model_point;
 
-      ModelFeaturePair(const cv::Point3f &point3D, const cv::Point2f & point2D)
+      ModelFeaturePair(const cv::Point3d &point3D, const cv::Point2d & point2D)
       {
         model_point = point3D;
         keyframe = point2D;
       }
     } model_feature_pair_;
 
-    std::vector<cv::Point3f> valid_3D_points_; ///< 3D points that project within frame
-    std::vector<cv::Point2f> valid_2D_points_; ///< Valid 2D points projected from 3D model
+    std::vector<cv::Point3d> valid_3D_points_; ///< 3D points that project within frame
+    std::vector<cv::Point2d> valid_2D_points_; ///< Valid 2D points projected from 3D model
 //    boost::shared_ptr<flann::Matrix<cv::Point2f> > valid_2D_points_;
 
-    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points);
+    void filterPointsWithinFrame(const std::vector<cv::Point3d> &all_3D_points, const std::vector<cv::Point2d> &all_2D_points);
 //    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points, std::vector<model_feature_pair_> &valid_points);
 
 //    cv::KDTree<cv::Point2f> tree_of_projections_to_2D_; // TODO: define properly for the structure FIXME: how to index it if it only takes points, but no structure?

@@ -98,6 +98,44 @@ cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec)
   return matrixFromRT(rmat, tvec);
 }
 
+
+cv::Mat rmatFromMatrix(const cv::Mat& E)
+{
+  cv::Mat R = cv::Mat::zeros(3, 3, CV_64FC1); // FIXME: it would be better to template the types or not to change at all
+
+  R.at<double>(0,0) = E.at<double>(0,0);
+  R.at<double>(0,1) = E.at<double>(0,1);
+  R.at<double>(0,2) = E.at<double>(0,2);
+  R.at<double>(1,0) = E.at<double>(1,0);
+  R.at<double>(1,1) = E.at<double>(1,1);
+  R.at<double>(1,2) = E.at<double>(1,2);
+  R.at<double>(2,0) = E.at<double>(2,0);
+  R.at<double>(2,1) = E.at<double>(2,1);
+  R.at<double>(2,2) = E.at<double>(2,2);
+
+  return R;
+}
+
+cv::Mat tvecFromMatrix(const cv::Mat& E)
+{
+  cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
+//  cv::Mat tvec = cv::Mat::zeros(3, 1, E.type()); // FIXME: it would be better to template the types or not to change at all
+
+  tvec.at<double>(0,0) = E.at<double>(0,3);
+  tvec.at<double>(1,0) = E.at<double>(1,3);
+  tvec.at<double>(2,0) = E.at<double>(2,3);
+
+  return tvec;
+}
+
+cv::Mat rvecFromMatrix(const cv::Mat& E)
+{
+  cv::Mat R = rmatFromMatrix(E);
+  cv::Mat rvec;
+  cv::Rodrigues(R, rvec);
+  return rvec;
+}
+
 cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec)
 {   
   cv::Mat E = cv::Mat::zeros(3, 4, CV_64FC1);

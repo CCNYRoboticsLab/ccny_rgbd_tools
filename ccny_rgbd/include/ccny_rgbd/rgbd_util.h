@@ -81,6 +81,19 @@ void transformToRotationCV(
   cv::Mat& translation,
   cv::Mat& rotation);
 
+/* decomposes a 3x4 Extrinsic matrix into a 3x3 OpenCV rotation matrix
+ */
+cv::Mat rmatFromMatrix(const cv::Mat& E);
+
+/* decomposes a 3x4 Extrinsic matrix into a 3x1 OpenCV translation vector
+ */
+cv::Mat tvecFromMatrix(const cv::Mat& E);
+
+/* decomposes a 3x4 Extrinsic matrix into a 3x1 OpenCV rotation vector
+ */
+cv::Mat rvecFromMatrix(const cv::Mat& E);
+
+
 /* get a 4x3 matrix from OpenCV r vector and t vector
  */
 cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);

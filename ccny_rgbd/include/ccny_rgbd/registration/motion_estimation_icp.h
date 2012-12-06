@@ -3,15 +3,17 @@
 
 #include <tf/transform_datatypes.h>
 
-#include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/structures/feature_history.h"
+#include "ccny_rgbd/registration/motion_estimation.h"
+#include "ccny_rgbd/registration/iterative_closest_point.h"
 
 namespace ccny_rgbd
 {
 
 class MotionEstimationICP: public MotionEstimation
 {
-  typedef ccny_rgbd::ICPKd<PointFeature, PointFeature> ICPReg;
+  typedef ccny_rgbd::IterativeClosestPoint<PointFeature, PointFeature> ICP;
+  typedef pcl::KdTreeFLANN<PointFeature> KdTree;
 
   public:
 
@@ -37,7 +39,7 @@ class MotionEstimationICP: public MotionEstimation
 
     // variables
 
-    ICPReg reg_;
+    ICP reg_;
 
     FeatureHistory<PointFeature> feature_history_;
 

@@ -30,15 +30,16 @@ void MonocularFrame::setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_
 
 void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam_info_ptr)
 {
-  static bool first_time = true;
   //  cv::Mat cameraMatrix(cv::Size(4,3), CV_64FC1);
   // Projection/camera matrix
   //     [fx'  0  cx' Tx]
   // P = [ 0  fy' cy' Ty]
   //     [ 0   0   1   0]
   // Note that calibrationMatrixValues doesn't require the Tx,Ty column (it only takes the 3x3 intrinsic parameteres)
+
   image_size_ = new cv::Size(cam_info_ptr->width, cam_info_ptr->height);
 
+  /*
   // Create the known projection matrix (obtained from Calibration)
   cv::Mat P(3,4,cv::DataType<float>::type);
   P.at<float>(0,0) = cam_info_ptr->P[0];
@@ -61,6 +62,9 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   K_.create(3,3,cv::DataType<float>::type); // intrinsic parameter matrix
   R_.create(3,3,cv::DataType<float>::type); // rotation matrix
   T_.create(4,1,cv::DataType<float>::type); // translation vector
+  cv::decomposeProjectionMatrix(P, K_, R_, T_);
+  */
+  cv::Mat P =  this->pihole_model_.projectionMatrix();
   cv::decomposeProjectionMatrix(P, K_, R_, T_);
 
   cv::Rodrigues(R_, rvec_);
@@ -93,8 +97,6 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   std::cout << "K: " << this->pihole_model_.intrinsicMatrix() << std::endl;
   std::cout << "K_full: " << this->pihole_model_.fullIntrinsicMatrix() << std::endl;
   std::cout << "Projection Matrix: " << this->pihole_model_.projectionMatrix() << std::endl;
-
-
 }
 
 void MonocularFrame::setCameraAperture(double width, double height)
@@ -140,7 +142,7 @@ bool MonocularFrame::isPointWithinFrame(const cv::Point2f &point) const
       );
 }
 
-void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points)
+void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3d> &all_3D_points, const std::vector<cv::Point2d> &all_2D_points)
 {
   valid_2D_points_.clear();
   valid_3D_points_.clear();
@@ -172,10 +174,10 @@ void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3f> &all
 
 bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time)
 {
-  std::vector<cv::Point3f> cv_model_3D_points;
+  std::vector<cv::Point3d> cv_model_3D_points;
 //  std::vector<cv::Point3f> model_in_frustum; // TODO: define a valid frustum volume for 2nd time frame (instead of projecting the whole cloud)
 
-  std::vector<cv::Point2f> projected_model_2D_points;
+  std::vector<cv::Point2d> projected_model_2D_points;
 //  std::vector<model_feature_pair_> valid_projected_points;
 
 //  if(is_first_time)
@@ -184,7 +186,7 @@ bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3
     for(; cloud_it!=model_3Dcloud->end(); ++cloud_it)
     {
       PointFeature point_from_model = *cloud_it;
-      cv::Point3f cv_cloud_point(point_from_model.x, point_from_model.y, point_from_model.z);
+      cv::Point3d cv_cloud_point((double) point_from_model.x,  (double) point_from_model.y, (double) point_from_model.z);
       cv_model_3D_points.push_back(cv_cloud_point);
     }
 //  }
