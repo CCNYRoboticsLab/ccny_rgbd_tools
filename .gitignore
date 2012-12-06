@@ -29,7 +29,10 @@ cmake_install.cmake
 build
 bin
 lib
+<<<<<<< HEAD
 data/*
+=======
+>>>>>>> develop
 msg_gen
 srv_gen
 src/*/cfg

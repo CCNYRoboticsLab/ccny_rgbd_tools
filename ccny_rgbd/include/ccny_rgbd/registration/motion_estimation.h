@@ -6,7 +6,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/registration/icp_kd.h"
 #include "ccny_rgbd/registration/motion_prediction_imu.h"
 
 namespace ccny_rgbd

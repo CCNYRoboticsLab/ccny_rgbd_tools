@@ -130,6 +130,11 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     ROS_INFO("RGB header = %s", rgb_msg->header.frame_id.c_str());
     initialized_ = getBaseToCameraTf(rgb_msg->header);
     init_time_ = rgb_msg->header.stamp;
+
+    // TODO:
+    // Estimate initial camera pose relative to the model
+    // Call Roberto's RANSAC function
+
     if (!initialized_) return;
 
     frame_->setCameraAperture(sensor_aperture_width_, sensor_aperture_height_);
@@ -206,6 +211,21 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   }
 
 //  mutex_lock_.unlock();
+}
+
+
+bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const int min_inliers, const std::vector<cv::Point3f> &sample_3D_points, const std::vector<cv::Point2f> & feature_2D_points, std::vector<cv::Point3f> &inliers_3D_points, std::vector<cv::Point2f> & inliers_2D_points)
+{
+  // Clean old results (if any)
+  inliers_2D_points.clear();
+  inliers_3D_points.clear();
+
+
+
+  if(inliers_3D_points.size() >= min_inliers)
+    return true;
+  else
+    return false;
 }
 
 void MonocularVisualOdometry::publishTf(const std_msgs::Header& header)
@@ -298,7 +318,7 @@ cv::Mat MonocularVisualOdometry::estimateFirstPose(
   std::vector<cv::Point3f> cloud_vector_3d;
   std::vector<cv::Point2f> cloud_vector_2d;
 
-  valid_inliers = fitness(intrinsic_matrix, extrinsic_matrix, distance_threshold, vector_3d, vector_2d, cloud_vector_3d, cloud_vector_2d); //include min_inliers,
+  valid_inliers = fitness(intrinsic_matrix, extrinsic_matrix, distance_threshold, min_inliers, vector_3d, vector_2d, cloud_vector_3d, cloud_vector_2d); 
   
 
   if (valid_inliers)

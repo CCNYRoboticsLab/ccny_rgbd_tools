@@ -25,28 +25,20 @@ MotionEstimationICP::MotionEstimationICP(ros::NodeHandle nh, ros::NodeHandle nh_
   int icp_max_iterations;
   double icp_tf_epsilon;
   double icp_max_corresp_dist;
-  bool use_ransac_rejection;
-  double ransac_inlier_threshold;
   int history_size;
 
   if (!nh_private_.getParam ("reg/ICP/max_iterations", icp_max_iterations))
     icp_max_iterations = 30;
   if (!nh_private_.getParam ("reg/ICP/tf_epsilon", icp_tf_epsilon))
     icp_tf_epsilon = 0.000001;
-  if (!nh_private_.getParam ("reg/ICP/use_ransac_rejection", use_ransac_rejection))
-    use_ransac_rejection = false;
   if (!nh_private_.getParam ("reg/ICP/max_corresp_dist", icp_max_corresp_dist))
     icp_max_corresp_dist = 0.15;
-  if (!nh_private_.getParam ("reg/ICP/ransac_inlier_threshold", ransac_inlier_threshold))
-    ransac_inlier_threshold = 0.10;
   if (!nh_private_.getParam ("reg/ICP/history_size", history_size))
     history_size = 5;
 
   reg_.setMaxIterations(icp_max_iterations);
   reg_.setTransformationEpsilon(icp_tf_epsilon);
   reg_.setMaxCorrDist(icp_max_corresp_dist);
-  reg_.setUseRANSACRejection(use_ransac_rejection);
-  reg_.setRANSACThreshold(ransac_inlier_threshold);
 
   feature_history_.setCapacity(history_size);
 }
@@ -75,8 +67,8 @@ bool MotionEstimationICP::getMotionEstimationImpl(
 
   // **** build model ***************************************************
 
-  PointCloudFeature::Ptr model_ptr =
-    boost::shared_ptr<PointCloudFeature> (new PointCloudFeature());
+  PointCloudFeature::Ptr model_ptr;
+  model_ptr.reset(new PointCloudFeature());
 
   model_ptr->header.frame_id = fixed_frame_;
 
@@ -88,27 +80,22 @@ bool MotionEstimationICP::getMotionEstimationImpl(
 
   if (model_ptr->points.empty())
   {
-    ROS_WARN("No points in model");
+    ROS_INFO("No points in model: initializing from features.");
     last_keyframe_features_ = *features_ptr;  
     last_keyframe_f2b_ = f2b_;
     motion.setIdentity();
-    result = false;
+    result = true;
   }
   else
   {
-    // **** icp ***********************************************************
+    // **** icp 
+    KdTree::Ptr tree_model;
+    tree_model.reset(new KdTree());
+    tree_model->setInputCloud(model_ptr);
+    reg_.setModelTree (tree_model);
 
-    pcl::KdTreeFLANN<PointFeature> tree_data;
-    pcl::KdTreeFLANN<PointFeature> tree_model;
-
-    tree_data.setInputCloud(features_ptr);
-    tree_model.setInputCloud(model_ptr);
-
-    reg_.setDataCloud  (&*features_ptr);
-    reg_.setModelCloud (&*model_ptr);
-
-    reg_.setDataTree  (&tree_data);
-    reg_.setModelTree (&tree_model);
+    reg_.setDataCloud  (features_ptr);
+    reg_.setModelCloud (model_ptr);
 
     result = reg_.align();
   }
