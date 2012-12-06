@@ -1,0 +1,17 @@
+<!-- RGB-D Visual odometry -->
+
+<launch>
+
+  <!-- todo: nodelets -->
+  <node pkg="rgbd_image_proc" type="rgbd_image_proc_node" name="rgbd_image_proc_node"
+    output="log">
+    
+    <!-- Resample by a factor of 2-->
+    <param name="scale" value="0.5"/>
+    
+  <node>
+  
+</launch>
+
+
+
