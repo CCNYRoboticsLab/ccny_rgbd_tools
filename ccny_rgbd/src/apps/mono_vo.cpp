@@ -268,4 +268,28 @@ bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
   return true;
 }
 
+void MonocularVisualOdometry::getMatches (
+  const Point2fVector& detected_points,
+  const Point2fVector& projected_points,
+  std::vector<cv::DMatch>& matches)
+{
+  printf("matching...\n");
+   
+  cv::Mat det_mat(detected_points);     // detected = query
+  cv::Mat prj_mat(projected_points);   // projected = train
+  
+  cv::FlannBasedMatcher matcher;
+
+  matcher.match(det_mat, prj_mat, matches);
+  
+  for (unsigned int i = 0; i < matches.size(); ++i)
+  {
+    const cv::DMatch& match = matches[i];
+    printf("Match for %d is %d\n", match.queryIdx, match.trainIdx); 
+    
+    // detected_points[match.queryIdx] is a match with 
+    // projected_points[match.trainIdx]
+  }
+}
+
 } //namespace ccny_rgbd
