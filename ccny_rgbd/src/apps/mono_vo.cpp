@@ -38,9 +38,11 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
 
 
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
+  /* TODO: Carlos: temporarily commented out in order to test the KDTree Class
   int queue_size = 5;
   sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
   sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
+  */
 
 }
 
@@ -51,8 +53,36 @@ MonocularVisualOdometry::~MonocularVisualOdometry()
   delete feature_detector_;
 }
 
+
+void testKDTree()
+{
+  cv::KDTree my_tree;
+  cv::Mat input = (cv::Mat_<float> (4,2) << 10.0, 0,
+                                              3.2, 0,
+                                              0, 1.1,
+                                              0, 2);
+
+  std::cout << "Input to KDTree" << input << std::endl;
+  my_tree.build(input, false);
+
+  std::vector<int> indices;
+  indices.push_back(0);
+  indices.push_back(3);
+  cv::Mat pts;
+  my_tree.getPoints(indices, pts);
+  std::cout << "Output pts from KDTree" << pts << std::endl;
+
+
+  const int K = 2, Emax = INT_MAX;
+  int idx[K];
+  float dist[K];
+//  my_tree.findNearest(query_vec, K, Emax, idx, 0, dist);
+}
+
 void MonocularVisualOdometry::initParams()
 {
+  testKDTree();
+
   // PCD File
   if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
     pcd_filename_ = "cloud.pcd";
