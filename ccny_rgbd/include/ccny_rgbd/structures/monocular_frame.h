@@ -27,7 +27,12 @@ class MonocularFrame : public RGBDFrame
     void setCameraAperture(double width, double height);
     void setFrame(const sensor_msgs::ImageConstPtr& rgb_msg);
     void setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_msg);
+    void setExtrinsicMatrix(const cv::Mat &E);
+
 //    boost::shared_ptr<cv::flann::KDTreeIndexParams flann::KDTreeSingleIndex> tree_2D_points_from_cloud_;
+
+    cv::Mat getIntrinsicCameraMatrix() const;
+    void getFeaturesVector(std::vector<cv::Point2d> &features_vector) const;
 
   protected:
 
