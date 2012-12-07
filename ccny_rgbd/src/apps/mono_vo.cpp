@@ -477,6 +477,50 @@ bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
   return true;
 }
 
+void MonocularVisualOdometry::testGetMatches()
+{
+  Point2fVector detected_points;
+  Point2fVector projected_points;
+  
+  detected_points.push_back(cv::Point2f(10.0, 10.0));
+  detected_points.push_back(cv::Point2f(20.0, 20.0));
+  detected_points.push_back(cv::Point2f(30.0, 30.0));
+  detected_points.push_back(cv::Point2f(40.0, 40.0));
+  
+  projected_points.push_back(cv::Point2f(30.1, 31.2));
+  projected_points.push_back(cv::Point2f(18.1, 16.0));
+  projected_points.push_back(cv::Point2f(9.1,  11.5));
+  projected_points.push_back(cv::Point2f(41.2,   42.01));
+  
+  // results should be (0, 2), (1, 1), (2, 0), (3, 3)
+  std::vector<cv::DMatch> matches; 
+  getMatches(detected_points, projected_points, matches);
+}
+
+void MonocularVisualOdometry::getMatches (
+  const Point2fVector& detected_points,
+  const Point2fVector& projected_points,
+  std::vector<cv::DMatch>& matches)
+{
+  printf("matching...\n");
+   
+  cv::Mat det_mat(detected_points);     // detected = query
+  cv::Mat prj_mat(projected_points);   // projected = train
+  
+  cv::FlannBasedMatcher matcher;
+
+  matcher.match(det_mat, prj_mat, matches);
+  
+  for (unsigned int i = 0; i < matches.size(); ++i)
+  {
+    const cv::DMatch& match = matches[i];
+    printf("Match for %d is %d\n", match.queryIdx, match.trainIdx); 
+    
+    // detected_points[match.queryIdx] is a match with 
+    // projected_points[match.trainIdx]
+  }
+}
+
 /** min_inliers - sufficient number of inliers to terminate
   */
 cv::Mat MonocularVisualOdometry::estimateFirstPose(

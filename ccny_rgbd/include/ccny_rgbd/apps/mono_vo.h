@@ -153,8 +153,11 @@ class MonocularVisualOdometry
     void setFeatureDetector();
     bool readPointCloudFromPCDFile(); ///< Returns true if PCD file was read successfully.
     
-    
-    
+    void testGetMatches();
+    void getMatches (
+      const Point2fVector& detected_points,
+      const Point2fVector& projected_points,
+      std::vector<cv::DMatch>& matches);
 };
 
 } //namespace ccny_rgbd
