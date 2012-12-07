@@ -56,20 +56,34 @@ MonocularVisualOdometry::~MonocularVisualOdometry()
 
 void testKDTree()
 {
+  /*
   cv::KDTree my_tree;
-  cv::Mat input = (cv::Mat_<float> (4,2) << 10.0, 0,
-                                              3.2, 0,
-                                              0, 1.1,
-                                              0, 2);
+//  cv::Mat input = (cv::Mat_<float> (4,2) << 10.0, 0,
+//                                              3.2, 0,
+//                                              0, 1.1,
+//                                              0, 2);
+//  cv::Mat input = (cv::Mat_<float> (4,1) << 10.0,
+//  cv::Mat input = (cv::Mat_<double> (4,1) << 10.0,
+//                                              3.2,
+//                                              0,
+//                                              2);
+  std::vector<double> input(4);
+  input[0] = 10.0;
+  input[1] = 0.0;
+  input[2] = 4.0;
+  input[3] = 1.0;
 
-  std::cout << "Input to KDTree" << input << std::endl;
+  for(int i=0; i<input.size(); i++)
+    std::cout << "Input to KDTree" << input[i] << std::endl;
   my_tree.build(input, false);
 
   std::vector<int> indices;
   indices.push_back(0);
   indices.push_back(3);
   cv::Mat pts;
+  ROS_WARN("FUCK");
   my_tree.getPoints(indices, pts);
+  ROS_WARN("WTF?");
   std::cout << "Output pts from KDTree" << pts << std::endl;
 
 
@@ -77,6 +91,93 @@ void testKDTree()
   int idx[K];
   float dist[K];
 //  my_tree.findNearest(query_vec, K, Emax, idx, 0, dist);
+*/
+  // Parse input
+//    parseInput(argc, argv);
+
+  using namespace std;
+  using namespace cv;
+
+    int numData = 5;
+    int numQueries = 2;
+    int numDimensions = 1;
+    int k = 1;
+
+    // Create the data
+//    cv::Mat features(numData,numDimensions,CV_32F), query(numQueries,numDimensions,CV_32F);
+//    cv::randu(features, Scalar::all(Mean), cv::Scalar::all(Variance));
+//    cv::randu(query, Scalar::all(Mean), cv::Scalar::all(Variance));
+
+      cv::Mat features = (cv::Mat_<float> (numData,numDimensions) << 10.0,
+                                                  3.2,
+                                                  0,
+                                                  2,
+                                                  6.6);
+      cv::Mat query = (cv::Mat_<float> (numQueries,numDimensions) << 9.0,
+                                                  5);
+
+    // Print generated data
+    std::cout << "Input::" << std::endl;
+    for(int row = 0 ; row < features.rows ; row++){
+            for(int col = 0 ; col < features.cols ; col++){
+                    std::cout << features.at<float>(row,col) <<"\t";
+            }
+            std::cout << endl;
+    }
+    std::cout << "Query::" << std::endl;
+    for(int row = 0 ; row < query.rows ; row++){
+            for(int col = 0 ; col < query.cols ; col++){
+                    cout << query.at<float>(row,col) <<"\t";
+            }
+            cout << endl;
+    }
+
+    // KdTree with 5 random trees
+    cv::flann::KDTreeIndexParams indexParams(5);
+
+    // You can also use LinearIndex
+    //cv::flann::LinearIndexParams indexParams;
+
+    // Create the Index
+    cv::flann::Index kdtree(features, indexParams);
+/*
+    // Perform single search for mean
+    cout << "Performing single search to find closest data point to mean:" << endl;
+    vector<double> singleQuery;
+    vector<int> index(1);
+    vector<double> dist(1);
+
+    // Searching for the Mean
+    for(int i = 0 ; i < numDimensions ;i++)
+            singleQuery.push_back(Mean);
+
+    // Invoke the function
+    kdtree.knnSearch(singleQuery, index, dist, 1, cv::flann::SearchParams(64));
+
+    // Print single search results
+    cout << "(index,dist):" << index[0] << "," << dist[0]<< endl;
+*/
+    // Batch: Call knnSearch
+    cout << "Batch search:"<< endl;
+    Mat indices;//(numQueries, k, CV_32S);
+    Mat dists;//(numQueries, k, CV_32F);
+
+    // Invoke the function
+    kdtree.knnSearch(query, indices, dists, k, cv::flann::SearchParams(64));
+
+    cout << indices.rows << "\t" << indices.cols << endl;
+    cout << dists.rows << "\t" << dists.cols << endl;
+
+    // Print batch results
+    cout << "Output::"<< endl;
+    for(int row = 0 ; row < indices.rows ; row++){
+            cout << "(index,dist):";
+            for(int col = 0 ; col < indices.cols ; col++){
+                    cout << "(" << indices.at<int>(row,col) << "," << dists.at<float>(row,col) << ")" << "\t";
+            }
+            cout << endl;
+    }
+
 }
 
 void MonocularVisualOdometry::initParams()
@@ -228,11 +329,10 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
     E = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
 
-    // TODO: Roberto: create tvec and rvec with 0;0;0
+    // TODO: Roberto: create tvec and rvec with 0;0;0 (TEMP)
     // Then, make it into E
-    cv::Mat tvec(0,0,0);
-    cv::Mat rvec(0,0,0);
-
+    cv::Mat tvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
+    cv::Mat rvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
     E = matrixFromRvecTvec(tvec, rvec);
 
     frame_->setExtrinsicMatrix(E);
