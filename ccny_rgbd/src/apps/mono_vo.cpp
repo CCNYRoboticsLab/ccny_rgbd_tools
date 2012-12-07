@@ -71,6 +71,16 @@ void MonocularVisualOdometry::initParams()
   if (!nh_private_.getParam ("apps/mono_vo/topic_image", topic_image_))
     topic_image_ = "/camera/rgb/image_rect_color";
 
+  if (!nh_private_.getParam ("apps/mono_vo/min_inliers", min_inliers_))
+    min_inliers_ = 50;
+  if (!nh_private_.getParam ("apps/mono_vo/max_iterations", max_iterations_))
+    max_iterations_ = 1000;
+  if (!nh_private_.getParam ("apps/mono_vo/distance_threshold", distance_threshold_))
+    distance_threshold_ = 2;
+
+  if (!nh_private_.getParam ("apps/mono_vo/max_PnP_iterations", max_PnP_iterations_))
+    max_PnP_iterations_ = 10;
+
   // TODO: find the right values:
   nh_private_.param("app/mono_vo/sensor_aperture_width", sensor_aperture_width_, 4.8); // Default for a 1/3" = 4.8 mm
   nh_private_.param("app/mono_vo/sensor_aperture_height", sensor_aperture_height_, 3.6); // Default for a 1/3" = 3.6 mm
@@ -114,7 +124,30 @@ bool MonocularVisualOdometry::readPointCloudFromPCDFile()
 //    << " "    << cloud->points[i].y
 //    << " "    << cloud->points[i].z << std::endl;
 
+  convertPointCloudModelPointsToVector(model_ptr_);
+
   return true;
+}
+
+
+void MonocularVisualOdometry::convertPointCloudModelPointsToVector(const PointCloudFeature::Ptr model)
+{
+  model_cloud_vector_.clear();
+
+  PointCloudFeature::iterator cloud_it = model->begin();
+  for(; cloud_it!=model->end(); ++cloud_it)
+  {
+    PointFeature point_from_model = *cloud_it;
+    cv::Point3d cv_cloud_point((double) point_from_model.x,  (double) point_from_model.y, (double) point_from_model.z);
+    model_cloud_vector_.push_back(cv_cloud_point);
+  }
+}
+
+
+// TODO: Roberto implements this:
+void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations)
+{
+
 }
 
 void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -123,6 +156,8 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   ros::WallTime start = ros::WallTime::now();
 
   // **** initialize ***************************************************
+  std::vector<cv::Point2d> features_vector;
+  cv::Mat E;
 
   if (!initialized_)
   {
@@ -131,9 +166,22 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     initialized_ = getBaseToCameraTf(rgb_msg->header);
     init_time_ = rgb_msg->header.stamp;
 
+
     // TODO:
     // Estimate initial camera pose relative to the model
-    // Call Roberto's RANSAC function
+    feature_detector_->onlyFind2DFeatures(*frame_);
+    frame_->getFeaturesVector(features_vector);
+
+    E = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
+
+    // TODO: Roberto: create tvec and rvec with 0;0;0
+    // Then, make it into E
+    cv::Mat tvec;
+    cv::Mat rvec;
+
+    E = matrixFromRvecTvec(tvec, rvec);
+
+    frame_->setExtrinsicMatrix(E);
 
     if (!initialized_) return;
 
@@ -145,7 +193,6 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   ros::WallTime start_frame = ros::WallTime::now();
   frame_->setFrame(rgb_msg);
-
   ros::WallTime end_frame = ros::WallTime::now();
 
   // **** find features ************************************************
@@ -154,13 +201,20 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   feature_detector_->onlyFind2DFeatures(*frame_);
   ros::WallTime end_features = ros::WallTime::now();
 
-  // ------- Perspective projection of cloud 3D points onto image plane
+  frame_->getFeaturesVector(features_vector);
+
+
   ros::WallTime start_3D_cloud_projection = ros::WallTime::now();
+  cv::Mat E_new;
+  estimateMotion(E, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
+  /* FIXME: take outside here:
+  // ------- Perspective projection of cloud 3D points onto image plane
   // Assume known initial position of camera position at the origin of the world center of coordinates
   // TODO: needs a base2cam static transformation to correct for the camera coordinates in the world where +Z is point upwards
   // NOTE: the OpenNI driver publishes the static transformation (doing the rotation of the axis) between the rgb optical frame (/camera_rgb_optical_frame) and the /camera_link
   // ---------------------------------------------------------------
   is_first_time_projecting_ = frame_->project3DModelToCamera(model_ptr_, is_first_time_projecting_);
+  */
   ros::WallTime end_3D_cloud_projection = ros::WallTime::now();
 
   // **** registration *************************************************
@@ -214,7 +268,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 }
 
 
-bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const int min_inliers, const std::vector<cv::Point3f> &sample_3D_points, const std::vector<cv::Point2f> & feature_2D_points, std::vector<cv::Point3f> &inliers_3D_points, std::vector<cv::Point2f> & inliers_2D_points)
+bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const int min_inliers, const std::vector<cv::Point3d> &sample_3D_points, const std::vector<cv::Point2d> & feature_2D_points, std::vector<cv::Point3d> &inliers_3D_points, std::vector<cv::Point2d> & inliers_2D_points)
 {
   // Clean old results (if any)
   inliers_2D_points.clear();
@@ -273,10 +327,10 @@ bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
   */
 cv::Mat MonocularVisualOdometry::estimateFirstPose(
 	const cv::Mat& intrinsic_matrix,
-	const std::vector<cv::Point3f>& model, 
-        const std::vector<cv::Point2f>& image_2d_points, 
+	const std::vector<cv::Point3d>& model,
+        const std::vector<cv::Point2d>& image_2d_points,
         int min_inliers, 
-        int max_iteration,
+        int max_iterations,
         int distance_threshold)
 
 {
@@ -284,53 +338,57 @@ cv::Mat MonocularVisualOdometry::estimateFirstPose(
 
   srand(time(NULL));
 
-  std::vector<cv::Point3f> vector_3d;
-  std::vector<cv::Point2f> vector_2d;
-  std::vector<cv::Point3f> cloud_vector_3d;
-  std::vector<cv::Point2f> cloud_vector_2d;
-  std::vector<cv::Point3f> best_3d_vector;
-  std::vector<cv::Point2f> best_2d_vector;
+  std::vector<cv::Point3d> vector_3d;
+  std::vector<cv::Point2d> vector_2d;
+  std::vector<cv::Point3d> cloud_vector_3d;
+  std::vector<cv::Point2d> cloud_vector_2d;
+  std::vector<cv::Point3d> best_3d_vector;
+  std::vector<cv::Point2d> best_2d_vector;
   
+  ROS_WARN("resize???");
+
   vector_3d.resize(6);
   vector_2d.resize(6);
   bool valid_inliers = false;
 
   //gets 2 vectors of 6 random points from the model(3d map) and from the camera image(2d points)
 
-  for (int i = 0; i <= max_iteration ; ++i)
+  for (int i = 0; i <= max_iterations ; ++i)
   {
-    for (int j = 0; j < 7; ++j)  
+    for (uint j = 0; j < vector_2d.size(); ++j)
     {  
       int index1 = rand() % model.size();
       vector_3d[j] = model[index1];
       int index2 = rand() % image_2d_points.size();
+//      printf("Rand %d: [%d][%d] \n", j, index1, index2);
       vector_2d[j] = image_2d_points[index2];
     }
-    
-  cv::Mat rvec;
-  cv::Mat tvec;
-  cv::Mat extrinsic_matrix;
-  
-  cv::solvePnP(vector_3d, vector_2d, intrinsic_matrix, cv::Mat(), rvec, tvec);
-  extrinsic_matrix = matrixFromRvecTvec(rvec, tvec);
-   
-    
-  std::vector<cv::Point3f> cloud_vector_3d;
-  std::vector<cv::Point2f> cloud_vector_2d;
 
-  valid_inliers = fitness(intrinsic_matrix, extrinsic_matrix, distance_threshold, min_inliers, vector_3d, vector_2d, cloud_vector_3d, cloud_vector_2d); 
-  
+    cv::Mat rvec;
+    cv::Mat tvec;
+    cv::Mat extrinsic_matrix;
 
-  if (valid_inliers)
-  {  
-    best_3d_vector = cloud_vector_3d;
-    best_2d_vector = cloud_vector_2d;
-    break;
+    cv::solvePnP(vector_3d, vector_2d, intrinsic_matrix, cv::Mat(), rvec, tvec);
+    extrinsic_matrix = matrixFromRvecTvec(rvec, tvec);
+
+
+    std::vector<cv::Point3d> inliers_3D_points;
+    std::vector<cv::Point2d> inliers_2D_points;
+
+
+    valid_inliers = fitness(intrinsic_matrix, extrinsic_matrix, distance_threshold, min_inliers, vector_3d, vector_2d, inliers_3D_points, inliers_2D_points);
+
+
+    if (valid_inliers)
+    {
+      best_3d_vector = inliers_3D_points;
+      best_2d_vector = inliers_2D_points;
+      break;
+    }
+
   }
-  
- } 
-  //refine the transformation after getting the best fitting vectors
 
+  //refine the transformation after getting the best fitting vectors
   cv::Mat rvec_ref;
   cv::Mat tvec_ref;
   cv::solvePnP(best_3d_vector, best_2d_vector, intrinsic_matrix, cv::Mat(), rvec_ref, tvec_ref);

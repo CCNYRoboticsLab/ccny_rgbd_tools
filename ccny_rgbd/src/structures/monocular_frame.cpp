@@ -28,6 +28,21 @@ void MonocularFrame::setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_
   processCameraInfo(info_msg);
 }
 
+void MonocularFrame::setExtrinsicMatrix(const cv::Mat &E)
+{
+  rvec_ = rvecFromMatrix(E);
+  R_ = rmatFromMatrix(E);
+  tvec_ = tvecFromMatrix(E);
+  T_ = tvec_;
+
+  std::cout << "Results from initial Pose: " << std::endl;
+  std::cout << "R: " << R_ << std::endl;
+  std::cout << "rvec_: " << rvec_ << std::endl;
+  std::cout << "t: " << T_ << std::endl;
+  std::cout << "tvec: " << tvec_ << std::endl;
+
+}
+
 void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &cam_info_ptr)
 {
   //  cv::Mat cameraMatrix(cv::Size(4,3), CV_64FC1);
@@ -37,6 +52,7 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   //     [ 0   0   1   0]
   // Note that calibrationMatrixValues doesn't require the Tx,Ty column (it only takes the 3x3 intrinsic parameteres)
 
+  this->pihole_model_.fromCameraInfo(cam_info_ptr);
   image_size_ = new cv::Size(cam_info_ptr->width, cam_info_ptr->height);
 
   /*
@@ -66,11 +82,18 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   */
   cv::Mat P =  this->pihole_model_.projectionMatrix();
   cv::decomposeProjectionMatrix(P, K_, R_, T_);
-
   cv::Rodrigues(R_, rvec_);
-  tvec_.create(3,1,cv::DataType<float>::type);
-  for(unsigned int t=0; t<3; t++)
-    tvec_.at<float>(t) = T_.at<float> (t);
+
+  tvec_ = cv::Mat::zeros(3, 1, CV_64FC1);
+//  cv::Mat tvec = cv::Mat::zeros(3, 1, E.type()); // FIXME: it would be better to template the types or not to change at all
+
+  tvec_.at<double>(0,0) = T_.at<double>(0,3);
+  tvec_.at<double>(1,0) = T_.at<double>(1,3);
+  tvec_.at<double>(2,0) = T_.at<double>(2,3);
+  // TODO: later
+  /*
+  cv::Mat E = matrixFromRvecTvec(rvec_, tvec_);
+  tvec_ = tvecFromMatrix()
 
   // Create zero distortion
   dist_coeffs_.create(cam_info_ptr->D.size(),1,cv::DataType<float>::type);
@@ -83,6 +106,8 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   //   distCoeffs.at<float>(1) = cam_info_ptr->D[1];
   //   distCoeffs.at<float>(2) = cam_info_ptr->D[2];
   //   distCoeffs.at<float>(3) = cam_info_ptr->D[3];
+   */
+  dist_coeffs_ = this->pihole_model_.distortionCoeffs();
 
   std::cout << "Decomposed Matrix" << std::endl;
   std::cout << "P: " << P << std::endl;
@@ -93,10 +118,21 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   std::cout << "K: " << K_ << std::endl;
   std::cout << "Distortion: " << dist_coeffs_ << std::endl;
 
-  std::cout << "COMPARISSON to Pinhole_Camera_Model's results" << std::endl;
-  std::cout << "K: " << this->pihole_model_.intrinsicMatrix() << std::endl;
-  std::cout << "K_full: " << this->pihole_model_.fullIntrinsicMatrix() << std::endl;
-  std::cout << "Projection Matrix: " << this->pihole_model_.projectionMatrix() << std::endl;
+  cv::Mat E = matrixFromRvecTvec(rvec_, tvec_);
+
+//  std::cout << "COMPARISSON to Pinhole_Camera_Model's results" << std::endl;
+//  std::cout << "K: " << this->pihole_model_.intrinsicMatrix() << std::endl;
+//  std::cout << "K_full: " << this->pihole_model_.fullIntrinsicMatrix() << std::endl;
+//  std::cout << "Projection Matrix: " << this->pihole_model_.projectionMatrix() << std::endl;
+  std::cout << "CHECK with utils" << std::endl;
+  std::cout << "rvec: " << rvecFromMatrix(E) << std::endl;
+  std::cout << "R: " << rmatFromMatrix(E) << std::endl;
+  std::cout << "tvec: " << tvecFromMatrix(E) << std::endl;
+}
+
+cv::Mat MonocularFrame::getIntrinsicCameraMatrix() const
+{
+  return K_;
 }
 
 void MonocularFrame::setCameraAperture(double width, double height)
@@ -170,6 +206,22 @@ void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3d> &all
   for(unsigned int i = 0; i < valid_3D_points_.size(); ++i)
     std::cout << "3D Object point: " << valid_3D_points_[i] << " Projected to " << valid_2D_points_[i] << std::endl;
   ROS_DEBUG("%d valid points projected to frame", all_2D_points.size());
+}
+
+
+void MonocularFrame::getFeaturesVector(std::vector<cv::Point2d> &features_vector) const
+{
+  features_vector.clear();
+
+  std::vector<cv::KeyPoint>::const_iterator feat_it = keypoints.begin();
+  for(; feat_it!=keypoints.end(); ++feat_it)
+  {
+    cv::KeyPoint feature_from_frame = *feat_it;
+    cv::Point2d keypoint_point = feat_it->pt;
+    features_vector.push_back(keypoint_point);
+  }
+//  }
+
 }
 
 bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time)

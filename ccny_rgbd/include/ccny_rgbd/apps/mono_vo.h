@@ -67,19 +67,24 @@ class MonocularVisualOdometry
      *
      * @return True if the fitness falls under certain threshold criteria of number of inliers
      */
-    
-   // estimate the first camera pose
+    bool fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const int min_inliers, const std::vector<cv::Point3d> &sample_3D_points, const std::vector<cv::Point2d> & feature_2D_points, std::vector<cv::Point3d> &inliers_3D_points, std::vector<cv::Point2d> & inliers_2D_points);
 
+   // estimate the first camera pose
    cv::Mat estimateFirstPose(
      const cv::Mat& intrinsic_matrix, 
-     const std::vector<cv::Point3f>& model, 
-     const std::vector<cv::Point2f>& image_2d_points, 
+     const std::vector<cv::Point3d>& model,
+     const std::vector<cv::Point2d>& image_2d_points,
      int min_inliers, 
-     int max_iteration, 
+     int max_iterations,
      int distance_threshold);
 
-    bool fitness(const cv::Mat M, const cv::Mat E, const int distance_threshold, const int min_inliers, const std::vector<cv::Point3f> &sample_3D_points, const std::vector<cv::Point2f> & feature_2D_points, std::vector<cv::Point3f> &inliers_3D_points, std::vector<cv::Point2f> & inliers_2D_points);
+   void convertPointCloudModelPointsToVector(const PointCloudFeature::Ptr model);
 
+   // TODO: Carlos:
+   void getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &v3d, std::vector<cv::Point2d> &v2d );
+
+   // TODO: Roberto:
+   void estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations = 10);
 
   private:
 
@@ -113,6 +118,11 @@ class MonocularVisualOdometry
     int  frame_count_;
     ros::Time init_time_;
 
+    int min_inliers_;
+    int max_iterations_;
+    int distance_threshold_;
+    int max_PnP_iterations_;
+
     tf::Transform b2c_;
     tf::Transform f2b_;
 
@@ -122,7 +132,7 @@ class MonocularVisualOdometry
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
     PointCloudFeature::Ptr model_ptr_;
-
+    std::vector<cv::Point3d> model_cloud_vector_;
     ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
 
     bool publish_cloud_model_; ///< to indicate whether the model pointcloud will be published
