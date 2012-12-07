@@ -100,7 +100,7 @@ void testKDTree()
 
     int numData = 5;
     int numQueries = 2;
-    int numDimensions = 1;
+    int numDimensions = 2;
     int k = 1;
 
     // Create the data
@@ -108,13 +108,13 @@ void testKDTree()
 //    cv::randu(features, Scalar::all(Mean), cv::Scalar::all(Variance));
 //    cv::randu(query, Scalar::all(Mean), cv::Scalar::all(Variance));
 
-      cv::Mat features = (cv::Mat_<float> (numData,numDimensions) << 10.0,
-                                                  3.2,
-                                                  0,
-                                                  2,
-                                                  6.6);
-      cv::Mat query = (cv::Mat_<float> (numQueries,numDimensions) << 9.0,
-                                                  5);
+      cv::Mat features = (cv::Mat_<float> (numData,numDimensions) << 10.0, 0,
+                                                        3.2, 0,
+                                                        0, 1.1,
+                                                        0, 2,
+                                                        6.2, 30);
+      cv::Mat query = (cv::Mat_<float> (numQueries,numDimensions) << 9.0, 20,
+                                                  6,5);
 
     // Print generated data
     std::cout << "Input::" << std::endl;
@@ -183,6 +183,7 @@ void testKDTree()
 void MonocularVisualOdometry::initParams()
 {
   testKDTree();
+//  testGetMatches();
 
   // PCD File
   if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
