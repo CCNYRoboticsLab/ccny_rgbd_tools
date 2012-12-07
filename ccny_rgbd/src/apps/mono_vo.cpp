@@ -147,6 +147,30 @@ void MonocularVisualOdometry::convertPointCloudModelPointsToVector(const PointCl
 // TODO: Roberto implements this:
 void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations)
 {
+ 
+ cv::Mat tvec;
+ cv::Mat rvec;
+
+ rvec = rvecFromMatrix(E_prev);
+ tvec = tvecFromMatrix(E_prev);
+ cv::Mat intrinsic_matrix = frame_->getIntrinsicCameraMatrix();
+
+ //TODO call estimateFirstPose function to get the first estimation of rvec tvecv
+
+ for (int i=0; i<=max_PnP_iterations; ++i) 
+ {
+   std::vector<cv::Point2d> vector_2d_corr;
+   std::vector<cv::Point3d> vector_3d_corr;    
+
+   getCorrespondences(model, features, rvec, tvec, vector_3d_corr, vector_2d_corr);
+   cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
+ }
+  
+ E_new = matrixFromRvecTvec(tvec, rvec);
+}
+
+void MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &v3d, std::vector<cv::Point2d> &v2d )
+{
 
 }
 
@@ -176,8 +200,8 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
     // TODO: Roberto: create tvec and rvec with 0;0;0
     // Then, make it into E
-    cv::Mat tvec;
-    cv::Mat rvec;
+    cv::Mat tvec(0,0,0);
+    cv::Mat rvec(0,0,0);
 
     E = matrixFromRvecTvec(tvec, rvec);
 
@@ -366,10 +390,9 @@ cv::Mat MonocularVisualOdometry::estimateFirstPose(
 
     cv::Mat rvec;
     cv::Mat tvec;
-    cv::Mat extrinsic_matrix;
-
+    cv::Mat intrinsic_matrix = frame_->getIntrinsicCameraMatrix();
     cv::solvePnP(vector_3d, vector_2d, intrinsic_matrix, cv::Mat(), rvec, tvec);
-    extrinsic_matrix = matrixFromRvecTvec(rvec, tvec);
+    cv::Mat extrinsic_matrix = matrixFromRvecTvec(rvec, tvec);
 
 
     std::vector<cv::Point3d> inliers_3D_points;
