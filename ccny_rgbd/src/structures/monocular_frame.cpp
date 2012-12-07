@@ -224,6 +224,7 @@ void MonocularFrame::getFeaturesVector(std::vector<cv::Point2d> &features_vector
 
 }
 
+
 bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time)
 {
   std::vector<cv::Point3d> cv_model_3D_points;
@@ -264,6 +265,7 @@ bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3
         << " with: " << valid_2D_points.rows << " rows, " << valid_2D_points.cols << " cols" << std::endl;
 
   cv::KDTree my_tree;
+
   /*
 //  my_tree.build(valid_2D_points_, false);
 //  cv::Mat test(3,5, CV_32F);
@@ -275,7 +277,6 @@ bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3
   test.push_back(cv::Point2f(3.2,4.4));
   test.push_back(cv::Point2f(3.2,4.4));
 
-  cv::Mat fuck(test);
 
   my_tree.build(fuck, false);
   */
