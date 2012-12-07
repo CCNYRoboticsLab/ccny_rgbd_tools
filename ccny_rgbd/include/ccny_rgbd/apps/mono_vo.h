@@ -155,8 +155,8 @@ class MonocularVisualOdometry
     
     void testGetMatches();
     void getMatches (
-        const cv::Mat& detected_points,
         const cv::Mat& projected_points,
+        const cv::Mat& detected_points,
         std::vector<int>& match_indices,
         std::vector<float>& match_distances);
 

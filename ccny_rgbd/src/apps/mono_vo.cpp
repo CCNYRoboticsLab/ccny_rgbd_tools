@@ -511,12 +511,12 @@ void MonocularVisualOdometry::testGetMatches()
   std::vector<int> match_indices;
   std::vector<float> match_distances;
   // results should be (0, 2), (1, 1), (2, 0), (3, 3)
-  getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances);
+  getMatches(projected_points_matrix, detected_points_matrix, match_indices, match_distances);
 }
 
 void MonocularVisualOdometry::getMatches (
-  const cv::Mat& detected_points,
-  const cv::Mat& projected_points,
+  const cv::Mat& reference_points,
+  const cv::Mat& query_points,
   std::vector<int>& match_indices,
   std::vector<float>& match_distances
   )
@@ -530,26 +530,33 @@ void MonocularVisualOdometry::getMatches (
   //cv::flann::LinearIndexParams indexParams;
 
   // Create the Index
-  cv::flann::Index kdtree(projected_points, indexParams);
+  cv::flann::Index kdtree(reference_points, indexParams);
 
   // Batch: Call knnSearch
   std::cout << "Batch search:"<< std::endl;
-  cv::Mat indices;//(numQueries, k, CV_32S);
-  cv::Mat dists;//(numQueries, k, CV_32F);
-
   // Invoke the function
   int k = 1;
-  kdtree.knnSearch(detected_points, indices, dists, k, cv::flann::SearchParams(64));
+  cv::Mat indices;//(numQueries, k, CV_32S);
+  cv::Mat dists;//(numQueries, k, CV_32F);
+  kdtree.knnSearch(query_points, indices, dists, k, cv::flann::SearchParams(64));
+  match_indices.resize(indices.rows);
+  match_distances.resize(dists.rows);
 
-  std::cout << indices.rows << "\t" << indices.cols << std::endl;
-  std::cout << dists.rows << "\t" << dists.cols << std::endl;
+//  std::cout << match_indices.rows << "\t" << match_indices.cols << std::endl;
+//  std::cout << match_distances.rows << "\t" << match_distances.cols << std::endl;
+  std::cout << match_indices.size()  << std::endl;
+  std::cout << match_distances.size() << std::endl;
 
   // Print batch results
   std::cout << "Output::"<< std::endl;
   for(int row = 0 ; row < indices.rows ; row++)
   {
-      printf("Row %d: col[0]=%d, col[1]=%d \t Distances: col[0]=%f, col[1]=%f \n", row, indices.at<int>(row,0), indices.at<int>(row,1),  dists.at<float>(row,0), dists.at<float>(row,0));
-      printf("Point = (%f, %f) \n\n", projected_points.at<float>(indices.at<int>(row,0),0), projected_points.at<float>(indices.at<int>(row,0),1));
+    match_indices[row]=indices.at<int>(row,0);
+    match_distances[row]=dists.at<float>(row,0);
+//      printf("Row %d: col[0]=%d, col[1]=%d \t Distances: col[0]=%f, col[1]=%f \n", row, match_indices.at<int>(row,0), match_indices.at<int>(row,1),  match_distances.at<float>(row,0), match_distances.at<float>(row,0));
+//      printf("Point = (%f, %f) \n\n", reference_points.at<float>(match_indices.at<int>(row,0),0), reference_points.at<float>(match_indices.at<int>(row,0),1));
+      printf("Row %d: col[0]=%d \t Distances: col[0]=%f \n", row, match_indices[row], match_distances[row]);
+      printf("Point = (%f, %f) \n\n", reference_points.at<float>(match_indices[row],0), reference_points.at<float>(match_indices[row],1));
   }
 
 }
