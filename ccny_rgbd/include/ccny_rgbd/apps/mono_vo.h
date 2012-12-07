@@ -155,9 +155,12 @@ class MonocularVisualOdometry
     
     void testGetMatches();
     void getMatches (
-      const Point2fVector& detected_points,
-      const Point2fVector& projected_points,
-      std::vector<cv::DMatch>& matches);
+        const cv::Mat& detected_points,
+        const cv::Mat& projected_points,
+        std::vector<int>& match_indices,
+        std::vector<float>& match_distances);
+
+    void convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points) const;
 };
 
 } //namespace ccny_rgbd

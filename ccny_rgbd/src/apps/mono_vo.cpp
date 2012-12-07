@@ -53,6 +53,16 @@ MonocularVisualOdometry::~MonocularVisualOdometry()
   delete feature_detector_;
 }
 
+void MonocularVisualOdometry::convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points) const
+{
+  matrix_points.create(vector_points.size(), 2, CV_32FC1);
+  for(int row = 0 ; row < vector_points.size() ; row++)
+  {
+    matrix_points.at<float> (row, 0) = vector_points[row].x;
+    matrix_points.at<float> (row, 1) = vector_points[row].y;
+  }
+
+}
 
 void testKDTree()
 {
@@ -182,8 +192,8 @@ void testKDTree()
 
 void MonocularVisualOdometry::initParams()
 {
-  testKDTree();
-//  testGetMatches();
+//  testKDTree();
+  testGetMatches();
 
   // PCD File
   if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
@@ -480,46 +490,68 @@ bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
 
 void MonocularVisualOdometry::testGetMatches()
 {
-  Point2fVector detected_points;
-  Point2fVector projected_points;
+  std::vector<cv::Point2d> detected_points;
+  std::vector<cv::Point2d> projected_points;
+
+  detected_points.push_back(cv::Point2d(10.0, 10.0));
+  detected_points.push_back(cv::Point2d(20.0, 20.0));
+  detected_points.push_back(cv::Point2d(30.0, 30.0));
+  detected_points.push_back(cv::Point2d(40.0, 40.0));
   
-  detected_points.push_back(cv::Point2f(10.0, 10.0));
-  detected_points.push_back(cv::Point2f(20.0, 20.0));
-  detected_points.push_back(cv::Point2f(30.0, 30.0));
-  detected_points.push_back(cv::Point2f(40.0, 40.0));
+  projected_points.push_back(cv::Point2d(30.1, 31.2));
+  projected_points.push_back(cv::Point2d(18.1, 16.0));
+  projected_points.push_back(cv::Point2d(9.1,  11.5));
+  projected_points.push_back(cv::Point2d(41.2,   42.01));
   
-  projected_points.push_back(cv::Point2f(30.1, 31.2));
-  projected_points.push_back(cv::Point2f(18.1, 16.0));
-  projected_points.push_back(cv::Point2f(9.1,  11.5));
-  projected_points.push_back(cv::Point2f(41.2,   42.01));
+  cv::Mat detected_points_matrix;
+  cv::Mat projected_points_matrix;
+  convert2DPointVectorToMatrix(detected_points, detected_points_matrix);
+  convert2DPointVectorToMatrix(projected_points, projected_points_matrix);
   
+  std::vector<int> match_indices;
+  std::vector<float> match_distances;
   // results should be (0, 2), (1, 1), (2, 0), (3, 3)
-  std::vector<cv::DMatch> matches; 
-  getMatches(detected_points, projected_points, matches);
+  getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances);
 }
 
 void MonocularVisualOdometry::getMatches (
-  const Point2fVector& detected_points,
-  const Point2fVector& projected_points,
-  std::vector<cv::DMatch>& matches)
+  const cv::Mat& detected_points,
+  const cv::Mat& projected_points,
+  std::vector<int>& match_indices,
+  std::vector<float>& match_distances
+  )
 {
   printf("matching...\n");
-   
-  cv::Mat det_mat(detected_points);     // detected = query
-  cv::Mat prj_mat(projected_points);   // projected = train
-  
-  cv::FlannBasedMatcher matcher;
 
-  matcher.match(det_mat, prj_mat, matches);
-  
-  for (unsigned int i = 0; i < matches.size(); ++i)
+  // KdTree with 5 random trees
+  cv::flann::KDTreeIndexParams indexParams(5);
+
+  // You can also use LinearIndex
+  //cv::flann::LinearIndexParams indexParams;
+
+  // Create the Index
+  cv::flann::Index kdtree(projected_points, indexParams);
+
+  // Batch: Call knnSearch
+  std::cout << "Batch search:"<< std::endl;
+  cv::Mat indices;//(numQueries, k, CV_32S);
+  cv::Mat dists;//(numQueries, k, CV_32F);
+
+  // Invoke the function
+  int k = 1;
+  kdtree.knnSearch(detected_points, indices, dists, k, cv::flann::SearchParams(64));
+
+  std::cout << indices.rows << "\t" << indices.cols << std::endl;
+  std::cout << dists.rows << "\t" << dists.cols << std::endl;
+
+  // Print batch results
+  std::cout << "Output::"<< std::endl;
+  for(int row = 0 ; row < indices.rows ; row++)
   {
-    const cv::DMatch& match = matches[i];
-    printf("Match for %d is %d\n", match.queryIdx, match.trainIdx); 
-    
-    // detected_points[match.queryIdx] is a match with 
-    // projected_points[match.trainIdx]
+      printf("Row %d: col[0]=%d, col[1]=%d \t Distances: col[0]=%f, col[1]=%f \n", row, indices.at<int>(row,0), indices.at<int>(row,1),  dists.at<float>(row,0), dists.at<float>(row,0));
+      printf("Point = (%f, %f) \n\n", projected_points.at<float>(indices.at<int>(row,0),0), projected_points.at<float>(indices.at<int>(row,0),1));
   }
+
 }
 
 /** min_inliers - sufficient number of inliers to terminate
