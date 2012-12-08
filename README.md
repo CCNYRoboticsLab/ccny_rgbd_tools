@@ -70,8 +70,10 @@ There are many paramters - the first ones you can try changing are:
 More info
 -----------------------------------
 
+Coming soon:
+
+ - http://ros.org/wiki/ccny_rgbd_tools
+
 Some videos:
 
-
-
-http://ros.org/wiki/ccny_rgbd_tools
+ - http://youtu.be/XDKDDWIrWx0
