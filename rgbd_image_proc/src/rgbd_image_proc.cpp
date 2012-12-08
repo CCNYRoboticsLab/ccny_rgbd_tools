@@ -267,8 +267,8 @@ void RGBDImageProc::RGBDCallback(
   
   double dur_allocate = getMsDuration(start_allocate); 
 
-  ROS_INFO("Rect: %.1f Reproj: %.1f Unwarp: %.1f Cloud %.1f Alloc: %.1f ms", 
-    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate);
+  //ROS_INFO("Rect: %.1f Reproj: %.1f Unwarp: %.1f Cloud %.1f Alloc: %.1f ms", 
+  //  dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate);
 
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);

@@ -192,14 +192,14 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
   p_f.y = f_mean.at<double>(1,0);
   p_f.z = f_mean.at<double>(2,0);
 
-  model_tree.nearestKSearch(p_f, 1, indices, dist_sq);
+  model_tree.nearestKSearch(p_f, n_nearest_neighbors_, indices, dist_sq);
 
   // iterate over Euclidean NNs to find Mah. NN
 
   // TODO - clean this up
   double best_mah_dist = 9999999;
   int best_mah_nn_idx = -1;
-  int best_i; // optionally print this to check how far in we found the best one
+  int best_i = 0; // optionally print this to check how far in we found the best one
   for (int i = 0; i < n_nearest_neighbors_; i++)
   {
     int nn_idx = indices[i];
@@ -224,7 +224,7 @@ void MotionEstimationICPProbModel::getNNMahalanobis(
     }
   }
 
-  if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
+  //if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
   mah_dist   = best_mah_dist;
   mah_nn_idx = best_mah_nn_idx;
 }
