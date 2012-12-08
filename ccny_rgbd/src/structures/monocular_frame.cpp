@@ -135,6 +135,41 @@ cv::Mat MonocularFrame::getIntrinsicCameraMatrix() const
   return K_;
 }
 
+bool MonocularFrame::buildKDTreeFromKeypoints()
+{
+  if(this->keypoints.empty())
+    return false;
+
+  // KdTree with 5 random trees
+  cv::flann::KDTreeIndexParams indexParams(5);
+
+  // You can also use LinearIndex
+  //cv::flann::LinearIndexParams indexParams;
+
+  std::vector<cv::Point2d> features_vector;
+  this->getFeaturesVector(features_vector);
+  cv::Mat reference_points;
+  convert2DPointVectorToMatrix(features_vector, reference_points);
+
+  // Create the Index
+  kdtree_ = boost::shared_ptr<cv::flann::Index> (new cv::flann::Index(reference_points, indexParams));
+
+  return true;
+}
+
+void MonocularFrame::getFeaturesVector(std::vector<cv::Point2d> &features_vector) const
+{
+  features_vector.clear();
+
+  std::vector<cv::KeyPoint>::const_iterator feat_it = keypoints.begin();
+  for(; feat_it!=keypoints.end(); ++feat_it)
+  {
+    cv::KeyPoint feature_from_frame = *feat_it;
+    cv::Point2d keypoint_point = feat_it->pt;
+    features_vector.push_back(keypoint_point);
+  }
+}
+
 void MonocularFrame::setCameraAperture(double width, double height)
 {
   sensor_aperture_width_ = width;
@@ -178,10 +213,12 @@ bool MonocularFrame::isPointWithinFrame(const cv::Point2f &point) const
       );
 }
 
-void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3d> &all_3D_points, const std::vector<cv::Point2d> &all_2D_points)
+void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3d> &all_3D_points, const std::vector<cv::Point2d> &all_2D_points,
+                                             std::vector<cv::Point3d> &valid_3D_points,
+                                             std::vector<cv::Point2d> &valid_2D_points)
 {
-  valid_2D_points_.clear();
-  valid_3D_points_.clear();
+  valid_2D_points.clear();
+  valid_3D_points.clear();
 
 #ifdef DEVELOP
   ROS_DEBUG("%d points in model", all_3D_points.size());
@@ -194,40 +231,20 @@ void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3d> &all
 //      model_feature_pair_ valid_point_pair(all_3D_points[i], all_2D_points[i]);
 //      valid_points.push_back(valid_point_pair);
 //      std::cout << "3D Object point: " << valid_points.end()->model_point << " Projected to " << valid_points.end()->keyframe << std::endl;
-      valid_2D_points_.push_back(all_2D_points[i]);
-      valid_3D_points_.push_back(all_3D_points[i]);
+      valid_2D_points.push_back(all_2D_points[i]);
+      valid_3D_points.push_back(all_3D_points[i]);
     }
-
-    // FIXME: breaking with 10 points temporarily
-    if(valid_2D_points_.size()>10)
-      break;
   }
 
-  for(unsigned int i = 0; i < valid_3D_points_.size(); ++i)
-    std::cout << "3D Object point: " << valid_3D_points_[i] << " Projected to " << valid_2D_points_[i] << std::endl;
-  ROS_DEBUG("%d valid points projected to frame", all_2D_points.size());
-}
-
-
-void MonocularFrame::getFeaturesVector(std::vector<cv::Point2d> &features_vector) const
-{
-  features_vector.clear();
-
-  std::vector<cv::KeyPoint>::const_iterator feat_it = keypoints.begin();
-  for(; feat_it!=keypoints.end(); ++feat_it)
-  {
-    cv::KeyPoint feature_from_frame = *feat_it;
-    cv::Point2d keypoint_point = feat_it->pt;
-    features_vector.push_back(keypoint_point);
-  }
-//  }
-
+  ROS_DEBUG("%d valid points projected to frame", valid_2D_points.size());
+  for(unsigned int i = 0; i < valid_3D_points.size(); ++i)
+    std::cout << "3D Object point: " << valid_3D_points[i] << " Projected to " << valid_2D_points[i] << std::endl;
 }
 
 
 bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time)
 {
-  std::vector<cv::Point3d> cv_model_3D_points;
+  /*
 //  std::vector<cv::Point3f> model_in_frustum; // TODO: define a valid frustum volume for 2nd time frame (instead of projecting the whole cloud)
 
   std::vector<cv::Point2d> projected_model_2D_points;
@@ -265,6 +282,8 @@ bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3
         << " with: " << valid_2D_points.rows << " rows, " << valid_2D_points.cols << " cols" << std::endl;
 
   cv::KDTree my_tree;
+
+*/
 
   /*
 //  my_tree.build(valid_2D_points_, false);

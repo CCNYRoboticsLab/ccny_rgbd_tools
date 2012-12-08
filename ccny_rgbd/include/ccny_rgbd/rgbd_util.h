@@ -102,6 +102,10 @@ cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);
  */
 cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
 
+/* convert a vector of 2D cv points into a cv matrix of n points by 2 columns
+ */
+void convert2DPointVectorToMatrix(const std::vector<cv::Point2d>& vector_points, cv::Mat& matrix_points);
+
 /* get a 4x4 matrix from a 3x3 matrix, 
  * 4th row is 0 0 0 1
  */

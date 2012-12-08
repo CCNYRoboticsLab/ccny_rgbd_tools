@@ -38,11 +38,9 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
 
 
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  /* TODO: Carlos: temporarily commented out in order to test the KDTree Class
   int queue_size = 5;
   sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
   sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
-  */
 
 }
 
@@ -51,17 +49,6 @@ MonocularVisualOdometry::~MonocularVisualOdometry()
   ROS_INFO("Destroying Monocular Visual Odometry");
 
   delete feature_detector_;
-}
-
-void MonocularVisualOdometry::convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points) const
-{
-  matrix_points.create(vector_points.size(), 2, CV_32FC1);
-  for(int row = 0 ; row < vector_points.size() ; row++)
-  {
-    matrix_points.at<float> (row, 0) = vector_points[row].x;
-    matrix_points.at<float> (row, 1) = vector_points[row].y;
-  }
-
 }
 
 void testKDTree()
@@ -193,7 +180,7 @@ void testKDTree()
 void MonocularVisualOdometry::initParams()
 {
 //  testKDTree();
-  testGetMatches();
+//  testGetMatches();
 
   // PCD File
   if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
@@ -311,9 +298,41 @@ void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, cv::Mat &E_n
  E_new = matrixFromRvecTvec(tvec, rvec);
 }
 
-void MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &v3d, std::vector<cv::Point2d> &v2d )
+double MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points )
 {
+  // Clean old results (if any)
+  corr_2D_points.clear();
+  corr_3D_points.clear();
 
+  std::vector<cv::Point2d> projected_model_2D_points;
+  std::vector<cv::Point3d> valid_3D_points;
+  std::vector<cv::Point2d> valid_2D_points;
+
+  cv::projectPoints(model_3D, rvec, tvec, frame_->getIntrinsicCameraMatrix(), frame_->pihole_model_.distortionCoeffs(), projected_model_2D_points);
+
+  frame_->filterPointsWithinFrame(model_3D, projected_model_2D_points, valid_3D_points, valid_2D_points);
+
+  std::vector<int> match_indices;
+  std::vector<float> match_distances; // FIXME: use double? or will the KDTree crash?
+  cv::Mat detected_points_matrix;
+  cv::Mat projected_points_matrix;
+  convert2DPointVectorToMatrix(features_2D, detected_points_matrix);
+  convert2DPointVectorToMatrix(valid_2D_points, projected_points_matrix);
+  getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances);
+
+  double total_distance_error = 0.0; // Accumulator error of distances to nearest neighbor
+  // Filter points according to threshold distance
+  for(uint i = 0 ; i < match_indices.size(); i++)
+  {
+    if(match_distances[i] < distance_threshold_)
+    {
+      corr_2D_points.push_back(valid_2D_points[match_indices[i]]);
+      corr_3D_points.push_back(valid_3D_points[match_indices[i]]);
+      total_distance_error += (double) match_distances[i];
+    }
+  }
+
+  return (double) total_distance_error/corr_2D_points.size();
 }
 
 void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -336,17 +355,18 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     // TODO:
     // Estimate initial camera pose relative to the model
     feature_detector_->onlyFind2DFeatures(*frame_);
-    frame_->getFeaturesVector(features_vector);
-
-    E = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
-
-    // TODO: Roberto: create tvec and rvec with 0;0;0 (TEMP)
-    // Then, make it into E
-    cv::Mat tvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
-    cv::Mat rvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
-    E = matrixFromRvecTvec(tvec, rvec);
-
-    frame_->setExtrinsicMatrix(E);
+    if(frame_->buildKDTreeFromKeypoints())
+    {
+      frame_->getFeaturesVector(features_vector);
+      E = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
+      // TODO: temp initial extrinsic vectors:
+      //    cv::Mat tvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
+      //    cv::Mat rvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
+      //    E = matrixFromRvecTvec(tvec, rvec);
+      frame_->setExtrinsicMatrix(E);
+    }
+    else
+      initialized_ = false;
 
     if (!initialized_) return;
 
@@ -366,44 +386,45 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   feature_detector_->onlyFind2DFeatures(*frame_);
   ros::WallTime end_features = ros::WallTime::now();
 
-  frame_->getFeaturesVector(features_vector);
+  if(frame_->buildKDTreeFromKeypoints())
+  {
+    frame_->getFeaturesVector(features_vector);
 
 
-  ros::WallTime start_3D_cloud_projection = ros::WallTime::now();
-  cv::Mat E_new;
-  estimateMotion(E, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
-  /* FIXME: take outside here:
+    ros::WallTime start_3D_cloud_projection = ros::WallTime::now();
+    cv::Mat E_new;
+    estimateMotion(E, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
+    /* FIXME: take outside here:
   // ------- Perspective projection of cloud 3D points onto image plane
   // Assume known initial position of camera position at the origin of the world center of coordinates
   // TODO: needs a base2cam static transformation to correct for the camera coordinates in the world where +Z is point upwards
   // NOTE: the OpenNI driver publishes the static transformation (doing the rotation of the axis) between the rgb optical frame (/camera_rgb_optical_frame) and the /camera_link
   // ---------------------------------------------------------------
   is_first_time_projecting_ = frame_->project3DModelToCamera(model_ptr_, is_first_time_projecting_);
-  */
-  ros::WallTime end_3D_cloud_projection = ros::WallTime::now();
+     */
+    ros::WallTime end_3D_cloud_projection = ros::WallTime::now();
 
-  // **** registration *************************************************
-  // TODO: with the 3Dto2D method of registration and using PnP
-  ros::WallTime start_PnP_reg = ros::WallTime::now();
-//  tf::Transform motion = motion_estimation_->getMotionEstimation(frame);
-//  f2b_ = motion * f2b_; // TODO: the transformation based on motion estimation after PnP
-  ros::WallTime end_PnP_reg = ros::WallTime::now();
-  // **** publish motion **********************************************
+    // **** registration *************************************************
+    // TODO: with the 3Dto2D method of registration and using PnP
+    ros::WallTime start_PnP_reg = ros::WallTime::now();
+    //  tf::Transform motion = motion_estimation_->getMotionEstimation(frame);
+    //  f2b_ = motion * f2b_; // TODO: the transformation based on motion estimation after PnP
+    ros::WallTime end_PnP_reg = ros::WallTime::now();
+    // **** publish motion **********************************************
 
-  publishTf(rgb_msg->header);
+    publishTf(rgb_msg->header);
 
-  ros::WallTime end = ros::WallTime::now();
-  // **** print diagnostics *******************************************
+    ros::WallTime end = ros::WallTime::now();
+    // **** print diagnostics *******************************************
 
-//  int n_features = frame.features.points.size();
-  int n_keypoints = frame_->keypoints.size();
+    //  int n_features = frame.features.points.size();
+    int n_keypoints = frame_->keypoints.size();
 
-  double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
-  double d_features = 1000.0 * (end_features - start_features).toSec();
-  double d_cloud_projection = 1000.0 * (end_3D_cloud_projection - start_3D_cloud_projection).toSec();
-  double d_PnP_reg      = 1000.0 * (end_PnP_reg      - start_PnP_reg).toSec();
-  double d_total    = 1000.0 * (end          - start).toSec();
-
+    double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
+    double d_features = 1000.0 * (end_features - start_features).toSec();
+    double d_cloud_projection = 1000.0 * (end_3D_cloud_projection - start_3D_cloud_projection).toSec();
+    double d_PnP_reg      = 1000.0 * (end_PnP_reg      - start_PnP_reg).toSec();
+    double d_total    = 1000.0 * (end          - start).toSec();
   /*
 //  float time = (rgb_msg->header.stamp - init_time_).toSec();
   int model_size = motion_estimation_->getModelSize();
@@ -422,6 +443,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     d_total);
 
   frame_count_++;
+  }
 
   if(publish_cloud_model_)
   {
@@ -439,9 +461,36 @@ bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const in
   inliers_2D_points.clear();
   inliers_3D_points.clear();
 
+  std::vector<cv::Point2d> projected_model_2D_points;
+  std::vector<cv::Point3d> valid_3D_points;
+  std::vector<cv::Point2d> valid_2D_points;
 
+  cv::Mat rvec = rvecFromMatrix(E);
+  cv::Mat tvec = tvecFromMatrix(E);
 
-  if(inliers_3D_points.size() >= min_inliers)
+  cv::projectPoints(sample_3D_points, rvec, tvec, M, frame_->pihole_model_.distortionCoeffs(), projected_model_2D_points);
+
+  frame_->filterPointsWithinFrame(sample_3D_points, projected_model_2D_points, valid_3D_points, valid_2D_points);
+
+  std::vector<int> match_indices;
+  std::vector<float> match_distances;
+  cv::Mat detected_points_matrix;
+  cv::Mat projected_points_matrix;
+  convert2DPointVectorToMatrix(feature_2D_points, detected_points_matrix);
+  convert2DPointVectorToMatrix(valid_2D_points, projected_points_matrix);
+  getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances);
+
+  // Filter points according to threshold distance
+  for(uint i = 0 ; i < match_indices.size(); i++)
+  {
+    if(match_distances[i] < distance_threshold)
+    {
+      inliers_2D_points.push_back(valid_2D_points[match_indices[i]]);
+      inliers_3D_points.push_back(valid_3D_points[match_indices[i]]);
+    }
+  }
+
+  if(inliers_3D_points.size() >= (uint) min_inliers)
     return true;
   else
     return false;
@@ -523,22 +572,13 @@ void MonocularVisualOdometry::getMatches (
 {
   printf("matching...\n");
 
-  // KdTree with 5 random trees
-  cv::flann::KDTreeIndexParams indexParams(5);
-
-  // You can also use LinearIndex
-  //cv::flann::LinearIndexParams indexParams;
-
-  // Create the Index
-  cv::flann::Index kdtree(reference_points, indexParams);
-
   // Batch: Call knnSearch
   std::cout << "Batch search:"<< std::endl;
   // Invoke the function
   int k = 1;
   cv::Mat indices;//(numQueries, k, CV_32S);
   cv::Mat dists;//(numQueries, k, CV_32F);
-  kdtree.knnSearch(query_points, indices, dists, k, cv::flann::SearchParams(64));
+  frame_->kdtree_->knnSearch(query_points, indices, dists, k, cv::flann::SearchParams(64));
   match_indices.resize(indices.rows);
   match_distances.resize(dists.rows);
 
@@ -598,7 +638,6 @@ cv::Mat MonocularVisualOdometry::estimateFirstPose(
       int index1 = rand() % model.size();
       vector_3d[j] = model[index1];
       int index2 = rand() % image_2d_points.size();
-//      printf("Rand %d: [%d][%d] \n", j, index1, index2);
       vector_2d[j] = image_2d_points[index2];
     }
 
@@ -608,16 +647,18 @@ cv::Mat MonocularVisualOdometry::estimateFirstPose(
     cv::solvePnP(vector_3d, vector_2d, intrinsic_matrix, cv::Mat(), rvec, tvec);
     cv::Mat extrinsic_matrix = matrixFromRvecTvec(rvec, tvec);
 
-
     std::vector<cv::Point3d> inliers_3D_points;
     std::vector<cv::Point2d> inliers_2D_points;
 
-
+    // FIXME: CHECKME
     valid_inliers = fitness(intrinsic_matrix, extrinsic_matrix, distance_threshold, min_inliers, vector_3d, vector_2d, inliers_3D_points, inliers_2D_points);
+    std::cout << i << ": rvec_: " << rvec << std::endl;
+    std::cout << "tvec: " << tvec << std::endl;
 
 
     if (valid_inliers)
     {
+      printf("Valid inliers at %d\n", i);
       best_3d_vector = inliers_3D_points;
       best_2d_vector = inliers_2D_points;
       break;

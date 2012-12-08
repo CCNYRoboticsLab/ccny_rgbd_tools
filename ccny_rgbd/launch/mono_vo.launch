@@ -24,8 +24,8 @@
     <param name="base_frame"  value="/camera_link"/>
        
     #### RANSAC params for initial pose estimation ######################
-    <param name="apps/mono_vo/min_inliers"          value="50"/>
-    <param name="apps/mono_vo/max_iterations"       value="1000"/>
+    <param name="apps/mono_vo/min_inliers"          value="3"/>
+    <param name="apps/mono_vo/max_iterations"       value="10"/>
     <param name="apps/mono_vo/distance_threshold"   value="2"/>
 
     <param name="apps/mono_vo/max_PnP_iterations"   value="10"/>

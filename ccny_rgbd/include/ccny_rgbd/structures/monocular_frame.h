@@ -28,11 +28,18 @@ class MonocularFrame : public RGBDFrame
     void setFrame(const sensor_msgs::ImageConstPtr& rgb_msg);
     void setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_msg);
     void setExtrinsicMatrix(const cv::Mat &E);
+    bool buildKDTreeFromKeypoints(); ///< Returns true if successfully built KDTree from existing keypoints (2D features)
+
 
 //    boost::shared_ptr<cv::flann::KDTreeIndexParams flann::KDTreeSingleIndex> tree_2D_points_from_cloud_;
 
     cv::Mat getIntrinsicCameraMatrix() const;
     void getFeaturesVector(std::vector<cv::Point2d> &features_vector) const;
+    void filterPointsWithinFrame(const std::vector<cv::Point3d> &all_3D_points, const std::vector<cv::Point2d> &all_2D_points,
+                                 std::vector<cv::Point3d> &valid_3D_points,
+                                 std::vector<cv::Point2d> &valid_2D_points);
+
+    boost::shared_ptr<cv::flann::Index> kdtree_;
 
   protected:
 
@@ -62,11 +69,10 @@ class MonocularFrame : public RGBDFrame
       }
     } model_feature_pair_;
 
-    std::vector<cv::Point3d> valid_3D_points_; ///< 3D points that project within frame
-    std::vector<cv::Point2d> valid_2D_points_; ///< Valid 2D points projected from 3D model
+//    std::vector<cv::Point3d> valid_3D_points_; ///< 3D points that project within frame
+//    std::vector<cv::Point2d> valid_2D_points_; ///< Valid 2D points projected from 3D model
 //    boost::shared_ptr<flann::Matrix<cv::Point2f> > valid_2D_points_;
 
-    void filterPointsWithinFrame(const std::vector<cv::Point3d> &all_3D_points, const std::vector<cv::Point2d> &all_2D_points);
 //    void filterPointsWithinFrame(const std::vector<cv::Point3f> &all_3D_points, const std::vector<cv::Point2f> &all_2D_points, std::vector<model_feature_pair_> &valid_points);
 
 //    cv::KDTree<cv::Point2f> tree_of_projections_to_2D_; // TODO: define properly for the structure FIXME: how to index it if it only takes points, but no structure?

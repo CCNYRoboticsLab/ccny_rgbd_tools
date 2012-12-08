@@ -174,4 +174,14 @@ double getMsDuration(const ros::WallTime& start)
   return (ros::WallTime::now() - start).toSec() * 1000.0;
 }
 
+void convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points)
+{
+  matrix_points.create(vector_points.size(), 2, CV_32FC1);
+  for(uint row = 0 ; row < vector_points.size() ; row++)
+  {
+    matrix_points.at<float> (row, 0) = vector_points[row].x;
+    matrix_points.at<float> (row, 1) = vector_points[row].y;
+  }
+}
+
 } //namespace ccny_rgbd

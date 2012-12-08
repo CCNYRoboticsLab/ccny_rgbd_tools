@@ -80,8 +80,19 @@ class MonocularVisualOdometry
 
    void convertPointCloudModelPointsToVector(const PointCloudFeature::Ptr model);
 
-   // TODO: Carlos:
-   void getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &v3d, std::vector<cv::Point2d> &v2d );
+   /**
+    * @brief Fitness function for RANSAC used to find the initial camera pose
+    *
+    * @param model_3D the 3D point cloud model as a vector
+    * @param features_2D the 2D keypoints (features) on the current frame
+    * @param rvec the 3x1 rotation vector
+    * @param tvec the 3x1 translation vector
+    * @param corr_3D_points the vector of 3D points corresponding to the 2D points found
+    * @param corr_2D_points the vector of 2D points correspondances to the 2D keypoints (features detetected on frame)
+    *
+    * @return The normalized accumulated distances (error) of the correspondences found
+    */
+   double getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points );
 
    // TODO: Roberto:
    void estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations = 10);
@@ -160,7 +171,6 @@ class MonocularVisualOdometry
         std::vector<int>& match_indices,
         std::vector<float>& match_distances);
 
-    void convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points) const;
 };
 
 } //namespace ccny_rgbd
