@@ -44,17 +44,34 @@ Connect your RGB-D camera and launch the Openni device.
 
     roslaunch ccny_openni_launch openni.launch 
 
+For best performace, consider using `dynamic reconfigure` to set the 
+resolution to QVGA, especially if using a slower machine.
+
 Next, launch the visual odometry:
 
-    roslaunch ccny_rgbd visual_odometry.launch
+    roslaunch ccny_rgbd vo+mapping.launch reg_type:=ICPProbModel
 
 Finally, launch rviz. 
 
     rosrun rviz rviz
 
-For convenience, you can load the ccny_rgbd/launch/rviz.cfg file.
+For convenience, you can load the `ccny_rgbd/launch/rviz.cfg` file.
+
+Configuration
+----------------------------------
+
+There are many paramters - the first ones you can try changing are:
+ - resolution of the OpenNI camera, through `dynamic reconfigure`. 
+   QVGA is recommended, VGA is the default
+ - in `ccny_rgbd/launch/visual_odometry.launch`: `feature/GFT/n_features`: 
+   the number of features to detect in each image. Default is 150, hhigher numbers
+   (try up to 500) might give more robust tracking)
 
 More info
 -----------------------------------
+
+Some videos:
+
+
 
 http://ros.org/wiki/ccny_rgbd_tools
