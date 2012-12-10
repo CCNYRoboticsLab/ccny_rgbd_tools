@@ -272,9 +272,38 @@ void MonocularVisualOdometry::convertPointCloudModelPointsToVector(const PointCl
   }
 }
 
+void MonocularVisualOdometry::project3DTo2D(const std::vector<cv::Point3d> &model, 
+					                                  const cv::Mat &extrinsic, 
+  					                                const cv::Mat &intrinsic, 
+					                                  std::vector<cv::Point2d> &vector_point_2D)
+{
+  cv::Mat rmat = rmatFromMatrix(extrinsic);
+  cv::Mat tvec = tvecFromMatrix(extrinsic);
 
+  for (int i=0; i<model.size(); ++i)  
+  {
+    cv::Mat m(model[i]);
+    cv::Mat m_tf = m*rmat + tvec;
+    double z = m_tf.at<double>(2,0);
+    if (z>0) 
+    {
+      cv::Mat m_proj = intrinsic * m_tf;
+      double z_proj = m_proj.at<double>(2,0);
+      cv::Point2d temp_2D; 
+      temp_2D.x = (m_proj.at<double>(0,0))/z_proj;
+      temp_2D.y = (m_proj.at<double>(1,0))/z_proj;
+      vector_point_2D.push_back(temp_2D);
+    }  
+  }
+}   
+    
+    
 // TODO: Roberto implements this:
-void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations)
+void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, 
+					     cv::Mat &E_new, 
+					     const std::vector<cv::Point3d> &model, 
+					     const std::vector<cv::Point2d> &features, 
+					     int max_PnP_iterations)
 {
  
  cv::Mat tvec;
