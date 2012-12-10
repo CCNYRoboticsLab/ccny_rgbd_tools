@@ -38,19 +38,21 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
 
   if (!nh_private_.getParam ("reg/ICPProbModel/max_model_size", max_model_size_))
     max_model_size_ = 3000;
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_association_dist", max_association_dist_mah_))
-    max_association_dist_mah_ = 7.0;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_assoc_dist_mah", max_assoc_dist_mah_))
+    max_assoc_dist_mah_ = 7.0;
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
-    n_nearest_neighbors_ = 1;
+    n_nearest_neighbors_ = 4;
   if (!nh_private_.getParam ("reg/ICPProbModel/alpha", alpha_))
     alpha_ = 0.5;
 
+  max_assoc_dist_mah_sq_ = max_assoc_dist_mah_ * max_assoc_dist_mah_;
+  
   reg_.setMaxIterations(icp_max_iterations);
   reg_.setTransformationEpsilon(icp_tf_epsilon);
   reg_.setMaxCorrDist(icp_max_corresp_dist);
 
   model_ptr_.reset(new PointCloudFeature());
-  tree_model_.reset(new KdTree());
+  model_tree_ptr_.reset(new KdTree());
 
   model_ptr_->header.frame_id = fixed_frame_;
 
@@ -157,9 +159,9 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   }
 
   // update the model tree
-  tree_model_->setInputCloud(model_ptr_);
+  model_tree_ptr_->setInputCloud(model_ptr_);
   reg_.setModelCloud(model_ptr_);
-  reg_.setModelTree(tree_model_);
+  reg_.setModelTree(model_tree_ptr_);
   
   // update model pointcloud and publish
   model_ptr_->header.stamp = frame.header.stamp;
@@ -171,111 +173,158 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   return result;
 }
 
-void MotionEstimationICPProbModel::getNNMahalanobis(
-  const KdTree& model_tree,
-  const cv::Mat& f_mean, const cv::Mat& f_cov,
-  double& mah_dist, int& mah_nn_idx)
+void MotionEstimationICPProbModel::getCorrespEuclidean(
+  const MatVector& data_means,
+  IntVector& data_indices,
+  IntVector& model_indices)
 {
-  // precalculate inverse matrix
-  cv::Mat f_cov_inv;
-  cv::invert(f_cov, f_cov_inv);
+  for (unsigned int data_idx = 0; data_idx < data_means.size(); ++data_idx)
+  {
+    const cv::Mat& data_mean = data_means[data_idx];
+    
+    int eucl_nn_idx;
+    double eucl_dist_sq;
+    
+    bool nn_result = getNNEuclidean(data_mean, eucl_nn_idx, eucl_dist_sq);
+    
+    if (nn_result && eucl_dist_sq < max_corresp_dist_eucl_)
+    {
+      data_indices.push_back(data_idx);
+      model_indices.push_back(eucl_nn_idx);
+    }
+  }  
+}
 
+
+bool MotionEstimationICPProbModel::getNNEuclidean(
+  const cv::Mat& data_mean,
+  int& eucl_nn_idx, double& eucl_dist_sq)
+{
   // find n Euclidean nearest neighbors
-  std::vector<int> indices;
-  std::vector<float> dist_sq;
+  IntVector indices;
+  FloatVector dist_sq;
   
-  indices.resize(n_nearest_neighbors_);
-  dist_sq.resize(n_nearest_neighbors_);
+  indices.resize(1);
+  dist_sq.resize(1);
+  
+  PointFeature p_data;
+  p_data.x = data_mean.at<double>(0,0);
+  p_data.y = data_mean.at<double>(1,0);
+  p_data.z = data_mean.at<double>(2,0);
+  
+  int n_retrieved = model_tree_ptr_->nearestKSearch(p_data, 1, indices, dist_sq);
+  
+  if (n_retrieved != 0)
+  {
+    eucl_nn_idx = indices[0];
+    eucl_dist_sq = dist_sq[0];
+    return true;
+  }
+  else return false;
+}
 
-  PointFeature p_f;
-  p_f.x = f_mean.at<double>(0,0);
-  p_f.y = f_mean.at<double>(1,0);
-  p_f.z = f_mean.at<double>(2,0);
+bool MotionEstimationICPProbModel::getNNMahalanobis(
+  const cv::Mat& data_mean, const cv::Mat& data_cov,
+  int& mah_nn_idx, double& mah_dist_sq,
+  IntVector& indices, FloatVector& dists_sq)
+{
+  PointFeature p_data;
+  p_data.x = data_mean.at<double>(0,0);
+  p_data.y = data_mean.at<double>(1,0);
+  p_data.z = data_mean.at<double>(2,0);
 
-  model_tree.nearestKSearch(p_f, n_nearest_neighbors_, indices, dist_sq);
+  int n_retrieved = model_tree_ptr_->nearestKSearch(p_data, n_nearest_neighbors_, indices, dists_sq);
 
   // iterate over Euclidean NNs to find Mah. NN
-
-  // TODO - clean this up
-  double best_mah_dist = 9999999;
+  double best_mah_dist_sq = 0;
   int best_mah_nn_idx = -1;
   int best_i = 0; // optionally print this to check how far in we found the best one
-  for (int i = 0; i < n_nearest_neighbors_; i++)
+  for (int i = 0; i < n_retrieved; i++)
   {
     int nn_idx = indices[i];
    
-    const cv::Mat& m_mean = means_[nn_idx];
-    const cv::Mat& m_cov  = covariances_[nn_idx];
+    const cv::Mat& model_mean = means_[nn_idx];
+    const cv::Mat& model_cov  = covariances_[nn_idx];
 
-    cv::Mat diff_mat = m_mean - f_mean;
-    cv::Mat sum_cov = m_cov + f_cov;
+    cv::Mat diff_mat = model_mean - data_mean;
+    cv::Mat sum_cov = model_cov + data_cov;
     cv::Mat sum_cov_inv;
     cv::invert(sum_cov, sum_cov_inv);
 
     cv::Mat mah_mat = diff_mat.t() * sum_cov_inv * diff_mat;
 
-    double mah_dist = sqrt(mah_mat.at<double>(0,0));
-
-    if (mah_dist < best_mah_dist)
+    double mah_dist_sq = mah_mat.at<double>(0,0);
+  
+    if (best_mah_nn_idx == -1 || mah_dist_sq < best_mah_dist_sq)
     {
-      best_mah_dist   = mah_dist;
-      best_mah_nn_idx = nn_idx;
+      best_mah_dist_sq = mah_dist_sq;
+      best_mah_nn_idx  = nn_idx;
       best_i = i;
     }
   }
 
-  //if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
-  mah_dist   = best_mah_dist;
-  mah_nn_idx = best_mah_nn_idx;
+  if (best_mah_nn_idx != -1)
+  {  
+    //if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
+    mah_dist_sq = best_mah_dist_sq;
+    mah_nn_idx  = best_mah_nn_idx;
+    return true;
+  }
+  else return false;
 }
-
+  
 void MotionEstimationICPProbModel::initializeModelFromFrame(
   const RGBDFrame& frame)
 {
-  // calculate rotation and translation matrices
-  cv::Mat t, R;
-  transformToRotationCV(f2b_ * b2c_, t, R);
+  MatVector means, covariances;
   
-  for (unsigned int kp_idx = 0; kp_idx < frame.kp_covariance.size(); ++kp_idx)
+  // remove nans from distributinos
+  removeInvalidFeatures(
+    frame.kp_mean, frame.kp_covariance, frame.kp_valid,
+    means, covariances);
+  
+  // transform distributions to world frame
+  transformDistributions(means, covariances, f2b_ * b2c_);
+  
+  for (unsigned int idx = 0; idx < means.size(); ++idx)
   {
-    if (!frame.kp_valid[kp_idx]) continue;
-
-    const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
-    const cv::Mat& feature_cov  = frame.kp_covariance[kp_idx];
-
-    cv::Mat feature_mean_tf = R * feature_mean + t;
-    cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
-
-    addToModel(feature_mean_tf, feature_cov_tf);
+    const cv::Mat& mean = means[idx];
+    const cv::Mat& cov = covariances[idx];     
+    addToModel(mean, cov);
   }
 }
 
 void MotionEstimationICPProbModel::updateModelFromFrame(
   const RGBDFrame& frame)
 {
-  // decompose transform
-  cv::Mat t, R;
-  transformToRotationCV(f2b_ * b2c_, t, R);
+  // pre-allocate search vectors
+  IntVector indices;
+  FloatVector dists_sq;
+  indices.resize(n_nearest_neighbors_);
+  dists_sq.resize(n_nearest_neighbors_);
   
-  for (unsigned int kp_idx = 0; kp_idx < frame.keypoints.size(); ++kp_idx)
+  MatVector means, covariances;
+  
+  // remove nans from distributinos
+  removeInvalidFeatures(
+    frame.kp_mean, frame.kp_covariance, frame.kp_valid,
+    means, covariances);
+  
+  // transform distributions to world frame
+  transformDistributions(means, covariances, f2b_ * b2c_);
+  
+  for (unsigned int idx = 0; idx < means.size(); ++idx)
   {
-    // skip invalid
-    if (!frame.kp_valid[kp_idx]) continue;  
-
-    const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
-    const cv::Mat& feature_cov = frame.kp_covariance[kp_idx];
-
-    // rotate to fixed frame
-    cv::Mat feature_mean_tf = R * feature_mean + t;
-    cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
-
+    const cv::Mat& data_mean = means[idx];
+    const cv::Mat& data_cov  = covariances[idx];
+    
     // find nearest neighbor in model 
-    double mah_dist;
+    double mah_dist_sq;
     int mah_nn_idx;   
-    getNNMahalanobis(*tree_model_, feature_mean_tf, feature_cov_tf, 
-                     mah_dist, mah_nn_idx);
+    bool nn_result = getNNMahalanobis(
+      data_mean, data_cov, mah_nn_idx, mah_dist_sq, indices, dists_sq);
   
-    if (mah_dist < max_association_dist_mah_)
+    if (nn_result && mah_dist_sq < max_assoc_dist_mah_sq_)
     {
       // **** KF update *********************************
 
@@ -284,8 +333,8 @@ void MotionEstimationICPProbModel::updateModelFromFrame(
       const cv::Mat& model_cov_pred  = covariances_[mah_nn_idx];
       
       // calculate measurement and cov residual
-      cv::Mat y = feature_mean_tf - model_mean_pred;
-      cv::Mat S = feature_cov_tf + model_cov_pred;
+      cv::Mat y = data_mean - model_mean_pred;
+      cv::Mat S = data_cov + model_cov_pred;
 
       // calculate Kalman gain
       cv::Mat K = model_cov_pred * S.inv();
@@ -307,7 +356,7 @@ void MotionEstimationICPProbModel::updateModelFromFrame(
     }
     else
     {
-      addToModel(feature_mean_tf, feature_cov_tf);
+      addToModel(data_mean, data_cov);
     }
   }
 }
@@ -439,9 +488,9 @@ bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
   model_ptr_->header.frame_id = fixed_frame_;
 
   // update the model tree
-  tree_model_->setInputCloud(model_ptr_);
+  model_tree_ptr_->setInputCloud(model_ptr_);
   reg_.setModelCloud(model_ptr_);
-  reg_.setModelTree(tree_model_);
+  reg_.setModelTree(model_tree_ptr_);
 
   return (result_pcd == 0); // TODO: also OpenCV result
 }

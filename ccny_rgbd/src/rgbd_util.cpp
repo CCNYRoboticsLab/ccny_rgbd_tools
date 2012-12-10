@@ -71,10 +71,10 @@ bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
   return false;
 }
 
-void transformToRotationCV(
+void tfToCV(
   const tf::Transform& transform,
-  cv::Mat& translation,
-  cv::Mat& rotation)
+  cv::Mat& rotation,
+  cv::Mat& translation)
 {
   // extract translation
   tf::Vector3 translation_tf = transform.getOrigin();
@@ -134,6 +134,43 @@ cv::Mat m4(const cv::Mat& m3)
 double getMsDuration(const ros::WallTime& start)
 {
   return (ros::WallTime::now() - start).toSec() * 1000.0;
+}
+
+void removeInvalidFeatures(
+  const MatVector& means,
+  const MatVector& covariances,
+  const BoolVector& valid,
+  MatVector& means_f,
+  MatVector& covariances_f)
+{
+  unsigned int size = valid.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    if (valid[i])
+    {
+      means_f.push_back(means[i]);
+      covariances_f.push_back(covariances[i]);
+    }
+  }
+}
+
+void transformDistributions(
+  MatVector& means,
+  MatVector& covariances,
+  const tf::Transform& transform)
+{
+  cv::Mat R, t;
+  tfToCV(transform, R, t);
+  cv::Mat Rt = R.t();
+  
+  unsigned int size = means.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    cv::Mat& m = means[i];
+    cv::Mat& c = covariances[i];
+    m = R * m + t;
+    c = Rt * c * R;
+  }
 }
 
 } //namespace ccny_rgbd

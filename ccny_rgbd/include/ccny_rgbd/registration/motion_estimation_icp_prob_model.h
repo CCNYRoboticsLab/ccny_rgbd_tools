@@ -63,7 +63,13 @@ class MotionEstimationICPProbModel: public MotionEstimation
     int max_model_size_;    // bound for how many features to store in the model
    
     double max_association_dist_sq_;
-    double max_association_dist_mah_;
+    double max_assoc_dist_mah_;
+    
+    double max_corresp_dist_eucl_;
+    
+    // derived
+    double max_assoc_dist_mah_sq_;
+    double max_corresp_dist_eucl_sq_;
 
     // **** variables
 
@@ -73,7 +79,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
     MatVector covariances_;
     MatVector means_;
 
-    KdTree::Ptr tree_model_;
+    KdTree::Ptr model_tree_ptr_;
 
     cv::Mat I_; // identity matrix
     
@@ -84,17 +90,27 @@ class MotionEstimationICPProbModel: public MotionEstimation
 
     void publishCovariances();
 
-    void getNNMahalanobis(
-      const KdTree& model_tree,
-      const cv::Mat& f_mean, const cv::Mat& f_cov,
-      double& mah_dist, int& mah_nn_idx);
-
     void updateModelFromFrame(const RGBDFrame& frame);
     void initializeModelFromFrame(const RGBDFrame& frame);
     
     void addToModel(const cv::Mat& feature_mean,
                     const cv::Mat& feature_cov);
 
+    void getCorrespEuclidean(
+      const MatVector& data_means,
+      IntVector& data_indices,
+      IntVector& model_indices);
+    
+    bool getNNMahalanobis(
+      const cv::Mat& data_mean, const cv::Mat& data_cov,
+      int& mah_nn_idx, double& mah_dist_sq,
+      IntVector& indices, FloatVector& dists_sq);
+    
+    bool getNNEuclidean(
+      const cv::Mat& data_mean, 
+      int& eucl_nn_idx, double& eucl_dist_sq);
+    
+    
     bool saveModel(const std::string& filename);
     bool loadModel(const std::string& filename);
 };

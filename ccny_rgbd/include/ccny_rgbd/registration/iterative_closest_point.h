@@ -14,8 +14,6 @@ class IterativeClosestPoint
   typedef pcl::PointCloud<PointData>  PointCloudData;
   typedef pcl::PointCloud<PointModel> PointCloudModel;
   typedef pcl::KdTree<PointModel>  KdTree;
-  typedef std::vector<int>   IntVector;
-  typedef std::vector<float> FloatVector;
 
   typedef typename KdTree::Ptr          KdTreePtr;
   typedef typename PointCloudData::Ptr  PointCloudDataPtr;

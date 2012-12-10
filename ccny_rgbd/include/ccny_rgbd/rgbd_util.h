@@ -35,9 +35,14 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointXYZ_Feature,
 namespace ccny_rgbd
 {
 
+typedef std::vector<int>         IntVector;
+typedef std::vector<float>       FloatVector;
+typedef std::vector<bool>        BoolVector;
 typedef std::vector<cv::Point2f> Point2fVector;
 typedef std::vector<cv::Point3f> Point3fVector;
+typedef std::vector<cv::Mat>     MatVector;
   
+
 typedef pcl::PointXYZRGB          PointT;
 typedef pcl::PointCloud<PointT>   PointCloudT;
 
@@ -76,7 +81,7 @@ void getXYZRPY(const tf::Transform& t,
 /* decomposes a tf::Transform into a 3x3 OpenCV rotation matrix
  * and a 3x1 OpenCV translation vector
  */
-void transformToRotationCV(
+void tfToCV(
   const tf::Transform& transform,
   cv::Mat& translation,
   cv::Mat& rotation);
@@ -93,6 +98,18 @@ cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
  * 4th row is 0 0 0 1
  */
 cv::Mat m4(const cv::Mat& m3);
+
+void removeInvalidFeatures(
+  const MatVector& means,
+  const MatVector& covariances,
+  const BoolVector& valid,
+  MatVector& means_f,
+  MatVector& covariances_f);
+
+void transformDistributions(
+  MatVector& means,
+  MatVector& covariances,
+  const tf::Transform& transform);
 
 } // namespace ccny_rgbd
 
