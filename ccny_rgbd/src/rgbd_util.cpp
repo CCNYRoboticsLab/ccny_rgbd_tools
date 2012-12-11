@@ -169,7 +169,28 @@ void transformDistributions(
     cv::Mat& m = means[i];
     cv::Mat& c = covariances[i];
     m = R * m + t;
-    c = Rt * c * R;
+    c = R * c * Rt;
+  }
+}
+
+void getPointCloudFromDistributions(
+  const MatVector& means,
+  PointCloudFeature& cloud)
+{
+  PointFeature p;
+
+  unsigned int size = means.size(); 
+
+  cloud.points.resize(size);
+
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    const cv::Mat& m = means[i];
+    PointFeature& p = cloud.points[i];
+
+    p.x = m.at<double>(0,0);
+    p.y = m.at<double>(1,0);
+    p.z = m.at<double>(2,0);
   }
 }
 

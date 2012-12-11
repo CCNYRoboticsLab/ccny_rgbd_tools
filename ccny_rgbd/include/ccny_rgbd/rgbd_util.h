@@ -111,6 +111,10 @@ void transformDistributions(
   MatVector& covariances,
   const tf::Transform& transform);
 
+void getPointCloudFromDistributions(
+  const MatVector& means,
+  PointCloudFeature& cloud);
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_UTIL_H

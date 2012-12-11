@@ -17,39 +17,33 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   
   // **** init params
 
-  max_association_dist_ = 0.03;
-  max_association_dist_sq_ = max_association_dist_ * max_association_dist_;
-
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
     base_frame_ = "/camera_link";
 
-  int icp_max_iterations;
   double icp_tf_epsilon;
-  double icp_max_corresp_dist;
 
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", icp_max_iterations))
-    icp_max_iterations = 30;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", max_iterations_))
+    max_iterations_ = 10;
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon", icp_tf_epsilon))
     icp_tf_epsilon = 0.000001;
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist", icp_max_corresp_dist))
-    icp_max_corresp_dist = 0.15;
-
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_model_size", max_model_size_))
+    if (!nh_private_.getParam ("reg/ICPProbModel/max_model_size", max_model_size_))
     max_model_size_ = 3000;
+  
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist_eucl", max_corresp_dist_eucl_))
+    max_corresp_dist_eucl_ = 0.15;
   if (!nh_private_.getParam ("reg/ICPProbModel/max_assoc_dist_mah", max_assoc_dist_mah_))
     max_assoc_dist_mah_ = 7.0;
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
     n_nearest_neighbors_ = 4;
-  if (!nh_private_.getParam ("reg/ICPProbModel/alpha", alpha_))
-    alpha_ = 0.5;
 
+  max_corresp_dist_eucl_sq_ = max_corresp_dist_eucl_ * max_corresp_dist_eucl_;
   max_assoc_dist_mah_sq_ = max_assoc_dist_mah_ * max_assoc_dist_mah_;
   
-  reg_.setMaxIterations(icp_max_iterations);
+  reg_.setMaxIterations(max_iterations_);
   reg_.setTransformationEpsilon(icp_tf_epsilon);
-  reg_.setMaxCorrDist(icp_max_corresp_dist);
+  reg_.setMaxCorrDist(max_corresp_dist_eucl_);
 
   model_ptr_.reset(new PointCloudFeature());
   model_tree_ptr_.reset(new KdTree());
@@ -138,17 +132,37 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   else
   {
     // **** icp 
-    reg_.setDataCloud (features_ptr); 
-    result = reg_.align();
     
-    if (result)
-    { 
-      tf::Transform correction = tfFromEigen(reg_.getFinalTransformation());
-      motion = correction * prediction;
+    if (0)
+    {
+      reg_.setDataCloud (features_ptr); 
+      result = reg_.align();
+    
+      if (result)
+      { 
+        tf::Transform correction = tfFromEigen(reg_.getFinalTransformation());
+        motion = correction * prediction;
+      }
+      else
+      {
+        motion = prediction;
+      }
     }
     else
     {
-      motion = prediction;
+      MatVector data_means, data_covariances;
+  
+      // remove nans from distributinos
+      removeInvalidFeatures(
+        frame.kp_mean, frame.kp_covariance, frame.kp_valid,
+        data_means, data_covariances);
+      
+      // transform distributions to world frame
+      transformDistributions(data_means, data_covariances, predicted_f2b * b2c_);
+            
+      tf::Transform correction;
+      alignICPEuclidean(data_means, correction);
+      motion = correction * prediction;
     }
 
     constrainMotion(motion);
@@ -173,21 +187,57 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   return result;
 }
 
-void MotionEstimationICPProbModel::getCorrespEuclidean(
+void MotionEstimationICPProbModel::alignICPEuclidean(
   const MatVector& data_means,
+  tf::Transform& correction)
+{
+  pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
+
+  // create a point cloud from the means
+  PointCloudFeature data_cloud;
+  getPointCloudFromDistributions(data_means, data_cloud);
+
+  // initialize the result transform
+  Eigen::Matrix4f final_transformation; 
+  final_transformation.setIdentity();
+  
+  for (int iteration = 0; iteration < max_iterations_; ++iteration)
+  {    
+    // get corespondences
+    IntVector data_indices, model_indices;
+    getCorrespEuclidean(data_cloud, data_indices, model_indices);
+   
+    // estimae transformation
+    Eigen::Matrix4f transformation; 
+    svd.estimateRigidTransformation (data_cloud, data_indices,
+                                     *model_ptr_, model_indices,
+                                     transformation);
+    
+    // rotate   
+    pcl::transformPointCloud(data_cloud, data_cloud, transformation);
+    
+    // accumulate incremental tf
+    final_transformation = transformation * final_transformation;  
+  }
+  
+  correction = tfFromEigen(final_transformation);
+}
+
+void MotionEstimationICPProbModel::getCorrespEuclidean(
+  const PointCloudFeature& data_cloud,
   IntVector& data_indices,
   IntVector& model_indices)
 {
-  for (unsigned int data_idx = 0; data_idx < data_means.size(); ++data_idx)
+  for (unsigned int data_idx = 0; data_idx < data_cloud.size(); ++data_idx)
   {
-    const cv::Mat& data_mean = data_means[data_idx];
+    const PointFeature& data_point = data_cloud.points[data_idx];
     
     int eucl_nn_idx;
     double eucl_dist_sq;
     
-    bool nn_result = getNNEuclidean(data_mean, eucl_nn_idx, eucl_dist_sq);
+    bool nn_result = getNNEuclidean(data_point, eucl_nn_idx, eucl_dist_sq);
     
-    if (nn_result && eucl_dist_sq < max_corresp_dist_eucl_)
+    if (nn_result && eucl_dist_sq < max_corresp_dist_eucl_sq_)
     {
       data_indices.push_back(data_idx);
       model_indices.push_back(eucl_nn_idx);
@@ -197,7 +247,7 @@ void MotionEstimationICPProbModel::getCorrespEuclidean(
 
 
 bool MotionEstimationICPProbModel::getNNEuclidean(
-  const cv::Mat& data_mean,
+  const PointFeature& data_point,
   int& eucl_nn_idx, double& eucl_dist_sq)
 {
   // find n Euclidean nearest neighbors
@@ -207,12 +257,7 @@ bool MotionEstimationICPProbModel::getNNEuclidean(
   indices.resize(1);
   dist_sq.resize(1);
   
-  PointFeature p_data;
-  p_data.x = data_mean.at<double>(0,0);
-  p_data.y = data_mean.at<double>(1,0);
-  p_data.z = data_mean.at<double>(2,0);
-  
-  int n_retrieved = model_tree_ptr_->nearestKSearch(p_data, 1, indices, dist_sq);
+  int n_retrieved = model_tree_ptr_->nearestKSearch(data_point, 1, indices, dist_sq);
   
   if (n_retrieved != 0)
   {

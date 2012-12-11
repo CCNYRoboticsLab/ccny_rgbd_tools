@@ -58,13 +58,11 @@ class MotionEstimationICPProbModel: public MotionEstimation
     std::string base_frame_;
 
     double max_association_dist_;
-    double alpha_;
+    int max_iterations_;
     int n_nearest_neighbors_; // for searching for mah NN
     int max_model_size_;    // bound for how many features to store in the model
    
-    double max_association_dist_sq_;
     double max_assoc_dist_mah_;
-    
     double max_corresp_dist_eucl_;
     
     // derived
@@ -90,14 +88,12 @@ class MotionEstimationICPProbModel: public MotionEstimation
 
     void publishCovariances();
 
-    void updateModelFromFrame(const RGBDFrame& frame);
-    void initializeModelFromFrame(const RGBDFrame& frame);
-    
-    void addToModel(const cv::Mat& feature_mean,
-                    const cv::Mat& feature_cov);
-
-    void getCorrespEuclidean(
+    void alignICPEuclidean(
       const MatVector& data_means,
+      tf::Transform& correction);
+    
+    void getCorrespEuclidean(
+      const PointCloudFeature& data_cloud,
       IntVector& data_indices,
       IntVector& model_indices);
     
@@ -107,9 +103,14 @@ class MotionEstimationICPProbModel: public MotionEstimation
       IntVector& indices, FloatVector& dists_sq);
     
     bool getNNEuclidean(
-      const cv::Mat& data_mean, 
+      const PointFeature& data_point,
       int& eucl_nn_idx, double& eucl_dist_sq);
     
+    void updateModelFromFrame(const RGBDFrame& frame);
+    void initializeModelFromFrame(const RGBDFrame& frame);
+    
+    void addToModel(const cv::Mat& feature_mean,
+                    const cv::Mat& feature_cov);
     
     bool saveModel(const std::string& filename);
     bool loadModel(const std::string& filename);
