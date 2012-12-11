@@ -35,7 +35,20 @@ rosbuild_add_executable(rgbd_image_proc_node
   src/rgbd_image_proc_node.cpp
   src/rgbd_image_proc.cpp)
 
+rosbuild_add_library(rgbd_image_proc_nodelet
+  src/rgbd_image_proc_nodelet.cpp
+  src/rgbd_image_proc.cpp)
+  
 target_link_libraries (rgbd_image_proc_node
+  ccny_rgbd_util
+  ccny_rgbd_calibrate
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
+
+target_link_libraries (rgbd_image_proc_nodelet
   ccny_rgbd_util
   ccny_rgbd_calibrate
   boost_signals 

@@ -15,6 +15,10 @@
   <depend package="message_filters"/>
   <depend package="dynamic_reconfigure" />
 
+  <export>
+    <nodelet plugin="${prefix}/rgbd_image_proc_nodelet.xml" />
+  </export>
+  
   </package>
 
 
