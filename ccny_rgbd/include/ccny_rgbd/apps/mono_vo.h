@@ -85,14 +85,13 @@ class MonocularVisualOdometry
     *
     * @param model_3D the 3D point cloud model as a vector
     * @param features_2D the 2D keypoints (features) on the current frame
-    * @param rvec the 3x1 rotation vector
-    * @param tvec the 3x1 translation vector
+    * @param E the 3x4 extrinsic matrix
     * @param corr_3D_points the vector of 3D points corresponding to the 2D points found
     * @param corr_2D_points the vector of 2D points correspondances to the 2D keypoints (features detetected on frame)
     *
     * @return The normalized accumulated distances (error) of the correspondences found
     */
-   double getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &rvec, const cv::Mat &tvec, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points );
+   double getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points, bool use_opencv_projection = true);
 
    // TODO: Roberto:
    void estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations = 10);
@@ -126,6 +125,8 @@ class MonocularVisualOdometry
     boost::mutex::scoped_lock mutex_lock_; ///< Thread lock on subscribed input images
     bool initialized_;
     bool is_first_time_projecting_; ///< To indicate the first instance when the complete cloud model gets projected to the camera
+    bool use_opencv_projection_; ///< To indicate whether the projection is done using the OpenCV function or our own implementation
+    bool assume_initial_position_; ///< To indicate whether the assumption of known initial position of the camera pose is applied
     int  frame_count_;
     ros::Time init_time_;
 

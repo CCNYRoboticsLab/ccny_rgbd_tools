@@ -35,7 +35,6 @@ void MonocularFrame::setExtrinsicMatrix(const cv::Mat &E)
   tvec_ = tvecFromMatrix(E);
   T_ = tvec_;
 
-  std::cout << "Results from initial Pose: " << std::endl;
   std::cout << "R: " << R_ << std::endl;
   std::cout << "rvec_: " << rvec_ << std::endl;
   std::cout << "t: " << T_ << std::endl;
@@ -154,6 +153,8 @@ bool MonocularFrame::buildKDTreeFromKeypoints()
   // Create the Index
   kdtree_ = boost::shared_ptr<cv::flann::Index> (new cv::flann::Index(reference_points, indexParams));
 
+  printf("Built KD-Tree successfully!\n\n");
+
   return true;
 }
 
@@ -168,6 +169,8 @@ void MonocularFrame::getFeaturesVector(std::vector<cv::Point2d> &features_vector
     cv::Point2d keypoint_point = feat_it->pt;
     features_vector.push_back(keypoint_point);
   }
+
+  printf("Obtaining features vector successfully. \n");
 }
 
 void MonocularFrame::setCameraAperture(double width, double height)

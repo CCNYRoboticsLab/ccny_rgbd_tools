@@ -29,6 +29,8 @@
     <param name="apps/mono_vo/distance_threshold"   value="2"/>
 
     <param name="apps/mono_vo/max_PnP_iterations"   value="10"/>
+    <param name="apps/mono_vo/use_opencv_projection"   value="true"/>
+    <param name="apps/mono_vo/assume_initial_position"   value="true"/>
     
     #### features #####################################
 
