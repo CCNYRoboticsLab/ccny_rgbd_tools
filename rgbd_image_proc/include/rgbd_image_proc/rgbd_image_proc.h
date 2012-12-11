@@ -87,6 +87,9 @@ class RGBDImageProc
     std::string calib_extr_filename_;
     std::string calib_warp_filename_;
     
+    bool unwarp_;
+    bool publish_cloud_;
+    
     double scale_;
    
     // **** state variables

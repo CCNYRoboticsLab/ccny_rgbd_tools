@@ -11,6 +11,10 @@ RGBDImageProc::RGBDImageProc(ros::NodeHandle nh, ros::NodeHandle nh_private):
   // parameters 
   if (!nh_private_.getParam ("scale", scale_))
     scale_ = 1.0;
+  if (!nh_private_.getParam ("unwarp", unwarp_))
+    unwarp_ = true;
+  if (!nh_private_.getParam ("publish_cloud", publish_cloud_))
+    publish_cloud_ = true;
   
   std::string home_path = getenv("HOME");
   calib_path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
@@ -25,7 +29,9 @@ RGBDImageProc::RGBDImageProc(ros::NodeHandle nh, ros::NodeHandle nh_private):
   rgb_publisher_   = rgb_image_transport_.advertise("rgbd/rgb", 1);
   depth_publisher_ = depth_image_transport_.advertise("rgbd/depth", 1);
   info_publisher_  = nh_.advertise<CameraInfoMsg>("rgbd/info", 1);
-  cloud_publisher_ = nh_.advertise<PointCloudT>("rgbd/cloud", 1);
+  
+  if (publish_cloud_)
+    cloud_publisher_ = nh_.advertise<PointCloudT>("rgbd/cloud", 1);
 
   // dynamic reconfigure
   ProcConfigServer::CallbackType f = boost::bind(&RGBDImageProc::reconfigCallback, this, _1, _2);
@@ -201,6 +207,9 @@ void RGBDImageProc::RGBDCallback(
 {  
   boost::mutex::scoped_lock(mutex_);
   
+  // for profiling
+  double dur_unwarp, dur_rectify, dur_reproject, dur_cloud, dur_allocate;
+  
   // **** initialize if needed
   if (!initialized_)
   {
@@ -224,33 +233,40 @@ void RGBDImageProc::RGBDCallback(
   cv::Mat rgb_img_rect, depth_img_rect;
   cv::remap(rgb_img, rgb_img_rect, map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
   cv::remap(depth_img, depth_img_rect, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
-  double dur_rectify = getMsDuration(start_rectify);
+  dur_rectify = getMsDuration(start_rectify);
   
   //cv::imshow("RGB Rect", rgb_img_rect);
   //cv::imshow("Depth Rect", depth_img_rect);
   //cv::waitKey(1);
   
   // **** unwarp 
-  ros::WallTime start_unwarp = ros::WallTime::now();
-  unwarpDepthImage(depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
-  double dur_unwarp = getMsDuration(start_unwarp);
-   
+  if (unwarp_) 
+  {    
+    ros::WallTime start_unwarp = ros::WallTime::now();
+    unwarpDepthImage(depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
+    dur_unwarp = getMsDuration(start_unwarp);
+  }
+  else dur_unwarp = 0.0;
+  
   // **** reproject
   ros::WallTime start_reproject = ros::WallTime::now();
   cv::Mat depth_img_rect_reg;
   buildRegisteredDepthImage(intr_rect_depth_, intr_rect_rgb_, ir2rgb_,
                             depth_img_rect, depth_img_rect_reg);
-  double dur_reproject = getMsDuration(start_reproject);
-
+  dur_reproject = getMsDuration(start_reproject);
 
   // **** point cloud
-  ros::WallTime start_cloud = ros::WallTime::now();
-  PointCloudT::Ptr cloud;
-  cloud.reset(new PointCloudT());
-  buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud);
-  cloud->header = rgb_info_msg->header;
-  cloud_publisher_.publish(cloud);
-  double dur_cloud = getMsDuration(start_cloud);
+  if (publish_cloud_)
+  {
+    ros::WallTime start_cloud = ros::WallTime::now();
+    PointCloudT::Ptr cloud_ptr;
+    cloud_ptr.reset(new PointCloudT());
+    buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud_ptr);
+    cloud_ptr->header = rgb_info_msg->header;
+    cloud_publisher_.publish(cloud_ptr);
+    dur_cloud = getMsDuration(start_cloud);
+  }
+  else dur_cloud = 0.0;
   
   // **** allocate registered rgb image
   ros::WallTime start_allocate = ros::WallTime::now();
@@ -265,10 +281,10 @@ void RGBDImageProc::RGBDCallback(
   // **** update camera info (single, since both images are in rgb frame)
   rgb_rect_info_msg_.header = rgb_info_msg->header;
   
-  double dur_allocate = getMsDuration(start_allocate); 
+  dur_allocate = getMsDuration(start_allocate); 
 
-  //ROS_INFO("Rect: %.1f Reproj: %.1f Unwarp: %.1f Cloud %.1f Alloc: %.1f ms", 
-  //  dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate);
+  ROS_INFO("Rect: %.1f Reproj: %.1f Unwarp: %.1f Cloud %.1f Alloc: %.1f ms", 
+    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate);
 
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);
