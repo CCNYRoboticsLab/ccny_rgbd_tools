@@ -119,7 +119,6 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   //TODO: currently ignores prediction
 
   bool result;
-  //MatVector data_means, data_covariances;
   Vector3fVector data_means;
   Matrix3fVector data_covariances;
 

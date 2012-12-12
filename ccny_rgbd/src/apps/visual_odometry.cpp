@@ -138,20 +138,20 @@ void VisualOdometry::imageCb(
   double pos_y = f2b_.getOrigin().getY();
   double pos_z = f2b_.getOrigin().getZ();
 
-/*
   printf("[%d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
     frame_count_,
     d_frame, 
     detector_type_.c_str(), n_features, n_keypoints, d_features, 
     reg_type_.c_str(), d_reg, 
     d_total);
-*/
 
+/*
   // for time and model size profiling
   printf("%d\t%.2f\t%2.1f\t%2.1f\t%2.1f\t%d\t%d\n",
     frame_count_, time, 
     d_frame, d_features, d_reg, 
     n_features, model_size);
+*/
 /*
   // for position profiling
   printf("%d \t %.2f \t %.3f \t %.3f \t %.3f \n",
