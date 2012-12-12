@@ -162,6 +162,50 @@ void removeInvalidFeatures(
   }
 }
 
+void removeInvalidFeatures(
+  const MatVector& means,
+  const MatVector& covariances,
+  const BoolVector& valid,
+  Vector3fVector& means_f,
+  Matrix3fVector& covariances_f)
+{
+  unsigned int size = valid.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    if (valid[i])
+    {
+      const cv::Mat& mean_cv = means[i];
+      const cv::Mat& cov_cv  = covariances[i];
+
+      Vector3f mean_eigen;
+      Matrix3f cov_eigen;
+
+      cvMatToEigenVector3f(mean_cv, mean_eigen);
+      cvMatToEigenMatrix3f(cov_cv, cov_eigen);
+
+      means_f.push_back(mean_eigen);
+      covariances_f.push_back(cov_eigen);
+    }
+  }
+}
+
+void cvMatToEigenMatrix3f(
+  const cv::Mat mat_cv, 
+  Matrix3f& mat_eigen)
+{
+  for (int j = 0; j < 3; ++j)
+  for (int i = 0; i < 3; ++i)
+    mat_eigen(j, i) = mat_cv.at<double>(j, i);
+}
+
+void cvMatToEigenVector3f(
+  const cv::Mat mat_cv, 
+  Vector3f& mat_eigen)
+{
+  for (int j = 0; j < 3; ++j)
+    mat_eigen(j, 0) = mat_cv.at<double>(j, 0);
+}
+
 void transformDistributions(
   MatVector& means,
   MatVector& covariances,
@@ -181,6 +225,45 @@ void transformDistributions(
   }
 }
 
+void tfToEigenRt(
+  const tf::Transform& tf, 
+  Matrix3f& R, 
+  Vector3f& t)
+{
+   double mv[12];
+   tf.getBasis().getOpenGLSubMatrix(mv);
+
+   tf::Vector3 origin = tf.getOrigin();
+
+   R(0, 0) = mv[0]; R(0, 1) = mv[4]; R(0, 2) = mv[8];
+   R(1, 0) = mv[1]; R(1, 1) = mv[5]; R(1, 2) = mv[9];
+   R(2, 0) = mv[2]; R(2, 1) = mv[6]; R(2, 2) = mv[10];
+
+   t(0, 0) = origin.x();
+   t(1, 0) = origin.y();
+   t(2, 0) = origin.z();
+}
+
+void transformDistributions(
+  Vector3fVector& means,
+  Matrix3fVector& covariances,
+  const tf::Transform& transform)
+{
+  Matrix3f R;
+  Vector3f t;
+  tfToEigenRt(transform, R, t);
+  Matrix3f R_T = R.transpose();
+  
+  unsigned int size = means.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    Vector3f& m = means[i];
+    Matrix3f& c = covariances[i];
+    m = R * m + t;
+    c = R * c * R_T;
+  }
+}
+
 void getPointCloudFromDistributions(
   const MatVector& means,
   PointCloudFeature& cloud)
@@ -196,6 +279,24 @@ void getPointCloudFromDistributions(
     p.y = m.at<double>(1,0);
     p.z = m.at<double>(2,0);
   }
+}
+
+void getPointCloudFromDistributions(
+  const Vector3fVector& means,
+  PointCloudFeature& cloud)
+{
+  unsigned int size = means.size(); 
+  cloud.points.resize(size);
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    const Vector3f& m = means[i];
+    PointFeature& p = cloud.points[i];
+
+    p.x = m(0,0);
+    p.y = m(1,0);
+    p.z = m(2,0);
+  }
+
 }
 
 } //namespace ccny_rgbd

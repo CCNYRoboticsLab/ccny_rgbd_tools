@@ -46,7 +46,7 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   model_ptr_->header.frame_id = fixed_frame_;
 
   f2b_.setIdentity(); 
-  I_ = cv::Mat::eye(3, 3, CV_64F);
+  I_.setIdentity();
 
   // **** publishers
 
@@ -69,21 +69,21 @@ MotionEstimationICPProbModel::~MotionEstimationICPProbModel()
 }
 
 void MotionEstimationICPProbModel::addToModel(
-  const cv::Mat& feature_mean,
-  const cv::Mat& feature_cov)
+  const Vector3f& data_mean,
+  const Matrix3f& data_cov)
 {
   // **** create a PCL point
 
-  PointFeature feature_point;
-  feature_point.x = feature_mean.at<double>(0,0);
-  feature_point.y = feature_mean.at<double>(1,0);
-  feature_point.z = feature_mean.at<double>(2,0);
+  PointFeature data_point;
+  data_point.x = data_mean(0,0);
+  data_point.y = data_mean(1,0);
+  data_point.z = data_mean(2,0);
 
   if (model_size_ < max_model_size_)
   { 
-    covariances_.push_back(feature_cov);
-    means_.push_back(feature_mean);
-    model_ptr_->push_back(feature_point);
+    covariances_.push_back(data_cov);
+    means_.push_back(data_mean);
+    model_ptr_->push_back(data_point);
     
     model_size_++;
   }
@@ -92,9 +92,9 @@ void MotionEstimationICPProbModel::addToModel(
     if (model_idx_ == max_model_size_)
       model_idx_ = 0;
 
-    covariances_.at(model_idx_) = feature_cov;
-    means_.at(model_idx_) = feature_mean;
-    model_ptr_->at(model_idx_) = feature_point;
+    covariances_.at(model_idx_) = data_cov;
+    means_.at(model_idx_) = data_mean;
+    model_ptr_->at(model_idx_) = data_point;
   }
 
   model_idx_++;
@@ -108,7 +108,9 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   //TODO: currently ignores prediction
 
   bool result;
-  MatVector data_means, data_covariances;
+  //MatVector data_means, data_covariances;
+  Vector3fVector data_means;
+  Matrix3fVector data_covariances;
 
   // remove nans from distributinos
   removeInvalidFeatures(
@@ -153,20 +155,21 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   model_ptr_->width = model_ptr_->points.size();
   model_publisher_.publish(model_ptr_);
 
+  // TODO: disbale with flag
   publishCovariances();
 
   return result;
 }
 
 bool MotionEstimationICPProbModel::alignICPMahalanobis(
-  const MatVector& data_means_in,
-  const MatVector& data_covariances_in,
+  const Vector3fVector& data_means_in,
+  const Matrix3fVector& data_covariances_in,
   tf::Transform& correction)
 {
   pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
 
-  MatVector data_means(data_means_in);
-  MatVector data_covariances(data_covariances_in);
+  Vector3fVector data_means(data_means_in);
+  Matrix3fVector data_covariances(data_covariances_in);
 
   // initialize the result transform
   Eigen::Matrix4f final_transformation; 
@@ -219,11 +222,10 @@ bool MotionEstimationICPProbModel::alignICPMahalanobis(
   
   correction = tfFromEigen(final_transformation);
   return true;
-
 }
 
 bool MotionEstimationICPProbModel::alignICPEuclidean(
-  const MatVector& data_means,
+  const Vector3fVector& data_means,
   tf::Transform& correction)
 {
   pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
@@ -279,8 +281,8 @@ bool MotionEstimationICPProbModel::alignICPEuclidean(
 }
 
 void MotionEstimationICPProbModel::getCorrespMahalanobis(
-  const MatVector& data_means,
-  const MatVector& data_covariances,
+  const Vector3fVector& data_means,
+  const Matrix3fVector& data_covariances,
   IntVector& data_indices,
   IntVector& model_indices)
 {
@@ -292,8 +294,8 @@ void MotionEstimationICPProbModel::getCorrespMahalanobis(
 
   for (unsigned int data_idx = 0; data_idx < data_means.size(); ++data_idx)
   {
-    const cv::Mat data_mean = data_means[data_idx];
-    const cv::Mat data_cov  = data_covariances[data_idx];
+    const Vector3f data_mean = data_means[data_idx];
+    const Matrix3f data_cov  = data_covariances[data_idx];
     
     int mah_nn_idx;
     double mah_dist_sq;
@@ -355,42 +357,41 @@ bool MotionEstimationICPProbModel::getNNEuclidean(
 }
 
 bool MotionEstimationICPProbModel::getNNMahalanobis(
-  const cv::Mat& data_mean, const cv::Mat& data_cov,
+  const Vector3f& data_mean, const Matrix3f& data_cov,
   int& mah_nn_idx, double& mah_dist_sq,
   IntVector& indices, FloatVector& dists_sq)
 {
   PointFeature p_data;
-  p_data.x = data_mean.at<double>(0,0);
-  p_data.y = data_mean.at<double>(1,0);
-  p_data.z = data_mean.at<double>(2,0);
+  p_data.x = data_mean(0,0);
+  p_data.y = data_mean(1,0);
+  p_data.z = data_mean(2,0);
 
   int n_retrieved = model_tree_.nearestKSearch(p_data, n_nearest_neighbors_, indices, dists_sq);
 
   // iterate over Euclidean NNs to find Mah. NN
   double best_mah_dist_sq = 0;
   int best_mah_nn_idx = -1;
-  int best_i = 0; // optionally print this to check how far in we found the best one
+  //int best_i = 0; // optionally print this to check how far in we found the best one
   for (int i = 0; i < n_retrieved; i++)
   {
     int nn_idx = indices[i];
    
-    const cv::Mat& model_mean = means_[nn_idx];
-    const cv::Mat& model_cov  = covariances_[nn_idx];
+    const Vector3f& model_mean = means_[nn_idx];
+    const Matrix3f& model_cov  = covariances_[nn_idx];
 
-    cv::Mat diff_mat = model_mean - data_mean;
-    cv::Mat sum_cov = model_cov + data_cov;
-    cv::Mat sum_cov_inv;
-    cv::invert(sum_cov, sum_cov_inv);
+    Vector3f diff_mat = model_mean - data_mean;
+    Matrix3f sum_cov = model_cov + data_cov;
+    Matrix3f sum_cov_inv = sum_cov.inverse();
 
-    cv::Mat mah_mat = diff_mat.t() * sum_cov_inv * diff_mat;
+    Eigen::Matrix<float,1,1> mah_mat = diff_mat.transpose() * sum_cov_inv * diff_mat;
 
-    double mah_dist_sq = mah_mat.at<double>(0,0);
+    double mah_dist_sq = mah_mat(0,0);
   
     if (best_mah_nn_idx == -1 || mah_dist_sq < best_mah_dist_sq)
     {
       best_mah_dist_sq = mah_dist_sq;
       best_mah_nn_idx  = nn_idx;
-      best_i = i;
+      //best_i = i;
     }
   }
 
@@ -405,20 +406,20 @@ bool MotionEstimationICPProbModel::getNNMahalanobis(
 }
   
 void MotionEstimationICPProbModel::initializeModelFromData(
-  const MatVector& data_means,
-  const MatVector& data_covariances)
+  const Vector3fVector& data_means,
+  const Matrix3fVector& data_covariances)
 {
   for (unsigned int idx = 0; idx < data_means.size(); ++idx)
   {
-    const cv::Mat& mean = data_means[idx];
-    const cv::Mat& cov = data_covariances[idx];     
+    const Vector3f& mean = data_means[idx];
+    const Matrix3f& cov  = data_covariances[idx];     
     addToModel(mean, cov);
   }
 }
 
 void MotionEstimationICPProbModel::updateModelFromData(
-  const MatVector& data_means,
-  const MatVector& data_covariances)
+  const Vector3fVector& data_means,
+  const Matrix3fVector& data_covariances)
 {
   // pre-allocate search vectors
   IntVector indices;
@@ -428,8 +429,8 @@ void MotionEstimationICPProbModel::updateModelFromData(
 
   for (unsigned int idx = 0; idx < data_means.size(); ++idx)
   {
-    const cv::Mat& data_mean = data_means[idx];
-    const cv::Mat& data_cov  = data_covariances[idx];
+    const Vector3f& data_mean = data_means[idx];
+    const Matrix3f& data_cov  = data_covariances[idx];
     
     // find nearest neighbor in model 
     double mah_dist_sq;
@@ -442,28 +443,28 @@ void MotionEstimationICPProbModel::updateModelFromData(
       // **** KF update *********************************
 
       // predicted state
-      const cv::Mat& model_mean_pred = means_[mah_nn_idx];
-      const cv::Mat& model_cov_pred  = covariances_[mah_nn_idx];
+      const Vector3f& model_mean_pred = means_[mah_nn_idx];
+      const Matrix3f& model_cov_pred  = covariances_[mah_nn_idx];
       
       // calculate measurement and cov residual
-      cv::Mat y = data_mean - model_mean_pred;
-      cv::Mat S = data_cov + model_cov_pred;
+      Vector3f y = data_mean - model_mean_pred;
+      Matrix3f S = data_cov + model_cov_pred;
 
       // calculate Kalman gain
-      cv::Mat K = model_cov_pred * S.inv();
+      Matrix3f K = model_cov_pred * S.inverse();
       
       // updated state estimate (mean and cov)
-      cv::Mat model_mean_upd = model_mean_pred + K * y;
-      cv::Mat model_cov_upd  = (I_ - K) * model_cov_pred;
+      Vector3f model_mean_upd = model_mean_pred + K * y;
+      Matrix3f model_cov_upd  = (I_ - K) * model_cov_pred;
       
       // update in model
       means_[mah_nn_idx] = model_mean_upd;
       covariances_[mah_nn_idx] = model_cov_upd;
 
       PointFeature updated_point;
-      updated_point.x = model_mean_upd.at<double>(0,0);
-      updated_point.y = model_mean_upd.at<double>(1,0);
-      updated_point.z = model_mean_upd.at<double>(2,0);
+      updated_point.x = model_mean_upd(0,0);
+      updated_point.y = model_mean_upd(1,0);
+      updated_point.z = model_mean_upd(2,0);
 
       model_ptr_->points[mah_nn_idx] = updated_point;
     }
@@ -497,7 +498,13 @@ void MotionEstimationICPProbModel::publishCovariances()
     cv::Mat evl(1, 3, CV_64F);
     cv::Mat evt(3, 3, CV_64F);
 
-    cv::Mat& cov = covariances_[i];
+    const Matrix3f& cov_eigen = covariances_[i];
+
+    cv::Mat cov(3,3,CV_64F);
+    for(int j = 0; j < 3; ++j)  
+    for(int i = 0; i < 3; ++i)
+      cov.at<double>(j,i) = cov_eigen(j,i);
+
     cv::eigen(cov, evl, evt);
 
     double mx = model_ptr_->points[i].x;
@@ -566,6 +573,8 @@ bool MotionEstimationICPProbModel::loadSrvCallback(
 
 bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
 {
+// FIXME - load and save eigen
+/*
   // save as OpenCV yml matrix
   std::string filename_yml = filename + ".yml";
 
@@ -573,7 +582,8 @@ bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
   fs << "means"       << means_;
   fs << "covariances" << covariances_; 
   fs << "model_idx"   << model_idx_;  
-  fs << "model_size"  << model_size_;       
+  fs << "model_size"  << model_size_;    
+*/   
 
   // save as pcd
   std::string filename_pcd = filename + ".pcd";
@@ -585,6 +595,8 @@ bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
 
 bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
 {
+// FIXME - load and save eigen
+/*
   // load OpenCV yml matrix
   std::string filename_yml = filename + ".yml";
 
@@ -593,6 +605,7 @@ bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
   fs["covariances"] >> covariances_;
   fs["model_idx"] >> model_idx_;
   fs["model_size"] >> model_size_;
+*/
 
   // load pcd
   std::string filename_pcd = filename + ".pcd";

@@ -42,6 +42,11 @@ typedef std::vector<cv::Point2f> Point2fVector;
 typedef std::vector<cv::Point3f> Point3fVector;
 typedef std::vector<cv::Mat>     MatVector;
   
+typedef Eigen::Matrix3f Matrix3f;
+typedef Eigen::Vector3f Vector3f;
+typedef std::vector<Eigen::Matrix3f> Matrix3fVector;
+typedef std::vector<Eigen::Vector3f> Vector3fVector;
+
 typedef pcl::PointXYZRGB          PointT;
 typedef pcl::PointCloud<PointT>   PointCloudT;
 
@@ -117,6 +122,37 @@ void transformDistributions(
 
 void getPointCloudFromDistributions(
   const MatVector& means,
+  PointCloudFeature& cloud);
+
+// **** EIGEN **********************************************
+
+void removeInvalidFeatures(
+  const MatVector& means,
+  const MatVector& covariances,
+  const BoolVector& valid,
+  Vector3fVector& means_f,
+  Matrix3fVector& covariances_f);
+
+void cvMatToEigenMatrix3f(
+  const cv::Mat mat_cv, 
+  Matrix3f& mat_eigen);
+
+void cvMatToEigenVector3f(
+  const cv::Mat mat_cv, 
+  Vector3f& mat_eigen);
+
+void tfToEigenRt(
+  const tf::Transform& tf, 
+  Matrix3f& R, 
+  Vector3f& t);
+
+void transformDistributions(
+  Vector3fVector& means,
+  Matrix3fVector& covariances,
+  const tf::Transform& transform);
+
+void getPointCloudFromDistributions(
+  const Vector3fVector& means,
   PointCloudFeature& cloud);
 
 } // namespace ccny_rgbd

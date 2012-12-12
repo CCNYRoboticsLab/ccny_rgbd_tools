@@ -75,24 +75,24 @@ class MotionEstimationICPProbModel: public MotionEstimation
     PointCloudFeature::Ptr model_ptr_;   
     int model_idx_;         // current intex in the ring buffer
     int model_size_;        // current model size
-    MatVector covariances_;
-    MatVector means_;
+    Vector3fVector means_;
+    Matrix3fVector covariances_;
 
     KdTree model_tree_;
 
-    cv::Mat I_; // identity matrix
+    Matrix3f I_;
     
     tf::Transform f2b_; // Fixed frame to Base (moving) frame
     
     // ***** funtions
-
+  
     bool alignICPEuclidean(
-      const MatVector& data_means,
+      const Vector3fVector& data_means,
       tf::Transform& correction);
-    
+
     bool alignICPMahalanobis(
-      const MatVector& data_means_in,
-      const MatVector& data_covariances_in,
+      const Vector3fVector& data_means_in,
+      const Matrix3fVector& data_covariances_in,
       tf::Transform& correction);
 
     void getCorrespEuclidean(
@@ -101,28 +101,30 @@ class MotionEstimationICPProbModel: public MotionEstimation
       IntVector& model_indices);
     
     void getCorrespMahalanobis(
-      const MatVector& data_means_in,
-      const MatVector& data_covariances_in,
+      const Vector3fVector& data_means,
+      const Matrix3fVector& data_covariances,
       IntVector& data_indices,
       IntVector& model_indices);
-  
+ 
     bool getNNEuclidean(
       const PointFeature& data_point,
       int& eucl_nn_idx, double& eucl_dist_sq);
 
     bool getNNMahalanobis(
-      const cv::Mat& data_mean, const cv::Mat& data_cov,
+      const Vector3f& data_mean, const Matrix3f& data_cov,
       int& mah_nn_idx, double& mah_dist_sq,
       IntVector& indices, FloatVector& dists_sq);
-    
-    void updateModelFromData(const MatVector& data_means,
-                             const MatVector& data_covariances);
 
-    void initializeModelFromData(const MatVector& data_means,
-                                 const MatVector& data_covariances);
-    
-    void addToModel(const cv::Mat& feature_mean,
-                    const cv::Mat& feature_cov);
+    void updateModelFromData(const Vector3fVector& data_means,
+                             const Matrix3fVector& data_covariances);
+  
+    void initializeModelFromData(
+      const Vector3fVector& data_means,
+      const Matrix3fVector& data_covariances);
+
+    void addToModel(
+      const Vector3f& data_mean,
+      const Matrix3f& data_cov);
 
     void publishCovariances();
     
