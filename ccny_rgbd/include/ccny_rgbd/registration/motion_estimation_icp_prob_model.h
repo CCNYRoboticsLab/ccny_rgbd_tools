@@ -5,12 +5,11 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/kdtree/kdtree.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 #include <visualization_msgs/Marker.h>
 
-#include "ccny_rgbd/structures/feature_history.h"
 #include "ccny_rgbd/registration/motion_estimation.h"
-#include "ccny_rgbd/registration/iterative_closest_point.h"
-
 #include "ccny_rgbd/Save.h"
 #include "ccny_rgbd/Load.h"
 
@@ -21,7 +20,6 @@ typedef std::vector<cv::Mat> MatVector;
 
 class MotionEstimationICPProbModel: public MotionEstimation
 {
-  typedef ccny_rgbd::IterativeClosestPoint<PointFeature, PointFeature> ICP;
   typedef pcl::KdTreeFLANN<PointFeature> KdTree;
 
   public:
@@ -87,12 +85,9 @@ class MotionEstimationICPProbModel: public MotionEstimation
 
     cv::Mat I_; // identity matrix
     
-    //ICP reg_;
     tf::Transform f2b_; // Fixed frame to Base (moving) frame
     
     // ***** funtions
-
-    void publishCovariances();
 
     bool alignICPEuclidean(
       const MatVector& data_means,
@@ -132,6 +127,8 @@ class MotionEstimationICPProbModel: public MotionEstimation
     
     void addToModel(const cv::Mat& feature_mean,
                     const cv::Mat& feature_cov);
+
+    void publishCovariances();
     
     bool saveModel(const std::string& filename);
     bool loadModel(const std::string& filename);
