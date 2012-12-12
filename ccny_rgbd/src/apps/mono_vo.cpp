@@ -281,35 +281,67 @@ void MonocularVisualOdometry::project3DTo2D(const std::vector<cv::Point3d> &inpu
   					                                const cv::Mat &intrinsic, 
 					                                  std::vector<cv::Point2d> &vector_2D_points)
 {
-  cv::Mat rmat = rmatFromMatrix(extrinsic);
-  cv::Mat tvec = tvecFromMatrix(extrinsic);
+  //this function assumes that all the points are visible from the camera
+
+  cv::Mat m_hom;
 
   for (uint i=0; i<input_3D_points.size(); ++i)
   {
     cv::Mat m(input_3D_points[i]);
-    cv::Mat m_tf = m*rmat + tvec;
-    double z = m_tf.at<double>(2,0);
-    if (z>0) 
-    {
-      cv::Mat m_proj = intrinsic * m_tf;
-      double z_proj = m_proj.at<double>(2,0);
-      cv::Point2d temp_2D; 
-      temp_2D.x = (m_proj.at<double>(0,0))/z_proj;
-      temp_2D.y = (m_proj.at<double>(1,0))/z_proj;
-      vector_2D_points.push_back(temp_2D);
-    }  
+    m_hom.at<double>(0,0) = m.at<double>(0,0);
+    m_hom.at<double>(1,0) = m.at<double>(1,0);
+    m_hom.at<double>(2,0) = m.at<double>(2,0);
+    m_hom.at<double>(3,0) = 1.0;
+
+    cv::Mat m_proj = intrinsic * extrinsic * m_hom;
+    
+    double z_proj = m_proj.at<double>(2,0);
+    cv::Point2d temp_2D; 
+    temp_2D.x = (m_proj.at<double>(0,0))/z_proj;          
+    temp_2D.y = (m_proj.at<double>(1,0))/z_proj;
+    vector_2D_points.push_back(temp_2D);
+    
   }
 }   
+
+
     
     
-// TODO: Roberto implements this:
+// TODO: Roberto implements this:  I did!!
 void MonocularVisualOdometry::getVisible3DPoints(const std::vector<cv::Point3d> &input_3D_points,
                                                  const cv::Mat &extrinsic,
                                                  const cv::Mat &intrinsic,
                                                  std::vector<cv::Point3d> &visible_3D_points)
 {
+  cv::Mat rmat = rmatFromMatrix(extrinsic);
+  cv::Mat tvec = tvecFromMatrix(extrinsic);
+  std::vector<cv::Point3d> positive_z_3D_points;
+  std::vector<cv::Point3d> positive_z_3D_points_tf;
+  std::vector<cv::Point2d> projected_positive_z_points;
+  std::vector<cv::Point2d> valid_2D_points;
 
-  // TODO
+  for (uint i=0; i<input_3D_points.size(); ++i)
+  {
+    cv::Mat m(input_3D_points[i]);
+    cv::Mat m_tf = rmat*m + tvec;                           //transform the model to the camera frame
+    double z = m_tf.at<double>(2,0);
+    if (z>0) 
+    {
+      positive_z_3D_points.push_back(cv::Point3d(m));       // 3d model in the world frame with positive z wrt the camera frame
+      positive_z_3D_points_tf.push_back(cv::Point3d(m_tf)); // 3d model with positive z (camera frame)      
+
+      cv::Mat m_proj = intrinsic * m_tf;                    // projected model with positive z into the image plane
+      double z_proj = m_proj.at<double>(2,0);
+      
+      cv::Point2d temp_2D; 
+      temp_2D.x = (m_proj.at<double>(0,0))/z_proj;          
+      temp_2D.y = (m_proj.at<double>(1,0))/z_proj;          
+
+      projected_positive_z_points.push_back(temp_2D);       // projected points 
+    }  
+  }
+  // this function take only the 3D points (with positive z) wich projection is inside the image plane
+  frame_->filterPointsWithinFrame(positive_z_3D_points, projected_positive_z_points, visible_3D_points, valid_2D_points);
 }
 
 void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, 
