@@ -148,7 +148,7 @@ bool MonocularFrame::buildKDTreeFromKeypoints()
   std::vector<cv::Point2d> features_vector;
   this->getFeaturesVector(features_vector);
   cv::Mat reference_points;
-  convert2DPointVectorToMatrix(features_vector, reference_points);
+  convert2DPointVectorToMatrix(features_vector, reference_points, CV_32FC1);
 
   // Create the Index
   kdtree_ = boost::shared_ptr<cv::flann::Index> (new cv::flann::Index(reference_points, indexParams));

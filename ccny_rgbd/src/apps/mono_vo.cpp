@@ -308,7 +308,6 @@ void MonocularVisualOdometry::getVisible3DPoints(const std::vector<cv::Point3d> 
                                                  const cv::Mat &intrinsic,
                                                  std::vector<cv::Point3d> &visible_3D_points)
 {
-
   // TODO
 }
 
@@ -349,14 +348,15 @@ double MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d
 
   if(use_opencv_projection)
   {
+    // WARNING: OpenCV projection function projects any 3D point (even those behind the image plane)
     cv::Mat rvec = rvecFromMatrix(E);
     cv::Mat tvec = tvecFromMatrix(E);
     cv::projectPoints(model_3D, rvec, tvec, frame_->getIntrinsicCameraMatrix(), frame_->pihole_model_.distortionCoeffs(), projected_model_2D_points);
   }
   else
-    // TODO: Test custom function in comparisson to OpenCV's implementation
     project3DTo2D(model_3D, E, frame_->getIntrinsicCameraMatrix(), projected_model_2D_points);
 
+  // FIXME: is the assumption that all points are kept by OpenCV???
   frame_->filterPointsWithinFrame(model_3D, projected_model_2D_points, valid_3D_points, valid_2D_points);
 
   std::vector<int> match_indices;
@@ -420,7 +420,6 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   }
 
   // **** create frame *************************************************
-
   ros::WallTime start_frame = ros::WallTime::now();
   frame_->setFrame(rgb_msg);
   ros::WallTime end_frame = ros::WallTime::now();
@@ -433,6 +432,48 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   if(frame_->buildKDTreeFromKeypoints())
   {
+
+    // Testing CV projection versus our own projection implementation
+
+    // Does it filter Z??? (points behind the camera on the projection
+
+    std::vector<cv::Point3d> arbitrary_3D_points_wrt_world;
+    std::vector<cv::Point2d> projected_2D_points;
+    cv::Point3d point_A(1,0,0.25);
+
+    arbitrary_3D_points_wrt_world.push_back(point_A);
+    arbitrary_3D_points_wrt_world.push_back(cv::Point3d(1,0,-0.25));
+    arbitrary_3D_points_wrt_world.push_back(cv::Point3d(1,0.25, 0));
+    arbitrary_3D_points_wrt_world.push_back(cv::Point3d(1,-0.25, 0));
+
+    // Test conversion of a vector of points to homogeneous coordinates (as a matrix)
+    cv::Mat matrix_of_3D_points;
+    convert3DPointVectorToMatrix(arbitrary_3D_points_wrt_world, matrix_of_3D_points, CV_32FC1);
+    cv::Mat homo_points;
+    cv::convertPointsToHomogeneous(matrix_of_3D_points, homo_points);
+    std::cout <<"HOMO points" << homo_points << std::endl;
+
+    printf("Projecting...\n");
+    if(use_opencv_projection_)
+    {
+      cv::Mat rvec = rvecFromMatrix(E);
+      cv::Mat tvec = tvecFromMatrix(E);
+      cv::projectPoints(arbitrary_3D_points_wrt_world, rvec, tvec, frame_->getIntrinsicCameraMatrix(), frame_->pihole_model_.distortionCoeffs(), projected_2D_points);
+    }
+    else
+      project3DTo2D(arbitrary_3D_points_wrt_world, E, frame_->getIntrinsicCameraMatrix(), projected_2D_points);
+
+    printf("Projection results:\n");
+
+    for(uint i=0; i<projected_2D_points.size(); ++i)
+    {
+      std::cout << "3D Point: " << arbitrary_3D_points_wrt_world[i] <<  "---> projected to 2D Point: " << projected_2D_points[i] << std::endl;
+    }
+  }
+
+  /*
+  if(frame_->buildKDTreeFromKeypoints())
+  {
     printf("Processing frame %d\n", frame_count_);
     frame_->getFeaturesVector(features_vector);
 
@@ -443,14 +484,11 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     // TODO: use E_new to compute odom!!!!
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    /* FIXME: take outside here:
   // ------- Perspective projection of cloud 3D points onto image plane
   // Assume known initial position of camera position at the origin of the world center of coordinates
   // TODO: needs a base2cam static transformation to correct for the camera coordinates in the world where +Z is point upwards
   // NOTE: the OpenNI driver publishes the static transformation (doing the rotation of the axis) between the rgb optical frame (/camera_rgb_optical_frame) and the /camera_link
   // ---------------------------------------------------------------
-  is_first_time_projecting_ = frame_->project3DModelToCamera(model_ptr_, is_first_time_projecting_);
-     */
     ros::WallTime end_3D_cloud_projection = ros::WallTime::now();
 
     // TODO: compute odom
@@ -476,14 +514,13 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     // double d_PnP_reg      = 1000.0 * (end_PnP_reg      - start_PnP_reg).toSec();
     double d_PnP_reg      = 0; // TODO: ^^^^^^ compute in correct place
     double d_total    = 1000.0 * (end          - start).toSec();
-  /*
-//  float time = (rgb_msg->header.stamp - init_time_).toSec();
-  int model_size = motion_estimation_->getModelSize();
 
-  double pos_x = f2b_.getOrigin().getX();
-  double pos_y = f2b_.getOrigin().getY();
-  double pos_z = f2b_.getOrigin().getZ();
-*/
+//  float time = (rgb_msg->header.stamp - init_time_).toSec();
+  //  int model_size = motion_estimation_->getModelSize();
+  //
+  //  double pos_x = f2b_.getOrigin().getX();
+  //  double pos_y = f2b_.getOrigin().getY();
+  //  double pos_z = f2b_.getOrigin().getZ();
 
   ROS_INFO("[%d] Fr: %2.1f s %s[%d keyspoints]: %3.1f s  \t Proj: %2.1f s \t Reg: %4.1f s \t TOTAL %4.1f s\n",
     frame_count_,
@@ -495,6 +532,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   frame_count_++;
   }
+*/
 
   if(publish_cloud_model_)
   {
@@ -532,8 +570,8 @@ bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const in
   std::vector<float> match_distances;
   cv::Mat detected_points_matrix;
   cv::Mat projected_points_matrix;
-  convert2DPointVectorToMatrix(feature_2D_points, detected_points_matrix);
-  convert2DPointVectorToMatrix(valid_2D_points, projected_points_matrix);
+  convert2DPointVectorToMatrix(feature_2D_points, detected_points_matrix, CV_32FC1); // Type supported by FLANN is float only
+  convert2DPointVectorToMatrix(valid_2D_points, projected_points_matrix, CV_32FC1); // Type supported by FLANN is float only
   getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances);
 
   // Filter points according to threshold distance

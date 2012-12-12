@@ -174,13 +174,54 @@ double getMsDuration(const ros::WallTime& start)
   return (ros::WallTime::now() - start).toSec() * 1000.0;
 }
 
-void convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points)
+void convert2DPointVectorToMatrix(const std::vector<cv::Point2d> &vector_points, cv::Mat &matrix_points, int type)
 {
-  matrix_points.create(vector_points.size(), 2, CV_32FC1);
+  matrix_points.create(vector_points.size(), 2, type);
   for(uint row = 0 ; row < vector_points.size() ; row++)
   {
-    matrix_points.at<float> (row, 0) = vector_points[row].x;
-    matrix_points.at<float> (row, 1) = vector_points[row].y;
+    if(type == CV_64FC1)
+    {
+      matrix_points.at<double> (row, 0) = (double) vector_points[row].x;
+      matrix_points.at<double> (row, 1) = (double) vector_points[row].y;
+    }
+    if(type == CV_32FC1)
+    {
+      matrix_points.at<float> (row, 0) = (float) vector_points[row].x;
+      matrix_points.at<float> (row, 1) = (float) vector_points[row].y;
+    }
+    if(type == CV_32SC1)
+    {
+      matrix_points.at<int> (row, 0) = (int) vector_points[row].x;
+      matrix_points.at<int> (row, 0) = (int) vector_points[row].x;
+      matrix_points.at<int> (row, 1) = (int) vector_points[row].y;
+    }
+  }
+}
+
+void convert3DPointVectorToMatrix(const std::vector<cv::Point3d> &vector_points, cv::Mat &matrix_points, int type)
+{
+  matrix_points.create(vector_points.size(), 3, type);
+  for(uint row = 0 ; row < vector_points.size() ; row++)
+  {
+    if(type == CV_64FC1)
+    {
+      matrix_points.at<double> (row, 0) = (double) vector_points[row].x;
+      matrix_points.at<double> (row, 1) = (double) vector_points[row].y;
+      matrix_points.at<double> (row, 2) = (double) vector_points[row].z;
+    }
+    if(type == CV_32FC1)
+    {
+      matrix_points.at<float> (row, 0) = (float) vector_points[row].x;
+      matrix_points.at<float> (row, 1) = (float) vector_points[row].y;
+      matrix_points.at<float> (row, 2) = (float) vector_points[row].z;
+    }
+    if(type == CV_32SC1)
+    {
+      matrix_points.at<int> (row, 0) = (int) vector_points[row].x;
+      matrix_points.at<int> (row, 1) = (int) vector_points[row].y;
+      matrix_points.at<int> (row, 2) = (int) vector_points[row].z;
+    }
+
   }
 }
 
