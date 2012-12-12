@@ -65,6 +65,9 @@ class MotionEstimationICPProbModel: public MotionEstimation
     double max_corresp_dist_mah_;
     double max_corresp_dist_eucl_;
     
+    bool publish_model_;      // for visualization
+    bool publish_model_cov_;  // for visualization
+
     // derived
     double max_assoc_dist_mah_sq_;
     double max_corresp_dist_mah_sq_;

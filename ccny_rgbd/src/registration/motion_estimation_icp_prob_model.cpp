@@ -35,6 +35,11 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
     n_nearest_neighbors_ = 4;
 
+  if (!nh_private_.getParam ("publish_model", publish_model_))
+    publish_model_ = false;
+  if (!nh_private_.getParam ("publish_model_cov", publish_model_cov_))
+    publish_model_cov_ = true;
+
   // **** variables
 
   // derived params
@@ -50,10 +55,16 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
 
   // **** publishers
 
-  model_publisher_ = nh_.advertise<PointCloudFeature>(
-    "model", 1);
-  covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
-    "model_covariances", 1);
+  if (publish_model_)
+  {
+    model_publisher_ = nh_.advertise<PointCloudFeature>(
+      "model", 1);
+  }
+  if (publish_model_cov_)
+  {
+    covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
+      "model_covariances", 1);
+  }
 
   // **** services
 
@@ -150,13 +161,15 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   // update the model tree
   model_tree_.setInputCloud(model_ptr_);
 
-  // update model pointcloud and publish
-  model_ptr_->header.stamp = frame.header.stamp;
-  model_ptr_->width = model_ptr_->points.size();
-  model_publisher_.publish(model_ptr_);
-
-  // TODO: disbale with flag
-  publishCovariances();
+  if (publish_model_)
+  {
+    // update model pointcloud and publish
+    model_ptr_->header.stamp = frame.header.stamp;
+    model_ptr_->width = model_ptr_->points.size();
+    model_publisher_.publish(model_ptr_);
+  }
+  if (publish_model_cov_)
+    publishCovariances();
 
   return result;
 }
@@ -214,8 +227,8 @@ bool MotionEstimationICPProbModel::alignICPMahalanobis(
     if (linear  < tf_epsilon_linear_ &&
         angular < tf_epsilon_angular_)
     {
-      printf("(%f %f) conv. at [%d] leaving loop\n", 
-        linear*1000.0, angular*10.0*180.0/3.14, iteration);
+      //printf("(%f %f) conv. at [%d] leaving loop\n", 
+      //  linear*1000.0, angular*10.0*180.0/3.14, iteration);
       break; 
     }
   }
@@ -270,8 +283,8 @@ bool MotionEstimationICPProbModel::alignICPEuclidean(
     if (linear  < tf_epsilon_linear_ &&
         angular < tf_epsilon_angular_)
     {
-      printf("(%f %f) conv. at [%d] leaving loop\n", 
-        linear*1000.0, angular*10.0*180.0/3.14, iteration);
+      //printf("(%f %f) conv. at [%d] leaving loop\n", 
+      //  linear*1000.0, angular*10.0*180.0/3.14, iteration);
       break; 
     }
   }
