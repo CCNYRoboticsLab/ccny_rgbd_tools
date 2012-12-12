@@ -118,7 +118,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
       int& mah_nn_idx, double& mah_dist_sq,
       IntVector& indices, FloatVector& dists_sq);
     
-    void updateModelFromFrame(const RGBDFrame& frame);
+   // void updateModelFromFrame(const RGBDFrame& frame);
 
     void updateModelFromData(const MatVector& data_means,
                              const MatVector& data_covariances);

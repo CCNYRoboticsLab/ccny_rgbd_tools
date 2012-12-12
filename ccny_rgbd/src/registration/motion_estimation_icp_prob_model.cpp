@@ -494,6 +494,7 @@ void MotionEstimationICPProbModel::updateModelFromData(
   }
 }
 
+/*
 void MotionEstimationICPProbModel::updateModelFromFrame(
   const RGBDFrame& frame)
 {
@@ -560,6 +561,7 @@ void MotionEstimationICPProbModel::updateModelFromFrame(
     }
   }
 }
+*/
 
 void MotionEstimationICPProbModel::publishCovariances()
 {
