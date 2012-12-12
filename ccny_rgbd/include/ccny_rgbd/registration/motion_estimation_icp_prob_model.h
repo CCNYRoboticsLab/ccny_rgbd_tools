@@ -16,8 +16,6 @@
 namespace ccny_rgbd
 {
 
-typedef std::vector<cv::Mat> MatVector;
-
 class MotionEstimationICPProbModel: public MotionEstimation
 {
   typedef pcl::KdTreeFLANN<PointFeature> KdTree;
@@ -55,7 +53,6 @@ class MotionEstimationICPProbModel: public MotionEstimation
     std::string fixed_frame_; 
     std::string base_frame_;
 
-    //double max_association_dist_;
     int max_iterations_;
     int min_correspondences_;
     int n_nearest_neighbors_; // for searching for mah NN
@@ -118,12 +115,11 @@ class MotionEstimationICPProbModel: public MotionEstimation
       int& mah_nn_idx, double& mah_dist_sq,
       IntVector& indices, FloatVector& dists_sq);
     
-   // void updateModelFromFrame(const RGBDFrame& frame);
-
     void updateModelFromData(const MatVector& data_means,
                              const MatVector& data_covariances);
 
-    void initializeModelFromFrame(const RGBDFrame& frame);
+    void initializeModelFromData(const MatVector& data_means,
+                                 const MatVector& data_covariances);
     
     void addToModel(const cv::Mat& feature_mean,
                     const cv::Mat& feature_cov);
@@ -134,7 +130,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
     bool loadModel(const std::string& filename);
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_MOTION_ESTIMATION_ICP_PROB_MODEL_H
 

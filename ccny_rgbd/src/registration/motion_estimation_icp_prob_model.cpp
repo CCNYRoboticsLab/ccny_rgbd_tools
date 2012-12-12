@@ -8,13 +8,6 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   model_idx_(0),
   model_size_(0)
 {
-  // **** init variables
-
-  f2b_.setIdentity();
-  
-  I_ = cv::Mat(3, 3, CV_64F);
-  cv::setIdentity(I_);
-  
   // **** init params
 
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
@@ -51,8 +44,10 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   
   model_ptr_.reset(new PointCloudFeature());
   model_tree_ptr_.reset(new KdTree());
-
   model_ptr_->header.frame_id = fixed_frame_;
+
+  f2b_.setIdentity(); 
+  I_ = cv::Mat::eye(3, 3, CV_64F);
 
   // **** publishers
 
@@ -130,16 +125,13 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   if (model_size_ == 0)
   {
     ROS_INFO("No points in model: initializing from features.");
-    motion = prediction;
-    constrainMotion(motion);
-    f2b_ = motion * f2b_;
-    initializeModelFromFrame(frame);
+    motion.setIdentity();
+    initializeModelFromData(data_means, data_covariances);
     result = true;
   }
   else
   {
-    // **** icp 
-    
+    // align using icp 
     result = alignICPEuclidean(data_means, motion);
     //result = alignICPMahalanobis(data_means, data_covariances, motion);
 
@@ -319,7 +311,6 @@ void MotionEstimationICPProbModel::getCorrespMahalanobis(
   }  
 }
 
-
 void MotionEstimationICPProbModel::getCorrespEuclidean(
   const PointCloudFeature& data_cloud,
   IntVector& data_indices,
@@ -415,23 +406,14 @@ bool MotionEstimationICPProbModel::getNNMahalanobis(
   else return false;
 }
   
-void MotionEstimationICPProbModel::initializeModelFromFrame(
-  const RGBDFrame& frame)
+void MotionEstimationICPProbModel::initializeModelFromData(
+  const MatVector& data_means,
+  const MatVector& data_covariances)
 {
-  MatVector means, covariances;
-  
-  // remove nans from distributinos
-  removeInvalidFeatures(
-    frame.kp_mean, frame.kp_covariance, frame.kp_valid,
-    means, covariances);
-  
-  // transform distributions to world frame
-  transformDistributions(means, covariances, f2b_ * b2c_);
-  
-  for (unsigned int idx = 0; idx < means.size(); ++idx)
+  for (unsigned int idx = 0; idx < data_means.size(); ++idx)
   {
-    const cv::Mat& mean = means[idx];
-    const cv::Mat& cov = covariances[idx];     
+    const cv::Mat& mean = data_means[idx];
+    const cv::Mat& cov = data_covariances[idx];     
     addToModel(mean, cov);
   }
 }
@@ -493,75 +475,6 @@ void MotionEstimationICPProbModel::updateModelFromData(
     }
   }
 }
-
-/*
-void MotionEstimationICPProbModel::updateModelFromFrame(
-  const RGBDFrame& frame)
-{
-  // pre-allocate search vectors
-  IntVector indices;
-  FloatVector dists_sq;
-  indices.resize(n_nearest_neighbors_);
-  dists_sq.resize(n_nearest_neighbors_);
-  
-  MatVector means, covariances;
-  
-  // remove nans from distributinos
-  removeInvalidFeatures(
-    frame.kp_mean, frame.kp_covariance, frame.kp_valid,
-    means, covariances);
-  
-  // transform distributions to world frame
-  transformDistributions(means, covariances, f2b_ * b2c_);
-  
-  for (unsigned int idx = 0; idx < means.size(); ++idx)
-  {
-    const cv::Mat& data_mean = means[idx];
-    const cv::Mat& data_cov  = covariances[idx];
-    
-    // find nearest neighbor in model 
-    double mah_dist_sq;
-    int mah_nn_idx;   
-    bool nn_result = getNNMahalanobis(
-      data_mean, data_cov, mah_nn_idx, mah_dist_sq, indices, dists_sq);
-  
-    if (nn_result && mah_dist_sq < max_assoc_dist_mah_sq_)
-    {
-      // **** KF update *********************************
-
-      // predicted state
-      const cv::Mat& model_mean_pred = means_[mah_nn_idx];
-      const cv::Mat& model_cov_pred  = covariances_[mah_nn_idx];
-      
-      // calculate measurement and cov residual
-      cv::Mat y = data_mean - model_mean_pred;
-      cv::Mat S = data_cov + model_cov_pred;
-
-      // calculate Kalman gain
-      cv::Mat K = model_cov_pred * S.inv();
-      
-      // updated state estimate (mean and cov)
-      cv::Mat model_mean_upd = model_mean_pred + K * y;
-      cv::Mat model_cov_upd  = (I_ - K) * model_cov_pred;
-      
-      // update in model
-      means_[mah_nn_idx] = model_mean_upd;
-      covariances_[mah_nn_idx] = model_cov_upd;
-
-      PointFeature updated_point;
-      updated_point.x = model_mean_upd.at<double>(0,0);
-      updated_point.y = model_mean_upd.at<double>(1,0);
-      updated_point.z = model_mean_upd.at<double>(2,0);
-
-      model_ptr_->points[mah_nn_idx] = updated_point;
-    }
-    else
-    {
-      addToModel(data_mean, data_cov);
-    }
-  }
-}
-*/
 
 void MotionEstimationICPProbModel::publishCovariances()
 {
