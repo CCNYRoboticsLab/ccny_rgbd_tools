@@ -42,13 +42,17 @@ typedef std::vector<cv::Point2f> Point2fVector;
 typedef std::vector<cv::Point3f> Point3fVector;
 typedef std::vector<cv::Mat>     MatVector;
   
-
 typedef pcl::PointXYZRGB          PointT;
 typedef pcl::PointCloud<PointT>   PointCloudT;
 
 typedef pcl::PointXYZ PointFeature;
 typedef pcl::PointCloud<PointFeature>   PointCloudFeature;
 
+
+/* given a transform, calculates the linear and angular 
+ * distance between it and identity
+ */
+void getTfDifference(const tf::Transform& motion, double& dist, double& angle);
 
 /* given two tf::transforms, calculates the linear and angular 
  * distance between them

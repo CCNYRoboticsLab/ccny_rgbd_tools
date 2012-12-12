@@ -3,12 +3,17 @@
 namespace ccny_rgbd
 {
 
+void getTfDifference(const tf::Transform& motion, double& dist, double& angle)
+{
+  dist = motion.getOrigin().length();
+  double trace = motion.getBasis()[0][0] + motion.getBasis()[1][1] + motion.getBasis()[2][2];
+  angle = acos(std::min(1.0, std::max(-1.0, (trace - 1.0)/2.0)));
+}
+
 void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist, double& angle)
 {
   tf::Transform motion = a.inverse() * b;
-  dist = motion.getOrigin().length();
-  float trace = motion.getBasis()[0][0] + motion.getBasis()[1][1] + motion.getBasis()[2][2];
-  angle = acos(std::min(1.0, std::max(-1.0, (trace - 1.0)/2.0)));
+  getTfDifference(motion, dist, angle);
 }
 
 tf::Transform tfFromEigen(Eigen::Matrix4f trans)
@@ -148,8 +153,11 @@ void removeInvalidFeatures(
   {
     if (valid[i])
     {
-      means_f.push_back(means[i]);
-      covariances_f.push_back(covariances[i]);
+      cv::Mat mean_f = means[i].clone();
+      cv::Mat cov_f  = covariances[i].clone();
+
+      means_f.push_back(mean_f);
+      covariances_f.push_back(cov_f);
     }
   }
 }
@@ -177,12 +185,8 @@ void getPointCloudFromDistributions(
   const MatVector& means,
   PointCloudFeature& cloud)
 {
-  PointFeature p;
-
   unsigned int size = means.size(); 
-
   cloud.points.resize(size);
-
   for(unsigned int i = 0; i < size; ++i)
   {
     const cv::Mat& m = means[i];
