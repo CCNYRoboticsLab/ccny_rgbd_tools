@@ -78,7 +78,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
     MatVector covariances_;
     MatVector means_;
 
-    KdTree::Ptr model_tree_ptr_;
+    KdTree model_tree_;
 
     cv::Mat I_; // identity matrix
     

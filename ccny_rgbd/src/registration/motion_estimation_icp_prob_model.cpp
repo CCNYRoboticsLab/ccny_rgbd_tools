@@ -43,7 +43,6 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   max_assoc_dist_mah_sq_ = max_assoc_dist_mah_ * max_assoc_dist_mah_;
   
   model_ptr_.reset(new PointCloudFeature());
-  model_tree_ptr_.reset(new KdTree());
   model_ptr_->header.frame_id = fixed_frame_;
 
   f2b_.setIdentity(); 
@@ -106,10 +105,9 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   const tf::Transform& prediction,
   tf::Transform& motion)
 {
-  //TODO: currenyl ignores prediction
+  //TODO: currently ignores prediction
 
   bool result;
-
   MatVector data_means, data_covariances;
 
   // remove nans from distributinos
@@ -148,7 +146,7 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   }
 
   // update the model tree
-  model_tree_ptr_->setInputCloud(model_ptr_);
+  model_tree_.setInputCloud(model_ptr_);
 
   // update model pointcloud and publish
   model_ptr_->header.stamp = frame.header.stamp;
@@ -345,7 +343,7 @@ bool MotionEstimationICPProbModel::getNNEuclidean(
   indices.resize(1);
   dist_sq.resize(1);
   
-  int n_retrieved = model_tree_ptr_->nearestKSearch(data_point, 1, indices, dist_sq);
+  int n_retrieved = model_tree_.nearestKSearch(data_point, 1, indices, dist_sq);
   
   if (n_retrieved != 0)
   {
@@ -366,7 +364,7 @@ bool MotionEstimationICPProbModel::getNNMahalanobis(
   p_data.y = data_mean.at<double>(1,0);
   p_data.z = data_mean.at<double>(2,0);
 
-  int n_retrieved = model_tree_ptr_->nearestKSearch(p_data, n_nearest_neighbors_, indices, dists_sq);
+  int n_retrieved = model_tree_.nearestKSearch(p_data, n_nearest_neighbors_, indices, dists_sq);
 
   // iterate over Euclidean NNs to find Mah. NN
   double best_mah_dist_sq = 0;
@@ -603,7 +601,7 @@ bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
   model_ptr_->header.frame_id = fixed_frame_;
 
   // update the model tree
-  model_tree_ptr_->setInputCloud(model_ptr_);
+  model_tree_.setInputCloud(model_ptr_);
 
   return (result_pcd == 0); // TODO: also OpenCV result
 }
