@@ -4,7 +4,7 @@
 
   #### RGBD PROCESSING ####################################
   
-  <include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch"/>
+  <!--include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch"/-->
 
   #### VISUAL ODOMETRY ####################################
 

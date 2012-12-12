@@ -3,12 +3,17 @@
 namespace ccny_rgbd
 {
 
+void getTfDifference(const tf::Transform& motion, double& dist, double& angle)
+{
+  dist = motion.getOrigin().length();
+  double trace = motion.getBasis()[0][0] + motion.getBasis()[1][1] + motion.getBasis()[2][2];
+  angle = acos(std::min(1.0, std::max(-1.0, (trace - 1.0)/2.0)));
+}
+
 void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist, double& angle)
 {
   tf::Transform motion = a.inverse() * b;
-  dist = motion.getOrigin().length();
-  float trace = motion.getBasis()[0][0] + motion.getBasis()[1][1] + motion.getBasis()[2][2];
-  angle = acos(std::min(1.0, std::max(-1.0, (trace - 1.0)/2.0)));
+  getTfDifference(motion, dist, angle);
 }
 
 tf::Transform tfFromEigen(Eigen::Matrix4f trans)
@@ -71,10 +76,10 @@ bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
   return false;
 }
 
-void transformToRotationCV(
+void tfToCV(
   const tf::Transform& transform,
-  cv::Mat& translation,
-  cv::Mat& rotation)
+  cv::Mat& rotation,
+  cv::Mat& translation)
 {
   // extract translation
   tf::Vector3 translation_tf = transform.getOrigin();
@@ -134,6 +139,63 @@ cv::Mat m4(const cv::Mat& m3)
 double getMsDuration(const ros::WallTime& start)
 {
   return (ros::WallTime::now() - start).toSec() * 1000.0;
+}
+
+void removeInvalidFeatures(
+  const MatVector& means,
+  const MatVector& covariances,
+  const BoolVector& valid,
+  MatVector& means_f,
+  MatVector& covariances_f)
+{
+  unsigned int size = valid.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    if (valid[i])
+    {
+      cv::Mat mean_f = means[i].clone();
+      cv::Mat cov_f  = covariances[i].clone();
+
+      means_f.push_back(mean_f);
+      covariances_f.push_back(cov_f);
+    }
+  }
+}
+
+void transformDistributions(
+  MatVector& means,
+  MatVector& covariances,
+  const tf::Transform& transform)
+{
+  cv::Mat R, t;
+  tfToCV(transform, R, t);
+  cv::Mat Rt = R.t();
+  
+  unsigned int size = means.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    cv::Mat& m = means[i];
+    cv::Mat& c = covariances[i];
+    m = R * m + t;
+    c = R * c * Rt;
+  }
+}
+
+void getPointCloudFromDistributions(
+  const MatVector& means,
+  PointCloudFeature& cloud)
+{
+  unsigned int size = means.size(); 
+  cloud.points.resize(size);
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    const cv::Mat& m = means[i];
+    PointFeature& p = cloud.points[i];
+
+    p.x = m.at<double>(0,0);
+    p.y = m.at<double>(1,0);
+    p.z = m.at<double>(2,0);
+  }
 }
 
 } //namespace ccny_rgbd

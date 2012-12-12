@@ -57,13 +57,23 @@ class MotionEstimationICPProbModel: public MotionEstimation
     std::string fixed_frame_; 
     std::string base_frame_;
 
-    double max_association_dist_;
-    double alpha_;
+    //double max_association_dist_;
+    int max_iterations_;
+    int min_correspondences_;
     int n_nearest_neighbors_; // for searching for mah NN
-    int max_model_size_;    // bound for how many features to store in the model
-   
-    double max_association_dist_sq_;
-    double max_association_dist_mah_;
+    int max_model_size_;      // bound for how many features to store in the model
+
+    double tf_epsilon_linear_;   
+    double tf_epsilon_angular_;
+
+    double max_assoc_dist_mah_;
+    double max_corresp_dist_mah_;
+    double max_corresp_dist_eucl_;
+    
+    // derived
+    double max_assoc_dist_mah_sq_;
+    double max_corresp_dist_mah_sq_;
+    double max_corresp_dist_eucl_sq_;
 
     // **** variables
 
@@ -73,28 +83,56 @@ class MotionEstimationICPProbModel: public MotionEstimation
     MatVector covariances_;
     MatVector means_;
 
-    KdTree::Ptr tree_model_;
+    KdTree::Ptr model_tree_ptr_;
 
     cv::Mat I_; // identity matrix
     
-    ICP reg_;
+    //ICP reg_;
     tf::Transform f2b_; // Fixed frame to Base (moving) frame
     
     // ***** funtions
 
     void publishCovariances();
 
-    void getNNMahalanobis(
-      const KdTree& model_tree,
-      const cv::Mat& f_mean, const cv::Mat& f_cov,
-      double& mah_dist, int& mah_nn_idx);
+    bool alignICPEuclidean(
+      const MatVector& data_means,
+      tf::Transform& correction);
+    
+    bool alignICPMahalanobis(
+      const MatVector& data_means_in,
+      const MatVector& data_covariances_in,
+      tf::Transform& correction);
 
+    void getCorrespEuclidean(
+      const PointCloudFeature& data_cloud,
+      IntVector& data_indices,
+      IntVector& model_indices);
+    
+    void getCorrespMahalanobis(
+      const MatVector& data_means_in,
+      const MatVector& data_covariances_in,
+      IntVector& data_indices,
+      IntVector& model_indices);
+  
+    bool getNNEuclidean(
+      const PointFeature& data_point,
+      int& eucl_nn_idx, double& eucl_dist_sq);
+
+    bool getNNMahalanobis(
+      const cv::Mat& data_mean, const cv::Mat& data_cov,
+      int& mah_nn_idx, double& mah_dist_sq,
+      IntVector& indices, FloatVector& dists_sq);
+    
     void updateModelFromFrame(const RGBDFrame& frame);
+
+    void updateModelFromData(const MatVector& data_means,
+                             const MatVector& data_covariances);
+
     void initializeModelFromFrame(const RGBDFrame& frame);
     
     void addToModel(const cv::Mat& feature_mean,
                     const cv::Mat& feature_cov);
-
+    
     bool saveModel(const std::string& filename);
     bool loadModel(const std::string& filename);
 };
