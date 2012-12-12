@@ -172,10 +172,15 @@ class MonocularVisualOdometry
         std::vector<int>& match_indices,
         std::vector<float>& match_distances);
 
-    void project3DTo2D(const std::vector<cv::Point3d> &model, 
+    void project3DTo2D(const std::vector<cv::Point3d> &input_3D_points,
 					             const cv::Mat &extrinsic, 
   					           const cv::Mat &intrinsic, 
-					             std::vector<cv::Point2d> &vector_point_2D);
+					             std::vector<cv::Point2d> &vector_2D_points);
+
+    void getVisible3DPoints(const std::vector<cv::Point3d> &input_3D_points,
+					             const cv::Mat &extrinsic,
+  					           const cv::Mat &intrinsic,
+					             std::vector<cv::Point3d> &visible_3D_points);
 };
 
 } //namespace ccny_rgbd
