@@ -45,6 +45,7 @@ rosbuild_add_library (ccny_rgbd_structures
 rosbuild_add_library (ccny_monocular_structures
   src/structures/monocular_frame.cpp
   src/structures/rgbd_frame.cpp
+  src/structures/kmatch.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_features

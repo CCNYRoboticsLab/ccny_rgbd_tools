@@ -29,6 +29,7 @@
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/monocular_frame.h"
+#include "ccny_rgbd/structures/kmatch.h"
 
 #include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/features/orb_detector.h"
@@ -172,7 +173,16 @@ class MonocularVisualOdometry
         const cv::Mat& projected_points,
         const cv::Mat& detected_points,
         std::vector<int>& match_indices,
-        std::vector<float>& match_distances); ///< return true if matches exist
+        std::vector<float>& match_distances,
+        bool prune_repeated_matches = true
+    ); ///< return true if matches exist
+
+    void pruneMatches (
+        const std::vector<int>& match_indices_in,
+        const std::vector<float>& match_distances_in,
+        std::vector<int>& match_indices_out,
+        std::vector<float>& match_distances_out
+    ) const;
 
     void project3DTo2D(const std::vector<cv::Point3d> &input_3D_points,
 					             const cv::Mat &extrinsic, 

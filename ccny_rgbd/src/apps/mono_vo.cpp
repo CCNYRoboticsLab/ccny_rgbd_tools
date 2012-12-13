@@ -365,7 +365,9 @@ void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev,
    if(getCorrespondences(visible_3d_points, features, E_new, vector_3d_corr, vector_2d_corr))
    {
      cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
-     E_new = matrixFromRvecTvec(tvec, rvec);
+     E_new = matrixFromRvecTvec(rvec, tvec);
+     std::cout << "New translation vector at frame " << frame_count_ << ": (Iter " << i << ")" << tvecFromMatrix(E_) << std::endl;
+
    }
    ROS_WARN("estimate motion: Iteration %d", i);
  }
@@ -403,16 +405,23 @@ bool MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> 
 
   double total_distance_error = 0.0; // Accumulator error of distances to nearest neighbor
 
-  if(getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances))
+  if(getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances, false))
   {
+    cv::vector<cv::DMatch> matches; // vector of matches
+
     // Filter points according to threshold distance
     for(uint i = 0 ; i < match_indices.size(); i++)
     {
       if(match_distances[i] < distance_threshold_)
       {
-        corr_2D_points.push_back(features_2D[match_indices[i]]);
-        corr_3D_points.push_back(model_3D[match_indices[i]]);
+        int query_idx = i;
+        int train_idx = match_indices[i];
+
+        corr_2D_points.push_back(features_2D[train_idx]);
+        corr_3D_points.push_back(model_3D[query_idx]);
+
         total_distance_error += (double) match_distances[i];
+        matches.push_back(cv::DMatch(query_idx, train_idx, match_distances[i]));
       }
     }
     printf("Found %d correspondences\n", corr_2D_points.size());
@@ -427,29 +436,24 @@ bool MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> 
       convert2DPointDoubleVectorToFloatVector(projected_model_2D_points, vector_2d_corr_as_floats);
       cv::KeyPoint::convert(vector_2d_corr_as_floats, projections_as_keypoints);
 
-      cv::namedWindow("Features", CV_WINDOW_NORMAL);
-      cv::namedWindow("Correspondences", CV_WINDOW_NORMAL);
-      cv::Mat feat_img, corrs_img;
-      cv::drawKeypoints(*frame_->getRGBImage(), features_as_keypoints, feat_img);
-      cv::drawKeypoints(*frame_->getRGBImage(), projections_as_keypoints, corrs_img);
-      cv::imshow("Features", feat_img);
-      cv::imshow("Correspondences", corrs_img);
+//      cv::namedWindow("Features", CV_WINDOW_NORMAL);
+//      cv::namedWindow("Projected", CV_WINDOW_NORMAL);
+      cv::Mat feat_img, proj_points_img;
+      feat_img = frame_->getRGBImage()->clone();
+      proj_points_img = frame_->getRGBImage()->clone();
+//      cv::drawKeypoints(*frame_->getRGBImage(), features_as_keypoints, feat_img);
+//      cv::drawKeypoints(*frame_->getRGBImage(), projections_as_keypoints, proj_points_img);
+//      cv::imshow("Features", feat_img);
+//      cv::imshow("Projected", proj_points_img);
 
       // Draw matches
       cv::Mat matches_img;
-      cv::vector<cv::DMatch> matches; // vector of matches
-      for(uint i = 0 ; i < match_indices.size(); i++)
-          {
-            if(match_distances[i] < distance_threshold_)
-            {
-              matches.push_back(cv::DMatch(match_indices[i], i, match_indices[i]));
-            }
-          }
-      cv::drawMatches(feat_img, features_as_keypoints, // 1st image and its keypoints
-                      corrs_img, projections_as_keypoints, // 2nd image and its keypoints
+      cv::drawMatches(proj_points_img, projections_as_keypoints, // (QUERY) 1nd image and its keypoints
+                      feat_img, features_as_keypoints, // (TRAIN) 2st image and its keypoints
                       matches, // the matches
-                      matches_img, // the image produced
-                      cv::Scalar(255, 255, 255)); // color of the lines
+                      matches_img // the image produced
+                      ); // color of the lines
+//                      cv::Scalar(255, 255, 255)); // color of the lines
       cv::namedWindow("Matches", CV_WINDOW_KEEPRATIO);
       cv::imshow("Matches", matches_img);
       cv::waitKey(0);
@@ -475,9 +479,11 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   // **** initialize ***************************************************
   std::vector<cv::Point2d> features_vector;
 
+  frame_.reset();
+  frame_ = boost::shared_ptr<MonocularFrame> (new MonocularFrame(rgb_msg, info_msg));
+
   if (!initialized_)
   {
-    frame_ = boost::shared_ptr<MonocularFrame> (new MonocularFrame(rgb_msg, info_msg));
     ROS_INFO("RGB header = %s", rgb_msg->header.frame_id.c_str());
     initialized_ = getBaseToCameraTf(rgb_msg->header);
     init_time_ = rgb_msg->header.stamp;
@@ -504,7 +510,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   // **** create frame *************************************************
   ros::WallTime start_frame = ros::WallTime::now();
-  frame_->setFrame(rgb_msg);
+//  frame_->setFrame(rgb_msg);
   ros::WallTime end_frame = ros::WallTime::now();
 
   // **** find features ************************************************
@@ -574,7 +580,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     estimateMotion(E_, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
     // Update extrinsic matrix
     E_ = E_new;
-    std::cout << "Translation vector at frame " << frame_count_ << ": " << tvecFromMatrix(E_) << std::endl;
+    std::cout << "Computed Translation vector at frame " << frame_count_ << ": " << tvecFromMatrix(E_) << std::endl;
     // TODO: use E_new to compute odom!!!!
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -756,9 +762,12 @@ bool MonocularVisualOdometry::getMatches (
   const cv::Mat& reference_points,
   const cv::Mat& query_points,
   std::vector<int>& match_indices,
-  std::vector<float>& match_distances
+  std::vector<float>& match_distances,
+  bool prune_repeated_matches
   )
 {
+  match_indices.clear();
+  match_distances.clear();
 //  printf("matching...\n");
 
   // Batch: Call knnSearch
@@ -784,11 +793,31 @@ bool MonocularVisualOdometry::getMatches (
 //    printf("Point = (%f, %f) \n\n", reference_points.at<float>(match_indices[row],0), reference_points.at<float>(match_indices[row],1));
   }
 
+  if(prune_repeated_matches)
+  {
+    // TODO: prune matches
+    std::vector<int> match_indices_pruned;
+    std::vector<float> match_distances_pruned;
+    pruneMatches(match_indices, match_distances, match_indices_pruned, match_distances_pruned);
+
+  }
+
   if(match_indices.size() > 0)
     return true;
   else
     return false;
 
+}
+
+
+void MonocularVisualOdometry::pruneMatches (
+    const std::vector<int>& match_indices_in,
+    const std::vector<float>& match_distances_in,
+    std::vector<int>& match_indices_out,
+    std::vector<float>& match_distances_out
+) const
+{
+  KMatch::kMatchSet kmatch_prunning_set;
 }
 
 /** min_inliers - sufficient number of inliers to terminate
