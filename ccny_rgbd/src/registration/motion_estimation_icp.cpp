@@ -62,7 +62,7 @@ bool MotionEstimationICP::getMotionEstimationImpl(
   tf::Transform predicted_f2b = prediction * f2b_;
 
   // rotate into the fixed frame and account for prediction
-  pcl::transformPointCloud(frame.features , *features_ptr, eigenFromTf(predicted_f2b * b2c_));
+  pcl::transformPointCloud(frame.kp_cloud , *features_ptr, eigenFromTf(predicted_f2b * b2c_));
   features_ptr->header.frame_id = fixed_frame_;
 
   // **** build model ***************************************************
@@ -122,7 +122,7 @@ bool MotionEstimationICP::getMotionEstimationImpl(
   }
 
   // transform features using the new estimate for the fixed frame
-  pcl::transformPointCloud (frame.features , *features_ptr, eigenFromTf(f2b_* b2c_));
+  pcl::transformPointCloud (frame.kp_cloud , *features_ptr, eigenFromTf(f2b_* b2c_));
   features_ptr->header.frame_id = fixed_frame_;
 
   feature_history_.add(*features_ptr);

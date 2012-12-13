@@ -35,17 +35,20 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointXYZ_Feature,
 namespace ccny_rgbd
 {
 
-typedef std::vector<int>         IntVector;
-typedef std::vector<float>       FloatVector;
-typedef std::vector<bool>        BoolVector;
-typedef std::vector<cv::Point2f> Point2fVector;
-typedef std::vector<cv::Point3f> Point3fVector;
-typedef std::vector<cv::Mat>     MatVector;
-  
+// **** typedefs *********************************************
+
 typedef Eigen::Matrix3f Matrix3f;
 typedef Eigen::Vector3f Vector3f;
+
+typedef std::vector<int>             IntVector;
+typedef std::vector<float>           FloatVector;
+typedef std::vector<bool>            BoolVector;
+typedef std::vector<cv::Point2f>     Point2fVector;
+typedef std::vector<cv::Point3f>     Point3fVector;
+typedef std::vector<cv::Mat>         MatVector;
 typedef std::vector<Eigen::Matrix3f> Matrix3fVector;
 typedef std::vector<Eigen::Vector3f> Vector3fVector;
+typedef std::vector<cv::KeyPoint>    KeypointVector;
 
 typedef pcl::PointXYZRGB          PointT;
 typedef pcl::PointCloud<PointT>   PointCloudT;
@@ -108,13 +111,6 @@ cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
  */
 cv::Mat m4(const cv::Mat& m3);
 
-void removeInvalidFeatures(
-  const MatVector& means,
-  const MatVector& covariances,
-  const BoolVector& valid,
-  MatVector& means_f,
-  MatVector& covariances_f);
-
 void transformDistributions(
   MatVector& means,
   MatVector& covariances,
@@ -127,8 +123,8 @@ void getPointCloudFromDistributions(
 // **** EIGEN **********************************************
 
 void removeInvalidFeatures(
-  const MatVector& means,
-  const MatVector& covariances,
+  const Vector3fVector& means,
+  const Matrix3fVector& covariances,
   const BoolVector& valid,
   Vector3fVector& means_f,
   Matrix3fVector& covariances_f);

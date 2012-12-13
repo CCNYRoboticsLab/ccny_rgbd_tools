@@ -5,8 +5,6 @@ namespace ccny_rgbd
 
 FeatureDetector::FeatureDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), nh_private_(nh_private)
-  //mask_created_(false),
-  //mask_w_(30)
 {
   if (!nh_private_.getParam ("feature/compute_descriptors", compute_descriptors_))
     compute_descriptors_ = false;
@@ -14,6 +12,8 @@ FeatureDetector::FeatureDetector(ros::NodeHandle nh, ros::NodeHandle nh_private)
     smooth_ = 0;
   if (!nh_private_.getParam ("feature/max_range", max_range_))
     max_range_ = 5.5;
+  if (!nh_private_.getParam ("feature/max_stdev", max_stdev_))
+    max_stdev_ = 0.03;
   if (!nh_private_.getParam ("feature/show_keypoints", show_keypoints_))
     show_keypoints_ = false;
   if (!nh_private_.getParam ("feature/publish_features", publish_features_))
@@ -39,20 +39,13 @@ FeatureDetector::~FeatureDetector()
 
 }
 
-double FeatureDetector::findFeaturesTimed(RGBDFrame& frame)
-{
-  ros::WallTime start = ros::WallTime::now();
-  findFeatures(frame);
-  return (start - ros::WallTime::now()).toSec();
-}
-
 void FeatureDetector::findFeatures(RGBDFrame& frame)
 {
-  cv::Mat * input_img = frame.getRGBImage();
+  const cv::Mat& input_img = frame.rgb_img;
 
   // convert from RGB to grayscale
-  cv::Mat gray_img(input_img->rows, input_img->cols, CV_8UC1);
-  cvtColor(*input_img, gray_img, CV_BGR2GRAY);
+  cv::Mat gray_img(input_img.rows, input_img.cols, CV_8UC1);
+  cvtColor(input_img, gray_img, CV_BGR2GRAY);
 
   // blur if needed
   if(smooth_ > 0)
@@ -62,26 +55,27 @@ void FeatureDetector::findFeatures(RGBDFrame& frame)
   }
 
   // find the 2D coordinates of keypoints
-  findFeatures(frame, &gray_img);
-  frame.keypoints_computed = true;
+  findFeatures(frame, gray_img);
 
   // calculates the 3D position and covariance of features
-  frame.computeDistributions();
+  frame.computeDistributions(max_range_, max_stdev_);
 
   // filters out features with bad data and constructs a point cloud
-  frame.constructFeatureCloud(max_range_);
-
   if (show_keypoints_)
   {
     cv::namedWindow("Keypoints", CV_WINDOW_NORMAL);
-    cv::Mat kp_img(input_img->rows, input_img->cols, CV_8UC1);
-    cv::drawKeypoints(*input_img, frame.keypoints, kp_img);
+    cv::Mat kp_img(input_img.rows, input_img.cols, CV_8UC1);
+    cv::drawKeypoints(input_img, frame.keypoints, kp_img);
     cv::imshow("Keypoints", kp_img);
     cv::waitKey(1);
   }
 
   if (publish_features_)
-    features_publisher_.publish(frame.features);
+  {
+    // TODO: no reason for this to be a class method
+    frame.constructFeaturesCloud();
+    features_publisher_.publish(frame.kp_cloud);
+  }
 
   if (publish_covariances_)
     publishCovariances(frame);
@@ -107,12 +101,22 @@ void FeatureDetector::publishCovariances(RGBDFrame& frame)
   {
     if (!frame.kp_valid[kp_idx]) continue;
     
+    const Vector3f& kp_mean = frame.kp_means[kp_idx];
+    const Matrix3f& kp_cov  = frame.kp_covariances[kp_idx];
+
+    // transform Eigen to OpenCV matrices
+    cv::Mat m(3, 1, CV_64F);
+    for (int j = 0; j < 3; ++j)
+      m.at<double>(j, 0) = kp_mean(j, 0);
+
+    cv::Mat cov(3, 3, CV_64F);
+    for (int j = 0; j < 3; ++j)
+    for (int i = 0; i < 3; ++i)
+      cov.at<double>(j, i) = kp_cov(j, i);
+
     // compute eigenvectors
     cv::Mat evl(1, 3, CV_64F);
     cv::Mat evt(3, 3, CV_64F);
-
-    cv::Mat& m   = frame.kp_mean[kp_idx];
-    cv::Mat& cov = frame.kp_covariance[kp_idx];
     cv::eigen(cov, evl, evt);
 
     double mx = m.at<double>(0,0);
@@ -164,6 +168,16 @@ void FeatureDetector::setMaxRange(double max_range)
 double FeatureDetector::getMaxRange() const
 {
   return max_range_;
+} 
+
+void FeatureDetector::setMaxStDev(double max_stdev)
+{
+  max_stdev_ = max_stdev;
+}
+
+double FeatureDetector::getMaxStDev() const
+{
+  return max_stdev_;
 } 
 
 } //namespace

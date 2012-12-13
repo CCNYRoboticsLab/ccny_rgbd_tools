@@ -18,7 +18,7 @@ class GftDetector: public FeatureDetector
     GftDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
     ~GftDetector();
 
-    void findFeatures(RGBDFrame& frame, const cv::Mat * input_img);
+    void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
   private:
 

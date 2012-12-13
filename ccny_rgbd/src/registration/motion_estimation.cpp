@@ -40,13 +40,13 @@ tf::Transform MotionEstimation::getMotionEstimation(RGBDFrame& frame)
   //motion_prediction_->getMotion(prediction);
   prediction.setIdentity();
 
-  bool result;
   tf::Transform motion;
+  bool result;
 
-  if ((int)frame.features.size() < min_feature_count_)
+  if (frame.n_valid_keypoints < min_feature_count_)
   {
     ROS_WARN("Not enough features (%d detected, min is %d)", 
-      (int)frame.features.size(), min_feature_count_);
+      frame.n_valid_keypoints, min_feature_count_);
     result = false;
   }
   else

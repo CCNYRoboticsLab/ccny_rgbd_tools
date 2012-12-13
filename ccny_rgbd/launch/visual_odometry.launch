@@ -20,6 +20,7 @@
     <param name="feature/compute_descriptors" value="false"/>
     <param name="feature/smooth"              value="0"/>
     <param name="feature/max_range"           value="7.0"/>
+    <param name="feature/max_stdev"           value="0.03"/>
     <param name="feature/show_image"          value="false"/>
     <param name="feature/show_keypoints"      value="false"/>
 

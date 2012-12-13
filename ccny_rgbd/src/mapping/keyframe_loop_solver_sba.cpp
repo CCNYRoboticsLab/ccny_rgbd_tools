@@ -72,7 +72,7 @@ void KeyframeLoopSolverSBA::setUp(
   // **** set up camera parameters ******************************
   // use camera info from first frame
 
-  image_geometry::PinholeCameraModel& model = keyframes[0].model_;
+  image_geometry::PinholeCameraModel& model = keyframes[0].model;
 
   frame_common::CamParams cam_params;
   cam_params.fx = model.fx(); // Focal length in x
@@ -136,17 +136,17 @@ void KeyframeLoopSolverSBA::setUp(
       // check for invalid measurements
       if (frame_a.kp_valid[idx_a] && frame_b.kp_valid[idx_b])
       {
-        cv::Mat mean_a = frame_a.kp_mean[idx_a];
-        cv::Mat mean_b = frame_b.kp_mean[idx_b];
+        Vector3f mean_a = frame_a.kp_means[idx_a];
+        Vector3f mean_b = frame_b.kp_means[idx_b];
 
         // the feature point from frame_a, in the camera coords
-        tf::Point point_a(mean_a.at<double>(0,0),
-                          mean_a.at<double>(1,0),
-                          mean_a.at<double>(2,0));
+        tf::Point point_a(mean_a(0,0),
+                          mean_a(1,0),
+                          mean_a(2,0));
 
-        tf::Point point_b(mean_b.at<double>(0,0),
-                          mean_b.at<double>(1,0),
-                          mean_b.at<double>(2,0));
+        tf::Point point_b(mean_b(0,0),
+                          mean_b(1,0),
+                          mean_b(2,0));
 
         // transform into world coords
         point_a = frame_a.pose * point_a;

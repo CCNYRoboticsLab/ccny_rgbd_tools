@@ -5,9 +5,9 @@ namespace ccny_rgbd
 
 RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
   RGBDFrame(frame),
+  manually_added(false),
   max_data_range_(5.0),
-  max_sigma_z_(0.020), // TODO: Parameter, or max_sigma_z
-  manually_added(false)
+  max_sigma_z_(0.020) // TODO: Parameter, or max_sigma_z
 {
   max_var_z_ = max_sigma_z_ * max_sigma_z_;
 }
@@ -15,23 +15,23 @@ RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
 void RGBDKeyframe::constructDataCloud()
 {
   // Use correct principal point from calibration
-  float cx = model_.cx();
-  float cy = model_.cy();
+  float cx = model.cx();
+  float cy = model.cy();
 
   // Scale by focal length for computing (X,Y)
-  float constant_x = 1.0 / model_.fx();
-  float constant_y = 1.0 / model_.fy();
+  float constant_x = 1.0 / model.fx();
+  float constant_y = 1.0 / model.fy();
 
   float bad_point = std::numeric_limits<float>::quiet_NaN();
 
   data.points.clear();
-  data.points.resize(cv_ptr_rgb_->image.rows * cv_ptr_rgb_->image.cols);
-  for (int v = 0; v < cv_ptr_rgb_->image.rows; ++v)
-  for (int u = 0; u < cv_ptr_rgb_->image.cols; ++u)
+  data.points.resize(rgb_img.rows * rgb_img.cols);
+  for (int v = 0; v < rgb_img.rows; ++v)
+  for (int u = 0; u < rgb_img.cols; ++u)
   {
-    unsigned int index = v * cv_ptr_rgb_->image.cols + u;
+    unsigned int index = v * rgb_img.cols + u;
 
-    uint16_t z_raw = cv_ptr_depth_->image.at<uint16_t>(v, u);
+    uint16_t z_raw = depth_img.at<uint16_t>(v, u);
     float z = z_raw * 0.001; //convert to meters
 
     PointT p;
@@ -50,13 +50,6 @@ void RGBDKeyframe::constructDataCloud()
         p.x = z * (u - cx) * constant_x;
         p.y = z * (v - cy) * constant_y;
         p.z = z;
-
-        // ****** FIXME: better distortion model
-      //  double factor_s = 1.0 + depth_factor_ * (std::abs(u - cx) / 160) + 
-      //                          depth_factor_ * (std::abs(v - cy) / 120);
-        double factor_s = 1.0;
-        p.z = z * factor_s;
-        // **************************************************************
       }
       else
       {
@@ -68,16 +61,16 @@ void RGBDKeyframe::constructDataCloud()
       p.x = p.y = p.z = bad_point;
     }
 
-    cv::Vec3b& bgr = cv_ptr_rgb_->image.at<cv::Vec3b>(v,u);
+    cv::Vec3b& bgr = rgb_img.at<cv::Vec3b>(v,u);
     uint32_t color = (bgr[2] << 16) + (bgr[1] << 8) + bgr[0];
     p.rgb = *reinterpret_cast<float*>(&color);
 
     data.points[index] = p;
   }
 
-  data.header = cv_ptr_rgb_->header;
-  data.height = cv_ptr_rgb_->image.rows;
-  data.width  = cv_ptr_rgb_->image.cols;
+  data.header = header;
+  data.height = rgb_img.rows;
+  data.width  = rgb_img.cols;
   data.is_dense = false;
 }
 

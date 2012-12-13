@@ -142,29 +142,8 @@ double getMsDuration(const ros::WallTime& start)
 }
 
 void removeInvalidFeatures(
-  const MatVector& means,
-  const MatVector& covariances,
-  const BoolVector& valid,
-  MatVector& means_f,
-  MatVector& covariances_f)
-{
-  unsigned int size = valid.size(); 
-  for(unsigned int i = 0; i < size; ++i)
-  {
-    if (valid[i])
-    {
-      cv::Mat mean_f = means[i].clone();
-      cv::Mat cov_f  = covariances[i].clone();
-
-      means_f.push_back(mean_f);
-      covariances_f.push_back(cov_f);
-    }
-  }
-}
-
-void removeInvalidFeatures(
-  const MatVector& means,
-  const MatVector& covariances,
+  const Vector3fVector& means,
+  const Matrix3fVector& covariances,
   const BoolVector& valid,
   Vector3fVector& means_f,
   Matrix3fVector& covariances_f)
@@ -174,17 +153,11 @@ void removeInvalidFeatures(
   {
     if (valid[i])
     {
-      const cv::Mat& mean_cv = means[i];
-      const cv::Mat& cov_cv  = covariances[i];
+      const Vector3f& mean = means[i];
+      const Matrix3f& cov  = covariances[i];
 
-      Vector3f mean_eigen;
-      Matrix3f cov_eigen;
-
-      cvMatToEigenVector3f(mean_cv, mean_eigen);
-      cvMatToEigenMatrix3f(cov_cv, cov_eigen);
-
-      means_f.push_back(mean_eigen);
-      covariances_f.push_back(cov_eigen);
+      means_f.push_back(mean);
+      covariances_f.push_back(cov);
     }
   }
 }
@@ -296,7 +269,6 @@ void getPointCloudFromDistributions(
     p.y = m(1,0);
     p.z = m(2,0);
   }
-
 }
 
 } //namespace ccny_rgbd

@@ -20,15 +20,16 @@ OrbDetector::~OrbDetector()
   delete orb_detector_;
 }
 
-void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat * input_img)
+void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 {
-  orb_detector_->detect(*input_img, frame.keypoints);
+  cv::Mat mask(frame.depth_img.size(), CV_8UC1);
+  frame.depth_img.convertTo(mask, CV_8U);
+
+  orb_detector_->detect(input_img, frame.keypoints, mask);
 
   if(compute_descriptors_)
-  {
-    orb_descriptor_.compute(*input_img, frame.keypoints, frame.descriptors);
-    frame.descriptors_computed = true;
-  }
+    orb_descriptor_.compute(
+      input_img, frame.keypoints, frame.descriptors);
 }
 
 void OrbDetector::setThreshold(int threshold)

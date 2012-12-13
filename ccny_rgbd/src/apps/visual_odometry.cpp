@@ -123,8 +123,8 @@ void VisualOdometry::imageCb(
 
   ros::WallTime end = ros::WallTime::now();
 
-  int n_features = frame.features.points.size();
-  int n_keypoints = frame.keypoints.size();
+  int n_features = frame.keypoints.size();
+  int n_valid_features = frame.n_valid_keypoints;
 
   double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
   double d_features = 1000.0 * (end_features - start_features).toSec();
@@ -141,7 +141,7 @@ void VisualOdometry::imageCb(
   printf("[%d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
     frame_count_,
     d_frame, 
-    detector_type_.c_str(), n_features, n_keypoints, d_features, 
+    detector_type_.c_str(), n_features, n_valid_features, d_features, 
     reg_type_.c_str(), d_reg, 
     d_total);
 

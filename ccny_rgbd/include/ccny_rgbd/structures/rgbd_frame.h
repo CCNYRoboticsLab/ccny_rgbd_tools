@@ -7,17 +7,16 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
 #include <image_geometry/pinhole_camera_model.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
 #include <pcl_ros/transforms.h>
 
 #include "ccny_rgbd/rgbd_util.h"
 
 namespace ccny_rgbd
 {
+
+// Khoshelham, K.; Elberink, S.O. Accuracy and Resolution of Kinect 
+// Depth Data for Indoor Mapping Applications. Sensors 2012, 12, 1437-1454.
+const double Z_STDEV_CONSTANT = 0.001425;
 
 class RGBDFrame
 {
@@ -26,50 +25,61 @@ class RGBDFrame
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     RGBDFrame();
-    
+
     RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
               const sensor_msgs::ImageConstPtr& depth_msg,
               const sensor_msgs::CameraInfoConstPtr& info_msg);
     
+    // header taken from rgb_msg
     std_msgs::Header header;
 
-    image_geometry::PinholeCameraModel model_;
+    // RGB image (8UC3)
+    cv::Mat rgb_img;
+  
+    // Depth image in mm (16UC1). 0 = invalid data
+    cv::Mat depth_img;
 
-    PointCloudFeature features; // no NaNs
-      
-    std::vector<cv::KeyPoint> keypoints;  // with NaNs
+    // the intrinsic matrix which applies to both images. 
+    // it's assumed that the images are already
+    // rectified and in the same camera frame(RGB)
+    image_geometry::PinholeCameraModel model;
+    
+    // keypoints, descriptos, and kp_* are index the same way
+    // and may inculude invalid points
+    // invalid point: no z data, or var_z > threshold
 
-    std::vector<bool>    kp_valid;         // is z valid or NaN?
-    std::vector<cv::Mat> kp_mean;          // 1x3 mat of 3D location
-    std::vector<cv::Mat> kp_covariance;    // 3x3 mat of covariance
+    KeypointVector keypoints;         // 2D keypoint locations
+    cv::Mat        descriptors;       // feature descriptor vectors
 
-    cv::Mat descriptors;
+    BoolVector     kp_valid;          // is the z data valid?
+    Vector3fVector kp_means;          // 1x3 mat of 3D locations
+    Matrix3fVector kp_covariances;    // 3x3 mat of covariances
 
-    bool keypoints_computed;
-    bool descriptors_computed;
+    int n_valid_keypoints;            // how many keypoints have usable 3D data
 
-    cv::Mat * getRGBImage()   const { return &cv_ptr_rgb_->image; }
-    cv::Mat * getDepthImage() const { return &cv_ptr_depth_->image; }
+    // PCL points, invalid kp's removed
+    // TODO: remove this from class
+    PointCloudFeature kp_cloud;
 
-    void computeDistributions();
-    void constructFeatureCloud(float max_range, bool filter=true);
+    /* computes the 3D means and covariances for all the detected
+     * keypoints, and determines if tehy are valid or not
+     * TODO: do we want default values? 
+     */
+    void computeDistributions(
+      double max_z = 5.5,
+      double max_stdev_z = 0.03);    
+
+   void constructFeaturesCloud();
 
   protected:
-
-    cv_bridge::CvImagePtr cv_ptr_rgb_;
-    cv_bridge::CvImagePtr cv_ptr_depth_;
-
-    double depth_factor_;
 
     double getVarZ(double z);
     double getStdDevZ(double z);
 
     void getGaussianDistribution(int u, int v, double& z_mean, double& z_var);
     void getGaussianMixtureDistribution(int u, int v, double& z_mean, double& z_var);
-
 };
 
-} //namespace ccny_rgbd
-
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_FRAME_H

@@ -124,7 +124,7 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
 
   // remove nans from distributinos
   removeInvalidFeatures(
-    frame.kp_mean, frame.kp_covariance, frame.kp_valid,
+    frame.kp_means, frame.kp_covariances, frame.kp_valid,
     data_means, data_covariances);
   
   // transform distributions to world frame

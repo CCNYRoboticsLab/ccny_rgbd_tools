@@ -80,4 +80,5 @@ void KeyframeGenerator::addKeyframe(
   keyframes_.push_back(keyframe);
 }
 
+
 } // namespace ccny_rgbd

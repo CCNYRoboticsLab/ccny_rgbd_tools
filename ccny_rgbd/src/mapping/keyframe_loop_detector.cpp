@@ -205,7 +205,7 @@ void KeyframeLoopDetector::prepareFeaturesForRANSAC(
     {
       cv::SurfFeatureDetector detector(surf_threshold);
       keyframe.keypoints.clear();
-      detector.detect(*keyframe.getRGBImage(), keyframe.keypoints);
+      detector.detect(keyframe.rgb_img, keyframe.keypoints);
 
       printf("\t[%d] %d keypoints detecting with %.1f\n", 
         kf_idx, (int)keyframe.keypoints.size(), surf_threshold); 
@@ -218,18 +218,20 @@ void KeyframeLoopDetector::prepareFeaturesForRANSAC(
     if (save)
     {
       cv::Mat kp_img;
-      cv::drawKeypoints(*keyframe.getRGBImage(), keyframe.keypoints, kp_img);
+      cv::drawKeypoints(keyframe.rgb_img, keyframe.keypoints, kp_img);
       std::stringstream ss1;
       ss1 << "kp_" << kf_idx;
       cv::imwrite("/home/idryanov/ros/images/ransac/" + ss1.str() + ".png", kp_img);
     }
 
+    // TODO: not sure what's best here, reuse frame members, or make new ones
+
     //printf("[%d] computing descriptors\n", kf_idx);  
-    extractor.compute(*keyframe.getRGBImage(), keyframe.keypoints, keyframe.descriptors);
+    extractor.compute(keyframe.rgb_img, keyframe.keypoints, keyframe.descriptors);
  
     //printf("[%d] computing distributions\n", kf_idx);  
     keyframe.computeDistributions();
-    keyframe.features.clear();
+    //keyframe.kp_cloud.clear();
   }
 }
 
@@ -414,8 +416,8 @@ void KeyframeLoopDetector::simplifiedRingAssociations(
         if (save)
         {
           cv::Mat img_matches;
-          cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                          *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+          cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                          keyframe_a.rgb_img, keyframe_a.keypoints, 
                           inlier_matches, img_matches);
           std::stringstream ss1;
           ss1 << kf_idx_a << "_to_" << kf_idx_b;
@@ -432,8 +434,8 @@ void KeyframeLoopDetector::simplifiedRingAssociations(
         if (save)
         {
           cv::Mat img_matches;
-          cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                          *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+          cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                          keyframe_a.rgb_img, keyframe_a.keypoints, 
                           all_matches, img_matches);
           std::stringstream ss1;
           ss1 << kf_idx_a << "_xx_" << kf_idx_b;
@@ -498,8 +500,8 @@ void KeyframeLoopDetector::ringAssociations(
       if (save)
       {
         cv::Mat img_matches;
-        cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                        *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+        cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                        keyframe_a.rgb_img, keyframe_a.keypoints, 
                         inlier_matches, img_matches);
         std::stringstream ss1;
         ss1 << kf_idx_a << "_to_" << kf_idx_b;
@@ -516,8 +518,8 @@ void KeyframeLoopDetector::ringAssociations(
       if (save)
       {
         cv::Mat img_matches;
-        cv::drawMatches(*(keyframe_b.getRGBImage()), keyframe_b.keypoints, 
-                        *(keyframe_a.getRGBImage()), keyframe_a.keypoints, 
+        cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                        keyframe_a.rgb_img, keyframe_a.keypoints, 
                         all_matches, img_matches);
         std::stringstream ss1;
         ss1 << kf_idx_a << "_xx_" << kf_idx_b;
@@ -584,14 +586,14 @@ void KeyframeLoopDetector::pairwiseMatchingRANSAC(
     int idx_a = match.trainIdx; 
 
     PointFeature& p_a = features_a[m_idx];
-    p_a.x = frame_a.kp_mean[idx_a].at<double>(0,0);
-    p_a.y = frame_a.kp_mean[idx_a].at<double>(1,0);
-    p_a.z = frame_a.kp_mean[idx_a].at<double>(2,0);
+    p_a.x = frame_a.kp_means[idx_a](0,0);
+    p_a.y = frame_a.kp_means[idx_a](1,0);
+    p_a.z = frame_a.kp_means[idx_a](2,0);
 
     PointFeature& p_b = features_b[m_idx];
-    p_b.x = frame_b.kp_mean[idx_b].at<double>(0,0);
-    p_b.y = frame_b.kp_mean[idx_b].at<double>(1,0);
-    p_b.z = frame_b.kp_mean[idx_b].at<double>(2,0);
+    p_b.x = frame_b.kp_means[idx_b](0,0);
+    p_b.y = frame_b.kp_means[idx_b](1,0);
+    p_b.z = frame_b.kp_means[idx_b](2,0);
   }
 
   // **** main RANSAC loop ****************************************
