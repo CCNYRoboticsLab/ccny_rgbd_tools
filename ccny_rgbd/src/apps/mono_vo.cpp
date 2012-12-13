@@ -36,12 +36,10 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   if(readPointCloudFromPCDFile()==false)
     ROS_FATAL("The sky needs its point cloud to operate!");
 
-
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
   int queue_size = 5;
   sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
   sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
-
 }
 
 MonocularVisualOdometry::~MonocularVisualOdometry()
@@ -50,7 +48,6 @@ MonocularVisualOdometry::~MonocularVisualOdometry()
 
   delete feature_detector_;
 }
-
 void testKDTree()
 {
   /*
@@ -89,88 +86,88 @@ void testKDTree()
   float dist[K];
 //  my_tree.findNearest(query_vec, K, Emax, idx, 0, dist);
 */
-  // Parse input
-//    parseInput(argc, argv);
 
   using namespace std;
-  using namespace cv;
 
-    int numData = 5;
+    int numData = 1;
     int numQueries = 2;
     int numDimensions = 2;
-    int k = 1;
+    int k = 1; // Number of neighbors
 
     // Create the data
 //    cv::Mat features(numData,numDimensions,CV_32F), query(numQueries,numDimensions,CV_32F);
 //    cv::randu(features, Scalar::all(Mean), cv::Scalar::all(Variance));
 //    cv::randu(query, Scalar::all(Mean), cv::Scalar::all(Variance));
 
-      cv::Mat features = (cv::Mat_<float> (numData,numDimensions) << 10.0, 0,
-                                                        3.2, 0,
-                                                        0, 1.1,
-                                                        0, 2,
-                                                        6.2, 30);
-      cv::Mat query = (cv::Mat_<float> (numQueries,numDimensions) << 9.0, 20,
-                                                  6,5);
+//    cv::Mat reference_points = (cv::Mat_<float> (numData,numDimensions) << 3.0, 3.0
+//                                                            );
+//    cv::Mat query_points = (cv::Mat_<float> (numQueries,numDimensions) << 20.0, 3.0,
+//                                                                            18, 4.0);
+
+    std::vector<cv::Point2d> reference_points;
+    reference_points.push_back(cv::Point2d(3.0, 3.0));
+    reference_points.push_back(cv::Point2d(18.0, 15.0));
+//    reference_points.push_back(cv::Point2d(30.0, 30.0));
+//    reference_points.push_back(cv::Point2d(40.0, 40.0));
+
+    std::vector<cv::Point2d> query_points;
+    query_points.push_back(cv::Point2d(10., 3.));
+    query_points.push_back(cv::Point2d(18, 4.0));
+    query_points.push_back(cv::Point2d(6, 4.0));
+//    query_points.push_back(cv::Point2d(9.1,  11.5));
+//    query_points.push_back(cv::Point2d(41.2,   42.01));
+
+    cv::Mat reference_points_matrix;
+    cv::Mat query_points_matrix;
+    convert2DPointVectorToMatrix(reference_points, reference_points_matrix, CV_32FC1);
+    convert2DPointVectorToMatrix(query_points, query_points_matrix, CV_32FC1);
+
+    std::vector<int> match_indices;
+    std::vector<float> match_distances;
 
     // Print generated data
-    std::cout << "Input::" << std::endl;
-    for(int row = 0 ; row < features.rows ; row++){
-            for(int col = 0 ; col < features.cols ; col++){
-                    std::cout << features.at<float>(row,col) <<"\t";
-            }
-            std::cout << endl;
-    }
-    std::cout << "Query::" << std::endl;
-    for(int row = 0 ; row < query.rows ; row++){
-            for(int col = 0 ; col < query.cols ; col++){
-                    cout << query.at<float>(row,col) <<"\t";
-            }
-            cout << endl;
-    }
+    std::cout << "Reference (Tree) points:" << reference_points_matrix << std::endl;
+    std::cout << "Query points:" << query_points_matrix << std::endl;
+//    for(int row = 0 ; row < reference_points.rows ; row++){
+//            for(int col = 0 ; col < reference_points.cols ; col++){
+//                    std::cout << reference_points.at<float>(row,col) <<"\t";
+//            }
+//            std::cout << endl;
+//    }
+//    std::cout << "Query::" << std::endl;
+//    for(int row = 0 ; row < query_points.rows ; row++){
+//            for(int col = 0 ; col < query_points.cols ; col++){
+//                    cout << query_points.at<float>(row,col) <<"\t";
+//            }
+//            cout << endl;
+//    }
+
 
     // KdTree with 5 random trees
-    cv::flann::KDTreeIndexParams indexParams(5);
-
+//    cv::flann::KDTreeIndexParams indexParams(5);
     // You can also use LinearIndex
-    //cv::flann::LinearIndexParams indexParams;
+    cv::flann::LinearIndexParams indexParams;
 
     // Create the Index
-    cv::flann::Index kdtree(features, indexParams);
-/*
-    // Perform single search for mean
-    cout << "Performing single search to find closest data point to mean:" << endl;
-    vector<double> singleQuery;
-    vector<int> index(1);
-    vector<double> dist(1);
+    cv::flann::Index kdtree(reference_points_matrix, indexParams);
 
-    // Searching for the Mean
-    for(int i = 0 ; i < numDimensions ;i++)
-            singleQuery.push_back(Mean);
-
-    // Invoke the function
-    kdtree.knnSearch(singleQuery, index, dist, 1, cv::flann::SearchParams(64));
-
-    // Print single search results
-    cout << "(index,dist):" << index[0] << "," << dist[0]<< endl;
-*/
     // Batch: Call knnSearch
     cout << "Batch search:"<< endl;
-    Mat indices;//(numQueries, k, CV_32S);
-    Mat dists;//(numQueries, k, CV_32F);
+    cv::Mat indices;//(numQueries, k, CV_32S);
+    cv::Mat dists_sq;//(numQueries, k, CV_32F);
 
     // Invoke the function
-    kdtree.knnSearch(query, indices, dists, k, cv::flann::SearchParams(64));
+    kdtree.knnSearch(query_points_matrix, indices, dists_sq, k, cv::flann::SearchParams(64, 0, true));
 
-    cout << indices.rows << "\t" << indices.cols << endl;
-    cout << dists.rows << "\t" << dists.cols << endl;
+    cout << "Indices:  " << indices.rows << " rows, " << indices.cols << " cols" << endl;
+    cout << "Distances (Squared values):  " << dists_sq.rows << " rows, " << dists_sq.cols << " cols" << endl;
 
     // Print batch results
     cout << "Output::"<< endl;
     for(int row = 0 ; row < indices.rows ; row++){
             cout << "(index,dist):";
             for(int col = 0 ; col < indices.cols ; col++){
-                    cout << "(" << indices.at<int>(row,col) << "," << dists.at<float>(row,col) << ")" << "\t";
+                    cout << "(KNN index: " << indices.at<int>(row,col) << ", Sq. dist: " << dists_sq.at<float>(row,col) << ")" << "\t";
             }
             cout << endl;
     }
@@ -180,7 +177,6 @@ void testKDTree()
 void MonocularVisualOdometry::initParams()
 {
 //  testKDTree();
-//  testGetMatches();
 
   // PCD File
   if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
@@ -368,38 +364,6 @@ void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev,
 
    if(getCorrespondences(visible_3d_points, features, E_new, vector_3d_corr, vector_2d_corr))
    {
-     if (visualize_correspondences_)
-     {
-       std::vector<cv::KeyPoint> features_as_keypoints = frame_->keypoints;
-       std::vector<cv::KeyPoint> projections_as_keypoints;
-       std::vector<cv::Point2f> vector_2d_corr_as_floats;
-       convert2DPointDoubleVectorToFloatVector(vector_2d_corr, vector_2d_corr_as_floats);
-       cv::KeyPoint::convert(vector_2d_corr_as_floats, projections_as_keypoints);
-
-       cv::namedWindow("Features", CV_WINDOW_NORMAL);
-       cv::namedWindow("Correspondences", CV_WINDOW_NORMAL);
-       cv::Mat feat_img, corrs_img;
-       cv::drawKeypoints(*frame_->getRGBImage(), features_as_keypoints, feat_img);
-       cv::drawKeypoints(*frame_->getRGBImage(), projections_as_keypoints, corrs_img);
-       cv::imshow("Features", feat_img);
-       cv::imshow("Correspondences", corrs_img);
-       cv::waitKey(0);
-
-       // TODO: draw matches
-       cv::Mat matches_img;
-       cv::vector<cv::DMatch> matches; // TODO: find matches as vector
-       /*
-       cv::drawMatches(feat_img, features_as_keypoints, // 1st image and its keypoints
-                       corrs_img, projections_as_keypoints, // 2nd image and its keypoints
-                       matches, // the matches
-                       matches_img, // the image produced
-                       cv::Scalar(255, 255, 255)); // color of the lines
-       cv::namedWindow("Matches", CV_WINDOW_KEEPRATIO);
-       cv::imshow("Matches", matches_img);
-        */
-     }
-
-
      cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
      E_new = matrixFromRvecTvec(tvec, rvec);
    }
@@ -415,8 +379,8 @@ bool MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> 
   corr_3D_points.clear();
 
   std::vector<cv::Point2d> projected_model_2D_points;
-  std::vector<cv::Point3d> valid_3D_points;
-  std::vector<cv::Point2d> valid_2D_points;
+//  std::vector<cv::Point3d> valid_3D_points;
+//  std::vector<cv::Point2d> valid_2D_points;
 
   if(use_opencv_projection)
   {
@@ -428,14 +392,14 @@ bool MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> 
   else
     project3DTo2D(model_3D, E, frame_->getIntrinsicCameraMatrix(), projected_model_2D_points);
 
-  frame_->filterPointsWithinFrame(model_3D, projected_model_2D_points, valid_3D_points, valid_2D_points);
+//  frame_->filterPointsWithinFrame(model_3D, projected_model_2D_points, valid_3D_points, valid_2D_points);
 
   std::vector<int> match_indices;
   std::vector<float> match_distances; // ATTENTION: don't use double, otherwise the KDTree will crash
   cv::Mat detected_points_matrix;
   cv::Mat projected_points_matrix;
-  convert2DPointVectorToMatrix(features_2D, detected_points_matrix);
-  convert2DPointVectorToMatrix(valid_2D_points, projected_points_matrix);
+  convert2DPointVectorToMatrix(features_2D, detected_points_matrix, CV_32FC1);
+  convert2DPointVectorToMatrix(projected_model_2D_points, projected_points_matrix, CV_32FC1);
 
   double total_distance_error = 0.0; // Accumulator error of distances to nearest neighbor
 
@@ -446,13 +410,51 @@ bool MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> 
     {
       if(match_distances[i] < distance_threshold_)
       {
-        corr_2D_points.push_back(valid_2D_points[match_indices[i]]);
-        corr_3D_points.push_back(valid_3D_points[match_indices[i]]);
+        corr_2D_points.push_back(features_2D[match_indices[i]]);
+        corr_3D_points.push_back(model_3D[match_indices[i]]);
         total_distance_error += (double) match_distances[i];
       }
     }
     printf("Found %d correspondences\n", corr_2D_points.size());
     //  return (double) total_distance_error/corr_2D_points.size();
+
+    if (visualize_correspondences_)
+    {
+
+      std::vector<cv::KeyPoint> features_as_keypoints = frame_->keypoints;
+      std::vector<cv::KeyPoint> projections_as_keypoints;
+      std::vector<cv::Point2f> vector_2d_corr_as_floats;
+      convert2DPointDoubleVectorToFloatVector(projected_model_2D_points, vector_2d_corr_as_floats);
+      cv::KeyPoint::convert(vector_2d_corr_as_floats, projections_as_keypoints);
+
+      cv::namedWindow("Features", CV_WINDOW_NORMAL);
+      cv::namedWindow("Correspondences", CV_WINDOW_NORMAL);
+      cv::Mat feat_img, corrs_img;
+      cv::drawKeypoints(*frame_->getRGBImage(), features_as_keypoints, feat_img);
+      cv::drawKeypoints(*frame_->getRGBImage(), projections_as_keypoints, corrs_img);
+      cv::imshow("Features", feat_img);
+      cv::imshow("Correspondences", corrs_img);
+
+      // Draw matches
+      cv::Mat matches_img;
+      cv::vector<cv::DMatch> matches; // vector of matches
+      for(uint i = 0 ; i < match_indices.size(); i++)
+          {
+            if(match_distances[i] < distance_threshold_)
+            {
+              matches.push_back(cv::DMatch(match_indices[i], i, match_indices[i]));
+            }
+          }
+      cv::drawMatches(feat_img, features_as_keypoints, // 1st image and its keypoints
+                      corrs_img, projections_as_keypoints, // 2nd image and its keypoints
+                      matches, // the matches
+                      matches_img, // the image produced
+                      cv::Scalar(255, 255, 255)); // color of the lines
+      cv::namedWindow("Matches", CV_WINDOW_KEEPRATIO);
+      cv::imshow("Matches", matches_img);
+      cv::waitKey(0);
+    }
+
     if(corr_2D_points.size() > 0)
       return true;
     else
@@ -510,6 +512,8 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   ros::WallTime start_features = ros::WallTime::now();
   feature_detector_->onlyFind2DFeatures(*frame_);
   ros::WallTime end_features = ros::WallTime::now();
+
+  //  testGetMatches();
 
   /*// TESTING Projections
   if(frame_->buildKDTreeFromKeypoints(number_of_random_trees_))
@@ -640,6 +644,7 @@ bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const in
   inliers_2D_points.clear();
   inliers_3D_points.clear();
 
+  // FIXME: reanalized if filtering of points within frame is needed?
   std::vector<cv::Point2d> projected_model_2D_points;
   std::vector<cv::Point3d> valid_3D_points;
   std::vector<cv::Point2d> valid_2D_points;
@@ -723,23 +728,23 @@ bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
 
 void MonocularVisualOdometry::testGetMatches()
 {
-  std::vector<cv::Point2d> detected_points;
-  std::vector<cv::Point2d> projected_points;
+  std::vector<cv::Point2d> reference_points;
+  std::vector<cv::Point2d> query_points;
 
-  detected_points.push_back(cv::Point2d(10.0, 10.0));
-  detected_points.push_back(cv::Point2d(20.0, 20.0));
-  detected_points.push_back(cv::Point2d(30.0, 30.0));
-  detected_points.push_back(cv::Point2d(40.0, 40.0));
+  reference_points.push_back(cv::Point2d(10.0, 10.0));
+  reference_points.push_back(cv::Point2d(20.0, 20.0));
+  reference_points.push_back(cv::Point2d(30.0, 30.0));
+  reference_points.push_back(cv::Point2d(40.0, 40.0));
   
-  projected_points.push_back(cv::Point2d(30.1, 31.2));
-  projected_points.push_back(cv::Point2d(18.1, 16.0));
-  projected_points.push_back(cv::Point2d(9.1,  11.5));
-  projected_points.push_back(cv::Point2d(41.2,   42.01));
+  query_points.push_back(cv::Point2d(30.1, 31.2));
+  query_points.push_back(cv::Point2d(18.1, 16.0));
+  query_points.push_back(cv::Point2d(9.1,  11.5));
+  query_points.push_back(cv::Point2d(41.2,   42.01));
   
   cv::Mat detected_points_matrix;
   cv::Mat projected_points_matrix;
-  convert2DPointVectorToMatrix(detected_points, detected_points_matrix);
-  convert2DPointVectorToMatrix(projected_points, projected_points_matrix);
+  convert2DPointVectorToMatrix(reference_points, detected_points_matrix);
+  convert2DPointVectorToMatrix(query_points, projected_points_matrix);
   
   std::vector<int> match_indices;
   std::vector<float> match_distances;
