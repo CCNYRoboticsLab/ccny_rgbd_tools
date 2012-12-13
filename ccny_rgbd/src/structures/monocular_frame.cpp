@@ -108,6 +108,7 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
    */
   dist_coeffs_ = this->pihole_model_.distortionCoeffs();
 
+/*
   std::cout << "Decomposed Matrix" << std::endl;
   std::cout << "P: " << P << std::endl;
   std::cout << "R: " << R_ << std::endl;
@@ -116,6 +117,7 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
   std::cout << "tvec: " << tvec_ << std::endl;
   std::cout << "K: " << K_ << std::endl;
   std::cout << "Distortion: " << dist_coeffs_ << std::endl;
+*/
 
   cv::Mat E = matrixFromRvecTvec(rvec_, tvec_);
 
@@ -123,10 +125,12 @@ void MonocularFrame::processCameraInfo(const sensor_msgs::CameraInfoConstPtr &ca
 //  std::cout << "K: " << this->pihole_model_.intrinsicMatrix() << std::endl;
 //  std::cout << "K_full: " << this->pihole_model_.fullIntrinsicMatrix() << std::endl;
 //  std::cout << "Projection Matrix: " << this->pihole_model_.projectionMatrix() << std::endl;
+/*
   std::cout << "CHECK with utils" << std::endl;
   std::cout << "rvec: " << rvecFromMatrix(E) << std::endl;
   std::cout << "R: " << rmatFromMatrix(E) << std::endl;
   std::cout << "tvec: " << tvecFromMatrix(E) << std::endl;
+*/
 }
 
 cv::Mat MonocularFrame::getIntrinsicCameraMatrix() const

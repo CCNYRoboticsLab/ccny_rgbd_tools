@@ -92,7 +92,13 @@ class MonocularVisualOdometry
     *
     * @return whether true/false correspondences were found (NOT: The normalized accumulated distances (error) of the correspondences found)
     */
-   bool getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points, bool use_opencv_projection = true);
+   bool getCorrespondences(
+    cv::flann::Index& kd_tree,
+    const std::vector<cv::Point3d> &model_3D, 
+    const std::vector<cv::Point2d> &features_2D, 
+    const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, 
+    std::vector<cv::Point2d> &corr_2D_points, 
+    bool use_opencv_projection = true);
 
    void estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations = 10);
 
@@ -169,13 +175,13 @@ class MonocularVisualOdometry
     bool readPointCloudFromPCDFile(); ///< Returns true if PCD file was read successfully.
     
     void testGetMatches();
-    bool getMatches (
-        const cv::Mat& projected_points,
-        const cv::Mat& detected_points,
-        std::vector<int>& match_indices,
-        std::vector<float>& match_distances,
-        bool prune_repeated_matches = true
-    ); ///< return true if matches exist
+    bool getMatches(
+      cv::flann::Index& kd_tree,
+      const cv::Mat& projected_points,
+      const cv::Mat& detected_points,
+      std::vector<int>& match_indices,
+      std::vector<float>& match_distances,
+      bool prune_repeated_matches = true); ///< return true if matches exist
 
     void pruneMatches (
         const std::vector<int>& match_indices_in,
