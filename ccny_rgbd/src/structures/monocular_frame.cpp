@@ -134,24 +134,30 @@ cv::Mat MonocularFrame::getIntrinsicCameraMatrix() const
   return K_;
 }
 
-bool MonocularFrame::buildKDTreeFromKeypoints()
+bool MonocularFrame::buildKDTreeFromKeypoints(int number_of_random_trees)
 {
   if(this->keypoints.empty())
     return false;
 
-  // KdTree with 5 random trees
-  cv::flann::KDTreeIndexParams indexParams(5);
-
-  // You can also use LinearIndex
-  //cv::flann::LinearIndexParams indexParams;
 
   std::vector<cv::Point2d> features_vector;
   this->getFeaturesVector(features_vector);
   cv::Mat reference_points;
   convert2DPointVectorToMatrix(features_vector, reference_points, CV_32FC1);
 
-  // Create the Index
-  kdtree_ = boost::shared_ptr<cv::flann::Index> (new cv::flann::Index(reference_points, indexParams));
+  if(number_of_random_trees > 1)
+  {
+  // KdTree with 5 random trees
+    cv::flann::KDTreeIndexParams indexParams(number_of_random_trees);
+    // Create the Index
+    kdtree_ = boost::shared_ptr<cv::flann::Index> (new cv::flann::Index(reference_points, indexParams));
+  }
+  else// You can also use LinearIndex
+  {
+    cv::flann::LinearIndexParams indexParams;
+    // Create the Index
+    kdtree_ = boost::shared_ptr<cv::flann::Index> (new cv::flann::Index(reference_points, indexParams));
+  }
 
   printf("Built KD-Tree successfully!\n\n");
 
@@ -166,7 +172,7 @@ void MonocularFrame::getFeaturesVector(std::vector<cv::Point2d> &features_vector
   for(; feat_it!=keypoints.end(); ++feat_it)
   {
     cv::KeyPoint feature_from_frame = *feat_it;
-    cv::Point2d keypoint_point = feat_it->pt;
+    cv::Point2d keypoint_point = feat_it->pt; // Assuming automatic cast from Point2f to Point2d?
     features_vector.push_back(keypoint_point);
   }
 
@@ -231,161 +237,15 @@ void MonocularFrame::filterPointsWithinFrame(const std::vector<cv::Point3d> &all
   {
     if(isPointWithinFrame(all_2D_points[i]))
     {
-//      model_feature_pair_ valid_point_pair(all_3D_points[i], all_2D_points[i]);
-//      valid_points.push_back(valid_point_pair);
-//      std::cout << "3D Object point: " << valid_points.end()->model_point << " Projected to " << valid_points.end()->keyframe << std::endl;
       valid_2D_points.push_back(all_2D_points[i]);
       valid_3D_points.push_back(all_3D_points[i]);
     }
   }
 
   ROS_DEBUG("%d valid points projected to frame", valid_2D_points.size());
-  for(unsigned int i = 0; i < valid_3D_points.size(); ++i)
-    std::cout << "3D Object point: " << valid_3D_points[i] << " Projected to " << valid_2D_points[i] << std::endl;
+//  for(unsigned int i = 0; i < valid_3D_points.size(); ++i)
+//    std::cout << "3D Object point: " << valid_3D_points[i] << " Projected to " << valid_2D_points[i] << std::endl;
 }
 
-
-bool MonocularFrame::project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time)
-{
-  /*
-//  std::vector<cv::Point3f> model_in_frustum; // TODO: define a valid frustum volume for 2nd time frame (instead of projecting the whole cloud)
-
-  std::vector<cv::Point2d> projected_model_2D_points;
-//  std::vector<model_feature_pair_> valid_projected_points;
-
-//  if(is_first_time)
-//  {  // Project entire cloud:
-    PointCloudFeature::iterator cloud_it = model_3Dcloud->begin();
-    for(; cloud_it!=model_3Dcloud->end(); ++cloud_it)
-    {
-      PointFeature point_from_model = *cloud_it;
-      cv::Point3d cv_cloud_point((double) point_from_model.x,  (double) point_from_model.y, (double) point_from_model.z);
-      cv_model_3D_points.push_back(cv_cloud_point);
-    }
-//  }
-  cv::projectPoints(cv_model_3D_points, rvec_, tvec_, K_, dist_coeffs_, projected_model_2D_points);
-
-  filterPointsWithinFrame(cv_model_3D_points, projected_model_2D_points);
-
-  // TODO: if they are within the camera's frustum
-  // Save into a KD-tree for fast search
-//  tree_2D_points_from_cloud_ = boost::shared_ptr<flann::KDTreeSingleIndex> (new flann::KDTreeSingleIndex());
-
-
-  // ---------------------------------- TEST KD Trees -------------------------------------
-  // KdTree with 5 random trees
-//  cv::flann::KDTreeIndexParams indexParams(5);
-
-  // You can also use LinearIndex
-//  cv::flann::LinearIndexParams indexParams;
-
-  // Create the Index
-  cv::Mat valid_2D_points(valid_2D_points_);
-    std::cout << "Valid 2D Points as Matrix:" << valid_2D_points << std::endl
-        << " with: " << valid_2D_points.rows << " rows, " << valid_2D_points.cols << " cols" << std::endl;
-
-  cv::KDTree my_tree;
-
-*/
-
-  /*
-//  my_tree.build(valid_2D_points_, false);
-//  cv::Mat test(3,5, CV_32F);
-  std::vector<cv::Point2f> test(5);
-//  test.at<float>(0,0) = 6.6;
-//  test.at<float>(0,1) = 7.6;
-//  test.at<float>(0,4) = 8.6;
-  test.push_back(cv::Point2f(3.2,4.4));
-  test.push_back(cv::Point2f(3.2,4.4));
-  test.push_back(cv::Point2f(3.2,4.4));
-
-
-  my_tree.build(fuck, false);
-  */
-//  my_tree.build(valid_2D_points, false);
-//  std::cout << "The search space dimensionality: " << my_tree.dims() << std::endl;
-//  std::cout << "Tree points:" << my_tree.points << std::endl;
-//  std::cout << "Valid 2D Points as Matrix:" << valid_2D_points << std::endl
-//      << " with: " << valid_2D_points.rows << " rows, " << valid_2D_points.cols << " cols" << std::endl;
-
-//  cv::Mat query(numQueries,numDimensions,CV_32F);
-
-//  cv::flann::Index kdtree(valid_2D_points, indexParams);
-
-  // Perform single search for mean
-  std::cout << "Performing single search to find closest data point to mean:" << std::endl;
-  /*
-  vector<float> singleQuery;
-  vector<int> index(1);
-  vector<float> dist(1);
-
-  // Searching for the Mean
-  for(int i = 0 ; i < numDimensions ;i++)
-          singleQuery.push_back(Mean);
-
-  // Invoke the function
-  kdtree.knnSearch(singleQuery, index, dist, 1, cv::flann::SearchParams(64));
-
-  // Print single search results
-  cout << "(index,dist):" << index[0] << "," << dist[0]<< endl;
-
-  // Batch: Call knnSearch
-  cout << "Batch search:"<< endl;
-  Mat indices;//(numQueries, k, CV_32S);
-  Mat dists;//(numQueries, k, CV_32F);
-
-  // Invoke the function
-  kdtree.knnSearch(query, indices, dists, k, cv::flann::SearchParams(64));
-
-  cout << indices.rows << "\t" << indices.cols << endl;
-  cout << dists.rows << "\t" << dists.cols << endl;
-
-  // Print batch results
-  cout << "Output::"<< endl;
-  for(int row = 0 ; row < indices.rows ; row++){
-          cout << "(index,dist):";
-          for(int col = 0 ; col < indices.cols ; col++){
-                  cout << "(" << indices.at<int>(row,col) << "," << dists.at<float>(row,col) << ")" << "\t";
-          }
-          cout << endl;
-  }
-
-*/
-
-  /*
-        pcl::KdTreeFLANN<PointTV>::Ptr tree =
-        boost::make_shared<pcl::KdTreeFLANN<PointTV> > ();
-
-      tree->setInputCloud(model_);
-      int rc = 0;
-
-      // Allocate enough space to hold the results
-      std::vector<int> nn_indices (1);
-      std::vector<float> nn_dists (1);
-
-      PointCloudTV::Ptr new_features = boost::make_shared<PointCloudTV>();
-      new_features->header.frame_id = odom_frame_;
-
-      for (int ii = 0; ii < features_tf->points.size(); ++ii)
-      {
-        int result = tree->nearestKSearch(features_tf->points[ii], 1, nn_indices, nn_dists);
-
-        if (result == 0 || nn_dists[0] > 0.001)
-        {
-          new_features->points.push_back(features_tf->points[ii]);
-        }
-      }
-
-      new_features->width = new_features->points.size();
-
-      *model_ += *new_features;
-      */
-
-  // TODO:
-  // model_in_frustum.push_back(cloud_point);
-
-
-  return false; // Indicates that the first time projection is history!
-}
 
 } // namespace ccny_rgbd

@@ -71,7 +71,7 @@ bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
   return false;
 }
 
-void transformToRotationCV(
+void transformToRotationCV( // FIXME: rename it
   const tf::Transform& transform,
   cv::Mat& translation,
   cv::Mat& rotation)
@@ -222,6 +222,17 @@ void convert3DPointVectorToMatrix(const std::vector<cv::Point3d> &vector_points,
       matrix_points.at<int> (row, 2) = (int) vector_points[row].z;
     }
 
+  }
+}
+
+void convert2DPointDoubleVectorToFloatVector(const std::vector<cv::Point2d> &double_points, std::vector<cv::Point2f> &float_points)
+{
+  float_points.clear();
+  float_points.resize(double_points.size());
+  for(uint row = 0 ; row < double_points.size() ; row++)
+  {
+    float_points[row].x = (float) double_points[row].x;
+    float_points[row].y = (float) double_points[row].y;
   }
 }
 

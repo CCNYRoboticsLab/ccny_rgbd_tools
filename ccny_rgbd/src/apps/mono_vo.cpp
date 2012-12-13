@@ -209,10 +209,14 @@ void MonocularVisualOdometry::initParams()
 
   if (!nh_private_.getParam ("apps/mono_vo/max_PnP_iterations", max_PnP_iterations_))
     max_PnP_iterations_ = 10;
+  if (!nh_private_.getParam ("apps/mono_vo/number_of_random_trees", number_of_random_trees_))
+    number_of_random_trees_ = 1;
   if (!nh_private_.getParam ("apps/mono_vo/use_opencv_projection", use_opencv_projection_))
     use_opencv_projection_ = true;
   if (!nh_private_.getParam ("apps/mono_vo/assume_initial_position", assume_initial_position_))
     assume_initial_position_ = true;
+  if (!nh_private_.getParam ("apps/mono_vo/visualize_correspondences", visualize_correspondences_))
+    visualize_correspondences_ = false;
 
   // TODO: find the right values:
   nh_private_.param("app/mono_vo/sensor_aperture_width", sensor_aperture_width_, 4.8); // Default for a 1/3" = 4.8 mm
@@ -281,34 +285,64 @@ void MonocularVisualOdometry::project3DTo2D(const std::vector<cv::Point3d> &inpu
   					                                const cv::Mat &intrinsic, 
 					                                  std::vector<cv::Point2d> &vector_2D_points)
 {
-  cv::Mat rmat = rmatFromMatrix(extrinsic);
-  cv::Mat tvec = tvecFromMatrix(extrinsic);
+  //this function assumes that all the points are visible from the camera
+  vector_2D_points.clear();
+  cv::Mat m_hom(4,1,CV_64FC1);
 
   for (uint i=0; i<input_3D_points.size(); ++i)
   {
     cv::Mat m(input_3D_points[i]);
-    cv::Mat m_tf = m*rmat + tvec;
-    double z = m_tf.at<double>(2,0);
-    if (z>0) 
-    {
-      cv::Mat m_proj = intrinsic * m_tf;
-      double z_proj = m_proj.at<double>(2,0);
-      cv::Point2d temp_2D; 
-      temp_2D.x = (m_proj.at<double>(0,0))/z_proj;
-      temp_2D.y = (m_proj.at<double>(1,0))/z_proj;
-      vector_2D_points.push_back(temp_2D);
-    }  
+    m_hom.at<double>(0,0) = m.at<double>(0,0);
+    m_hom.at<double>(1,0) = m.at<double>(1,0);
+    m_hom.at<double>(2,0) = m.at<double>(2,0);
+    m_hom.at<double>(3,0) = 1.0;
+
+    cv::Mat m_proj = intrinsic * extrinsic * m_hom;
+    
+    double z_proj = m_proj.at<double>(2,0);
+    cv::Point2d temp_2D; 
+    temp_2D.x = (m_proj.at<double>(0,0))/z_proj;          
+    temp_2D.y = (m_proj.at<double>(1,0))/z_proj;
+    vector_2D_points.push_back(temp_2D);
+    
   }
 }   
-    
-    
-// TODO: Roberto implements this:
+
+
 void MonocularVisualOdometry::getVisible3DPoints(const std::vector<cv::Point3d> &input_3D_points,
                                                  const cv::Mat &extrinsic,
                                                  const cv::Mat &intrinsic,
                                                  std::vector<cv::Point3d> &visible_3D_points)
 {
-  // TODO
+  cv::Mat rmat = rmatFromMatrix(extrinsic);
+  cv::Mat tvec = tvecFromMatrix(extrinsic);
+  std::vector<cv::Point3d> positive_z_3D_points;
+  std::vector<cv::Point3d> positive_z_3D_points_tf;
+  std::vector<cv::Point2d> projected_positive_z_points;
+  std::vector<cv::Point2d> valid_2D_points;
+
+  for (uint i=0; i<input_3D_points.size(); ++i)
+  {
+    cv::Mat m(input_3D_points[i]);
+    cv::Mat m_tf = rmat*m + tvec;                           //transform the model to the camera frame
+    double z = m_tf.at<double>(2,0);
+    if (z>0) 
+    {
+      positive_z_3D_points.push_back(cv::Point3d(m));       // 3d model in the world frame with positive z wrt the camera frame
+      positive_z_3D_points_tf.push_back(cv::Point3d(m_tf)); // 3d model with positive z (camera frame)      
+
+      cv::Mat m_proj = intrinsic * m_tf;                    // projected model with positive z into the image plane
+      double z_proj = m_proj.at<double>(2,0);
+      
+      cv::Point2d temp_2D; 
+      temp_2D.x = (m_proj.at<double>(0,0))/z_proj;          
+      temp_2D.y = (m_proj.at<double>(1,0))/z_proj;          
+
+      projected_positive_z_points.push_back(temp_2D);       // projected points 
+    }  
+  }
+  // this function take only the 3D points (with positive z) wich projection is inside the image plane
+  frame_->filterPointsWithinFrame(positive_z_3D_points, projected_positive_z_points, visible_3D_points, valid_2D_points);
 }
 
 void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev, 
@@ -322,21 +356,59 @@ void MonocularVisualOdometry::estimateMotion(const cv::Mat &E_prev,
  cv::Mat rvec = rvecFromMatrix(E_prev);
  cv::Mat tvec = tvecFromMatrix(E_prev);
 
+ std::vector<cv::Point3d> visible_3d_points;
+ getVisible3DPoints(model, E_prev, intrinsic_matrix, visible_3d_points);
+
+ E_new = E_prev;
+
  for (int i=0; i<=max_PnP_iterations; ++i) 
  {
    std::vector<cv::Point2d> vector_2d_corr;
    std::vector<cv::Point3d> vector_3d_corr;    
 
-   getCorrespondences(model, features, E_prev, vector_3d_corr, vector_2d_corr);
-   cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
+   if(getCorrespondences(visible_3d_points, features, E_new, vector_3d_corr, vector_2d_corr))
+   {
+     if (visualize_correspondences_)
+     {
+       std::vector<cv::KeyPoint> features_as_keypoints = frame_->keypoints;
+       std::vector<cv::KeyPoint> projections_as_keypoints;
+       std::vector<cv::Point2f> vector_2d_corr_as_floats;
+       convert2DPointDoubleVectorToFloatVector(vector_2d_corr, vector_2d_corr_as_floats);
+       cv::KeyPoint::convert(vector_2d_corr_as_floats, projections_as_keypoints);
 
+       cv::namedWindow("Features", CV_WINDOW_NORMAL);
+       cv::namedWindow("Correspondences", CV_WINDOW_NORMAL);
+       cv::Mat feat_img, corrs_img;
+       cv::drawKeypoints(*frame_->getRGBImage(), features_as_keypoints, feat_img);
+       cv::drawKeypoints(*frame_->getRGBImage(), projections_as_keypoints, corrs_img);
+       cv::imshow("Features", feat_img);
+       cv::imshow("Correspondences", corrs_img);
+       cv::waitKey(0);
+
+       // TODO: draw matches
+       cv::Mat matches_img;
+       cv::vector<cv::DMatch> matches; // TODO: find matches as vector
+       /*
+       cv::drawMatches(feat_img, features_as_keypoints, // 1st image and its keypoints
+                       corrs_img, projections_as_keypoints, // 2nd image and its keypoints
+                       matches, // the matches
+                       matches_img, // the image produced
+                       cv::Scalar(255, 255, 255)); // color of the lines
+       cv::namedWindow("Matches", CV_WINDOW_KEEPRATIO);
+       cv::imshow("Matches", matches_img);
+        */
+     }
+
+
+     cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
+     E_new = matrixFromRvecTvec(tvec, rvec);
+   }
    ROS_WARN("estimate motion: Iteration %d", i);
  }
   
- E_new = matrixFromRvecTvec(tvec, rvec);
 }
 
-double MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points, bool use_opencv_projection )
+bool MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points, bool use_opencv_projection )
 {
   // Clean old results (if any)
   corr_2D_points.clear();
@@ -356,32 +428,41 @@ double MonocularVisualOdometry::getCorrespondences(const std::vector<cv::Point3d
   else
     project3DTo2D(model_3D, E, frame_->getIntrinsicCameraMatrix(), projected_model_2D_points);
 
-  // FIXME: is the assumption that all points are kept by OpenCV???
   frame_->filterPointsWithinFrame(model_3D, projected_model_2D_points, valid_3D_points, valid_2D_points);
 
   std::vector<int> match_indices;
-  std::vector<float> match_distances; // FIXME: use double? or will the KDTree crash?
+  std::vector<float> match_distances; // ATTENTION: don't use double, otherwise the KDTree will crash
   cv::Mat detected_points_matrix;
   cv::Mat projected_points_matrix;
   convert2DPointVectorToMatrix(features_2D, detected_points_matrix);
   convert2DPointVectorToMatrix(valid_2D_points, projected_points_matrix);
-  // FIXME: crashing when zero correspondences are attempted to be matched??
-  getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances);
 
   double total_distance_error = 0.0; // Accumulator error of distances to nearest neighbor
-  // Filter points according to threshold distance
-  for(uint i = 0 ; i < match_indices.size(); i++)
+
+  if(getMatches(detected_points_matrix, projected_points_matrix, match_indices, match_distances))
   {
-    if(match_distances[i] < distance_threshold_)
+    // Filter points according to threshold distance
+    for(uint i = 0 ; i < match_indices.size(); i++)
     {
-      corr_2D_points.push_back(valid_2D_points[match_indices[i]]);
-      corr_3D_points.push_back(valid_3D_points[match_indices[i]]);
-      total_distance_error += (double) match_distances[i];
+      if(match_distances[i] < distance_threshold_)
+      {
+        corr_2D_points.push_back(valid_2D_points[match_indices[i]]);
+        corr_3D_points.push_back(valid_3D_points[match_indices[i]]);
+        total_distance_error += (double) match_distances[i];
+      }
+    }
+    printf("Found %d correspondences\n", corr_2D_points.size());
+    //  return (double) total_distance_error/corr_2D_points.size();
+    if(corr_2D_points.size() > 0)
+      return true;
+    else
+    {
+      ROS_WARN("No correspondences found!");
+      //  return (double) total_distance_error/corr_2D_points.size();
+      return false;
     }
   }
 
-  printf("Found %d correspondences\n", corr_2D_points.size());
-  return (double) total_distance_error/corr_2D_points.size();
 }
 
 void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -391,7 +472,6 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   // **** initialize ***************************************************
   std::vector<cv::Point2d> features_vector;
-  cv::Mat E;
 
   if (!initialized_)
   {
@@ -403,11 +483,12 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     // TODO:
     // Estimate initial camera pose relative to the model
     feature_detector_->onlyFind2DFeatures(*frame_);
-    if(frame_->buildKDTreeFromKeypoints())
+    if(frame_->buildKDTreeFromKeypoints(number_of_random_trees_))
     {
       frame_->getFeaturesVector(features_vector);
-      E = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
-      frame_->setExtrinsicMatrix(E);
+      E_ = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
+
+      frame_->setExtrinsicMatrix(E_);
     }
     else
       initialized_ = false;
@@ -430,7 +511,8 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
   feature_detector_->onlyFind2DFeatures(*frame_);
   ros::WallTime end_features = ros::WallTime::now();
 
-  if(frame_->buildKDTreeFromKeypoints())
+  /*// TESTING Projections
+  if(frame_->buildKDTreeFromKeypoints(number_of_random_trees_))
   {
 
     // Testing CV projection versus our own projection implementation
@@ -453,15 +535,10 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     cv::convertPointsToHomogeneous(matrix_of_3D_points, homo_points);
     std::cout <<"HOMO points" << homo_points << std::endl;
 
-    printf("Projecting...\n");
-    if(use_opencv_projection_)
-    {
+    printf("Projecting with OpenCV...\n");
       cv::Mat rvec = rvecFromMatrix(E);
       cv::Mat tvec = tvecFromMatrix(E);
       cv::projectPoints(arbitrary_3D_points_wrt_world, rvec, tvec, frame_->getIntrinsicCameraMatrix(), frame_->pihole_model_.distortionCoeffs(), projected_2D_points);
-    }
-    else
-      project3DTo2D(arbitrary_3D_points_wrt_world, E, frame_->getIntrinsicCameraMatrix(), projected_2D_points);
 
     printf("Projection results:\n");
 
@@ -469,20 +546,34 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     {
       std::cout << "3D Point: " << arbitrary_3D_points_wrt_world[i] <<  "---> projected to 2D Point: " << projected_2D_points[i] << std::endl;
     }
-  }
 
-  /*
-  if(frame_->buildKDTreeFromKeypoints())
+
+
+    printf("Projecting with our own function...\n");
+    projected_2D_points.clear();
+    project3DTo2D(arbitrary_3D_points_wrt_world, E, frame_->getIntrinsicCameraMatrix(), projected_2D_points);
+    printf("Projection results:\n");
+    for(uint i=0; i<projected_2D_points.size(); ++i)
+    {
+      std::cout << "3D Point: " << arbitrary_3D_points_wrt_world[i] <<  "---> projected to 2D Point: " << projected_2D_points[i] << std::endl;
+    }
+  }
+   */
+
+  if(frame_->buildKDTreeFromKeypoints(number_of_random_trees_))
   {
     printf("Processing frame %d\n", frame_count_);
     frame_->getFeaturesVector(features_vector);
 
-
     ros::WallTime start_3D_cloud_projection = ros::WallTime::now();
     cv::Mat E_new;
-    estimateMotion(E, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
+    estimateMotion(E_, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
+    // Update extrinsic matrix
+    E_ = E_new;
+    std::cout << "Translation vector at frame " << frame_count_ << ": " << tvecFromMatrix(E_) << std::endl;
     // TODO: use E_new to compute odom!!!!
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
   // ------- Perspective projection of cloud 3D points onto image plane
   // Assume known initial position of camera position at the origin of the world center of coordinates
@@ -532,7 +623,6 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   frame_count_++;
   }
-*/
 
   if(publish_cloud_model_)
   {
@@ -657,17 +747,17 @@ void MonocularVisualOdometry::testGetMatches()
   getMatches(projected_points_matrix, detected_points_matrix, match_indices, match_distances);
 }
 
-void MonocularVisualOdometry::getMatches (
+bool MonocularVisualOdometry::getMatches (
   const cv::Mat& reference_points,
   const cv::Mat& query_points,
   std::vector<int>& match_indices,
   std::vector<float>& match_distances
   )
 {
-  printf("matching...\n");
+//  printf("matching...\n");
 
   // Batch: Call knnSearch
-  std::cout << "Batch search:"<< std::endl;
+//  std::cout << "Batch search:"<< std::endl;
   // Invoke the function
   int k = 1;
   cv::Mat indices;//(numQueries, k, CV_32S);
@@ -676,22 +766,23 @@ void MonocularVisualOdometry::getMatches (
   match_indices.resize(indices.rows);
   match_distances.resize(dists.rows);
 
-//  std::cout << match_indices.rows << "\t" << match_indices.cols << std::endl;
-//  std::cout << match_distances.rows << "\t" << match_distances.cols << std::endl;
-  std::cout << match_indices.size()  << std::endl;
-  std::cout << match_distances.size() << std::endl;
+  std::cout << "Number of features: " << reference_points.rows << "\t Matches: " << match_indices.size()  << std::endl;
+//  std::cout << match_distances.size() << std::endl;
 
   // Print batch results
-  std::cout << "Output::"<< std::endl;
+//  std::cout << "Output::"<< std::endl;
   for(int row = 0 ; row < indices.rows ; row++)
   {
     match_indices[row]=indices.at<int>(row,0);
     match_distances[row]=dists.at<float>(row,0);
-//      printf("Row %d: col[0]=%d, col[1]=%d \t Distances: col[0]=%f, col[1]=%f \n", row, match_indices.at<int>(row,0), match_indices.at<int>(row,1),  match_distances.at<float>(row,0), match_distances.at<float>(row,0));
-//      printf("Point = (%f, %f) \n\n", reference_points.at<float>(match_indices.at<int>(row,0),0), reference_points.at<float>(match_indices.at<int>(row,0),1));
-      printf("Row %d: col[0]=%d \t Distances: col[0]=%f \n", row, match_indices[row], match_distances[row]);
-      printf("Point = (%f, %f) \n\n", reference_points.at<float>(match_indices[row],0), reference_points.at<float>(match_indices[row],1));
+//    printf("Row %d: col[0]=%d \t Distances: col[0]=%f \n", row, match_indices[row], match_distances[row]);
+//    printf("Point = (%f, %f) \n\n", reference_points.at<float>(match_indices[row],0), reference_points.at<float>(match_indices[row],1));
   }
+
+  if(match_indices.size() > 0)
+    return true;
+  else
+    return false;
 
 }
 
@@ -770,9 +861,12 @@ cv::Mat MonocularVisualOdometry::estimateFirstPose(
   }
   else
   {
-    cv::Mat tvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
-    cv::Mat rvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
-    return matrixFromRvecTvec(rvec, tvec);
+//    cv::Mat tvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
+//    cv::Mat rvec = (cv::Mat_<double> (3,1) << 0.0, 0.0, 0.0);
+    cv::Mat trans, rot;
+    transformToRotationCV(
+        b2c_.inverse(), trans, rot);
+    return matrixFromRT(rot, trans);
   }
 }
 

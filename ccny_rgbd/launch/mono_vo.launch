@@ -29,15 +29,17 @@
     <param name="apps/mono_vo/distance_threshold"   value="2"/>
 
     <param name="apps/mono_vo/max_PnP_iterations"   value="10"/>
-    <param name="apps/mono_vo/use_opencv_projection"   value="true"/>
+    <param name="apps/mono_vo/number_of_random_trees"   value="1"/>
+    <param name="apps/mono_vo/use_opencv_projection"   value="false"/>
     <param name="apps/mono_vo/assume_initial_position"   value="true"/>
+    <param name="apps/mono_vo/visualize_correspondences"   value="true"/>
     
     #### features #####################################
 
     <param name="feature/detector_type"       value="$(arg detector_type)"/> #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/compute_descriptors" value="false"/>
     <param name="feature/smooth"              value="0"/>
-    <param name="feature/show_keypoints"      value="true"/>
+    <param name="feature/show_keypoints"      value="false"/>
 
     #### features: GFT ################################
 

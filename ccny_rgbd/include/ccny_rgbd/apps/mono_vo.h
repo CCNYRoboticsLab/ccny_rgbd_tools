@@ -89,9 +89,9 @@ class MonocularVisualOdometry
     * @param corr_3D_points the vector of 3D points corresponding to the 2D points found
     * @param corr_2D_points the vector of 2D points correspondances to the 2D keypoints (features detetected on frame)
     *
-    * @return The normalized accumulated distances (error) of the correspondences found
+    * @return whether true/false correspondences were found (NOT: The normalized accumulated distances (error) of the correspondences found)
     */
-   double getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points, bool use_opencv_projection = true);
+   bool getCorrespondences(const std::vector<cv::Point3d> &model_3D, const std::vector<cv::Point2d> &features_2D, const cv::Mat &E, std::vector<cv::Point3d> &corr_3D_points, std::vector<cv::Point2d> &corr_2D_points, bool use_opencv_projection = true);
 
    // TODO: Roberto:
    void estimateMotion(const cv::Mat &E_prev, cv::Mat &E_new, const std::vector<cv::Point3d> &model, const std::vector<cv::Point2d> &features, int max_PnP_iterations = 10);
@@ -127,6 +127,7 @@ class MonocularVisualOdometry
     bool is_first_time_projecting_; ///< To indicate the first instance when the complete cloud model gets projected to the camera
     bool use_opencv_projection_; ///< To indicate whether the projection is done using the OpenCV function or our own implementation
     bool assume_initial_position_; ///< To indicate whether the assumption of known initial position of the camera pose is applied
+    bool visualize_correspondences_; ///< To indicate whether correspondeces (matched points) will be vizualized in the frame
     int  frame_count_;
     ros::Time init_time_;
 
@@ -134,6 +135,7 @@ class MonocularVisualOdometry
     int max_iterations_;
     int distance_threshold_;
     int max_PnP_iterations_;
+    int number_of_random_trees_;
 
     tf::Transform b2c_;
     tf::Transform f2b_;
@@ -141,6 +143,7 @@ class MonocularVisualOdometry
     FeatureDetector * feature_detector_;
 
     MotionEstimation * motion_estimation_;
+    cv::Mat E_; ///< the camera's extrinsic matrix
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
     PointCloudFeature::Ptr model_ptr_;
@@ -166,11 +169,11 @@ class MonocularVisualOdometry
     bool readPointCloudFromPCDFile(); ///< Returns true if PCD file was read successfully.
     
     void testGetMatches();
-    void getMatches (
+    bool getMatches (
         const cv::Mat& projected_points,
         const cv::Mat& detected_points,
         std::vector<int>& match_indices,
-        std::vector<float>& match_distances);
+        std::vector<float>& match_distances); ///< return true if matches exist
 
     void project3DTo2D(const std::vector<cv::Point3d> &input_3D_points,
 					             const cv::Mat &extrinsic, 

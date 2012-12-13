@@ -23,12 +23,11 @@ class MonocularFrame : public RGBDFrame
 
     bool isPointWithinFrame(const cv::Point2f &point) const;
 
-    bool project3DModelToCamera(const PointCloudFeature::Ptr model_3Dcloud, bool is_first_time); ///< Returns false after the first time projection
     void setCameraAperture(double width, double height);
     void setFrame(const sensor_msgs::ImageConstPtr& rgb_msg);
     void setCameraModel(const sensor_msgs::CameraInfoConstPtr& info_msg);
     void setExtrinsicMatrix(const cv::Mat &E);
-    bool buildKDTreeFromKeypoints(); ///< Returns true if successfully built KDTree from existing keypoints (2D features)
+    bool buildKDTreeFromKeypoints(int number_of_random_trees = 1); ///< Returns true if successfully built KDTree from existing keypoints (2D features)
 
 
 //    boost::shared_ptr<cv::flann::KDTreeIndexParams flann::KDTreeSingleIndex> tree_2D_points_from_cloud_;

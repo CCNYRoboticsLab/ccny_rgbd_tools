@@ -110,6 +110,10 @@ void convert2DPointVectorToMatrix(const std::vector<cv::Point2d>& vector_points,
  */
 void convert3DPointVectorToMatrix(const std::vector<cv::Point3d> &vector_points, cv::Mat &matrix_points, int type = CV_32FC1);
 
+/* convert a vector of 2D cv Point2d into another vector of cv Point2f (simple type conversion from double to float)
+ */
+void convert2DPointDoubleVectorToFloatVector(const std::vector<cv::Point2d> &double_points, std::vector<cv::Point2f> &float_points);
+
 /* get a 4x4 matrix from a 3x3 matrix, 
  * 4th row is 0 0 0 1
  */
