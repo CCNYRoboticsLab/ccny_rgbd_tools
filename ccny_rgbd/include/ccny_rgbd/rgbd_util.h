@@ -8,30 +8,6 @@
 #include <pcl/filters/voxel_grid.h>
 #include <opencv2/opencv.hpp>
 
-// for campatibility b/n ROS Electric and Fuerte
-#if ROS_VERSION_MINIMUM(1, 8, 0)
-  typedef tf::Matrix3x3 MyMatrix;
-#else
-  typedef btMatrix3x3 MyMatrix;
-#endif
-
-namespace pcl
-{
-
-struct PointXYZ_Feature
-{
-  PCL_ADD_POINT4D;  // This adds the members x,y,z which can also be accessed using the point (which is float[4])
-
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-
-} // namespace pcl
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointXYZ_Feature,
-                                   (float, x, x)
-                                   (float, y, y)
-                                   (float, z, z));
-
 namespace ccny_rgbd
 {
 
@@ -45,7 +21,6 @@ typedef std::vector<float>           FloatVector;
 typedef std::vector<bool>            BoolVector;
 typedef std::vector<cv::Point2f>     Point2fVector;
 typedef std::vector<cv::Point3f>     Point3fVector;
-typedef std::vector<cv::Mat>         MatVector;
 typedef std::vector<Eigen::Matrix3f> Matrix3fVector;
 typedef std::vector<Eigen::Vector3f> Vector3fVector;
 typedef std::vector<cv::KeyPoint>    KeypointVector;
@@ -56,6 +31,7 @@ typedef pcl::PointCloud<PointT>   PointCloudT;
 typedef pcl::PointXYZ PointFeature;
 typedef pcl::PointCloud<PointFeature>   PointCloudFeature;
 
+// **** util functions **************************************
 
 /* given a transform, calculates the linear and angular 
  * distance between it and identity
@@ -80,9 +56,12 @@ tf::Transform tfFromEigen(Eigen::Matrix4f trans);
  */
 Eigen::Matrix4f eigenFromTf(const tf::Transform& tf);
 
-/* returns the duration, in ms, from a given time
- */
-double getMsDuration(const ros::WallTime& start);
+/* decomposes a tf into an Eigen 3x3 rotation matrix
+ * and Eigen 3x1 rotation vector */
+void tfToEigenRt(
+  const tf::Transform& tf, 
+  Matrix3f& R, 
+  Vector3f& t);
 
 /* decomposes a tf::Transform into 6 x, t, z, d, p, y
  */
@@ -90,64 +69,32 @@ void getXYZRPY(const tf::Transform& t,
                      double& x,    double& y,     double& z,
                      double& roll, double& pitch, double& yaw);
 
-/* decomposes a tf::Transform into a 3x3 OpenCV rotation matrix
- * and a 3x1 OpenCV translation vector
+/* returns the duration, in ms, from a given time
  */
-void tfToCV(
-  const tf::Transform& transform,
-  cv::Mat& translation,
-  cv::Mat& rotation);
+double getMsDuration(const ros::WallTime& start);
 
-/* get a 4x3 matrix from OpenCV r vector and t vector
- */
-cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);
+void removeInvalidMeans(
+  const Vector3fVector& means,
+  const BoolVector& valid,
+  Vector3fVector& means_f);
 
-/* get a 4x3 matrix from OpenCV 3x3 R matrix and t vector
- */
-cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
-
-/* get a 4x4 matrix from a 3x3 matrix, 
- * 4th row is 0 0 0 1
- */
-cv::Mat m4(const cv::Mat& m3);
-
-void transformDistributions(
-  MatVector& means,
-  MatVector& covariances,
-  const tf::Transform& transform);
-
-void getPointCloudFromDistributions(
-  const MatVector& means,
-  PointCloudFeature& cloud);
-
-// **** EIGEN **********************************************
-
-void removeInvalidFeatures(
+void removeInvalidDistributions(
   const Vector3fVector& means,
   const Matrix3fVector& covariances,
   const BoolVector& valid,
   Vector3fVector& means_f,
   Matrix3fVector& covariances_f);
 
-void cvMatToEigenMatrix3f(
-  const cv::Mat mat_cv, 
-  Matrix3f& mat_eigen);
-
-void cvMatToEigenVector3f(
-  const cv::Mat mat_cv, 
-  Vector3f& mat_eigen);
-
-void tfToEigenRt(
-  const tf::Transform& tf, 
-  Matrix3f& R, 
-  Vector3f& t);
+void transformMeans(
+  Vector3fVector& means,
+  const tf::Transform& transform);
 
 void transformDistributions(
   Vector3fVector& means,
   Matrix3fVector& covariances,
   const tf::Transform& transform);
 
-void getPointCloudFromDistributions(
+void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud);
 

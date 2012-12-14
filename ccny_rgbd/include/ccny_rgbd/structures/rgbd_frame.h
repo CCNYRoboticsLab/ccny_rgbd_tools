@@ -69,7 +69,7 @@ class RGBDFrame
       double max_z = 5.5,
       double max_stdev_z = 0.03);    
 
-   void constructFeaturesCloud();
+   void constructFeaturePointCloud(PointCloudFeature& cloud);
 
   protected:
 
