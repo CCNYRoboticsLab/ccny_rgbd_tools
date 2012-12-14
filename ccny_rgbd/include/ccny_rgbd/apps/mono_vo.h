@@ -178,8 +178,7 @@ class MonocularVisualOdometry
     void testGetMatches();
     bool getMatches(
       cv::flann::Index& kd_tree,
-      const cv::Mat& projected_points,
-      const cv::Mat& detected_points,
+      const cv::Mat& query_points,          // 2d visible query points
       std::vector<int>& match_indices,
       std::vector<float>& match_distances,
       bool prune_repeated_matches = true); ///< return true if matches exist
