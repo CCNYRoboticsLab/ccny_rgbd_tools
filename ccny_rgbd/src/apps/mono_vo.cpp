@@ -207,10 +207,6 @@ void MonocularVisualOdometry::initParams()
     max_PnP_iterations_ = 10;
   if (!nh_private_.getParam ("apps/mono_vo/number_of_random_trees", number_of_random_trees_))
     number_of_random_trees_ = 1;
-  if (!nh_private_.getParam ("apps/mono_vo/use_opencv_projection", use_opencv_projection_))
-    use_opencv_projection_ = true;
-  if (!nh_private_.getParam ("apps/mono_vo/build_tree_using_detected_features", build_tree_using_detected_features_))
-    build_tree_using_detected_features_ = true;
   if (!nh_private_.getParam ("apps/mono_vo/assume_initial_position", assume_initial_position_))
     assume_initial_position_ = true;
   if (!nh_private_.getParam ("apps/mono_vo/visualize_correspondences", visualize_correspondences_))
@@ -367,32 +363,6 @@ void MonocularVisualOdometry::estimateMotion(
   std::vector<cv::Point2d> visible_2d_points;
   getVisible3DPoints(model, E_prev, intrinsic_matrix, visible_3d_points, visible_2d_points);
 
-  // **** build kd tree
-
-  cv::Mat train_points; // observed 2d features
-  cv::flann::Index kd_tree;
-
-  if(build_tree_using_detected_features_)
-  {
-    convert2DPointVectorToMatrix(features, train_points, CV_32FC1);
-    if(number_of_random_trees_ > 1)
-    {
-    // KdTree with 5 random trees
-      cv::flann::KDTreeIndexParams indexParams(number_of_random_trees_);
-      // Create the Index
-      kd_tree.build(train_points, indexParams);
-    }
-    else// You can also use LinearIndex
-    {
-      cv::flann::LinearIndexParams indexParams;
-      // Create the Index
-      kd_tree.build(train_points, indexParams);
-    }
-  }
-
-
-  // ***********************************************************************
-
   E_new = E_prev;
 
   printf("estimateMotion...\n");
@@ -404,20 +374,18 @@ void MonocularVisualOdometry::estimateMotion(
   std::cout << "rmat: " << std::endl << rmat << std::endl;
   bool last_iteration = false;
 
-  for (int i=0; i <= max_PnP_iterations; ++i) 
+  for (int i=0; i < max_PnP_iterations; ++i)
   {
     printf("[iter %d] estimateMotion:\n", i);
 
     std::vector<cv::Point2d> vector_2d_corr;
     std::vector<cv::Point3d> vector_3d_corr;    
-
     
-    if (i==max_PnP_iterations)
+    if (i==max_PnP_iterations-1)
     {
       last_iteration = true;
     }
-    bool corresp_result = getCorrespondences(kd_tree, visible_3d_points,
-                                             features, E_new, vector_3d_corr, vector_2d_corr, last_iteration);
+    bool corresp_result = getCorrespondences(visible_3d_points, features, E_new, vector_3d_corr, vector_2d_corr, last_iteration);
   
     if(corresp_result)
     {
@@ -425,10 +393,8 @@ void MonocularVisualOdometry::estimateMotion(
       E_new = matrixFromRvecTvec(rvec, tvec);
 
       // output 
-      cv::Mat rmat;
-      cv::Rodrigues(rvec, rmat);
       std::cout << "tvec: " << std::endl << tvec << std::endl;
-      std::cout << "rmat: " << std::endl << rmat << std::endl;
+      std::cout << "rmat: " << std::endl << rmatFromMatrix(E_new) << std::endl;
     }
     else
     {
@@ -441,14 +407,12 @@ void MonocularVisualOdometry::estimateMotion(
 }
 
 bool MonocularVisualOdometry::getCorrespondences(
-  cv::flann::Index& kd_tree,
   const std::vector<cv::Point3d>& visible_3d_points, 
   const std::vector<cv::Point2d>& features_2D, 
   const cv::Mat &E, 
   std::vector<cv::Point3d> &corr_3D_points, 
   std::vector<cv::Point2d> &corr_2D_points, 
-  bool last_iteration,
-  bool use_opencv_projection )
+  bool last_iteration)
 {
   // Clean old results (if any)
   corr_2D_points.clear();
@@ -463,36 +427,31 @@ bool MonocularVisualOdometry::getCorrespondences(
   cv::Mat query_points_matrix;
   std::vector<int> match_indices;
   std::vector<float> match_distances; // ATTENTION: don't use double, otherwise the KDTree will crash
-
   double total_distance_error = 0.0; // Accumulator error of distances to nearest neighbor
 
+  train_points_vector = projected_model_2D_points;
+  query_points_vector = features_2D;
 
-  if(build_tree_using_detected_features_ )
-  {
-    train_points_vector  =features_2D;
-    query_points_vector = projected_model_2D_points;
-  }
-  else
-  {
-    train_points_vector = projected_model_2D_points;
-    query_points_vector = features_2D;
+  cv::Mat train_points_matrix;
+  convert2DPointVectorToMatrix(train_points_vector, train_points_matrix, CV_32FC1);
 
-    cv::Mat train_points_matrix;
-    convert2DPointVectorToMatrix(train_points_vector, train_points_matrix, CV_32FC1);
-    if(number_of_random_trees_ > 1)
-    {
-      // KdTree with 5 random trees
-      cv::flann::KDTreeIndexParams indexParams(number_of_random_trees_);
-      // Create the Index
-      kd_tree.build(train_points_matrix, indexParams);
-    }
-    else// You can also use LinearIndex
-    {
-      cv::flann::LinearIndexParams indexParams;
-      // Create the Index
-      kd_tree.build(train_points_matrix, indexParams);
-    }
+  // Create KD-Tree:
+  // ---------------------------------------------------------------------------------
+  cv::flann::Index kd_tree;
+  if(number_of_random_trees_ > 1)
+  {
+    // KdTree with 5 random trees
+    cv::flann::KDTreeIndexParams indexParams(number_of_random_trees_);
+    // Create the Index
+    kd_tree.build(train_points_matrix, indexParams);
   }
+  else// You can also use LinearIndex
+  {
+    cv::flann::LinearIndexParams indexParams;
+    // Create the Index
+    kd_tree.build(train_points_matrix, indexParams);
+  }
+  // ---------------------------------------------------------------------------------
 
   convert2DPointVectorToMatrix(query_points_vector, query_points_matrix, CV_32FC1);
   if(getMatches(kd_tree, query_points_matrix, match_indices, match_distances, false))
@@ -505,25 +464,17 @@ bool MonocularVisualOdometry::getCorrespondences(
       if(match_distances[i] < (float) distance_threshold_)
       {
         int query_idx = i;
-        int train_idx = match_indices[i];
+        int train_idx = match_indices[query_idx];
 
-        // FIXME: double check this:
-        if(build_tree_using_detected_features_)
-        {
-          corr_2D_points.push_back(features_2D[train_idx]);
-          corr_3D_points.push_back(visible_3d_points[query_idx]);
-        }
-        else
-        {
-          corr_2D_points.push_back(features_2D[query_idx]);
-          corr_3D_points.push_back(visible_3d_points[train_idx]);
-        }
+//        corr_2D_points.push_back(features_2D[query_idx]);
+        corr_2D_points.push_back(query_points_vector[query_idx]);
+        corr_3D_points.push_back(visible_3d_points[train_idx]);
 
         total_distance_error += (double) match_distances[query_idx];
         good_matches.push_back(cv::DMatch(query_idx, train_idx, match_distances[query_idx]));
       }
     }
-    printf("Found %d good matches out of %d train-points (in tree) and %d query-points\n", corr_2D_points.size(), train_points_vector.size(), query_points_vector.size());
+    printf("Found %d good matches out of %d train-points (projected points) and %d query-points (detected features)\n", corr_2D_points.size(), train_points_vector.size(), query_points_vector.size());
 
    if ((visualize_correspondences_) && (last_iteration==true))
     {
@@ -544,7 +495,7 @@ bool MonocularVisualOdometry::getCorrespondences(
       // Draw matches
       cv::Mat good_matches_img;
       cv::drawMatches(query_points_img, query_keypoints, // (QUERY) 1nd image and its keypoints
-                      train_points_img, train_keypoints,           // (TRAIN) 2st image and its keypoints
+                      train_points_img, train_keypoints,  // (TRAIN) 2st image and its keypoints
                       good_matches, // the matches
                       good_matches_img); // the image produced
 
@@ -682,15 +633,7 @@ bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const in
   std::vector<cv::Point3d> valid_3D_points;
   std::vector<cv::Point2d> valid_2D_points;
 
-  if(use_opencv_projection_)
-   {
-     cv::Mat rvec = rvecFromMatrix(E);
-     cv::Mat tvec = tvecFromMatrix(E);
-     cv::projectPoints(sample_3D_points, rvec, tvec, frame_->getIntrinsicCameraMatrix(), frame_->pihole_model_.distortionCoeffs(), projected_model_2D_points);
-   }
-   else
-     // TODO: Test custom function in comparisson to OpenCV's implementation
-     project3DTo2D(sample_3D_points, E, frame_->getIntrinsicCameraMatrix(), projected_model_2D_points);
+   project3DTo2D(sample_3D_points, E, frame_->getIntrinsicCameraMatrix(), projected_model_2D_points);
 
   frame_->filterPointsWithinFrame(sample_3D_points, projected_model_2D_points, valid_3D_points, valid_2D_points);
 

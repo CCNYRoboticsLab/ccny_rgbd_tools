@@ -91,7 +91,7 @@ void transformToRotationCV( // FIXME: rename it
     rotation.at<double>(j,i) = rotation_tf[j][i];
 }
 
-tf::Transform getTfFromCVMat(const cv::Mat& M) // TODO: Revise me and make sure implementation is correct
+tf::Transform getTfFromCVMat(const cv::Mat& M)
 {
   cv::Mat tvec = tvecFromMatrix(M);
   cv::Mat rot_mat = rmatFromMatrix(M);
