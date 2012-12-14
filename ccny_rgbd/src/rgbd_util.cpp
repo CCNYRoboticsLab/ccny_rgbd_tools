@@ -271,4 +271,81 @@ void getPointCloudFromDistributions(
   }
 }
 
+void projectCloudToImage(PointCloudT cloud,
+                         Matrix3f rmat,
+                         Vector3f tvec,
+                         Matrix3f intrinsic,
+                         int width,
+                         int height,
+                         cv::Mat rgb_img,
+                         cv::Mat depth_img)
+{
+  
+  cv::Mat rgb_img(width, height, CV_8UC3);
+  
+  for (uint i=0; i<cloud.points.size(); ++i)
+  {
+    // convert from pcl PointT to Eigen Vector3f
+         
+    PointT point = cloud.points[i];
+    Vector3f p_world;
+    Vector3f p_world(0,0) = point.x;
+    Vector3f p_world(1,0) = point.y;
+    Vector3f p_world(2,0) = point.z;
+
+    Vector3f p_cam = rmat * p_world + tvec; 
+    
+       
+    Vector3f p_proj = intrinsic * p_cam;                    
+    double z_proj = p_proj(2,0);
+
+    uint u = (p_proj<double>(0,0))/z_proj;
+    uint v = (p_proj.at<double>(1,0))/z_proj;
+    
+    if (u<width) && (u>0) && (v<height) && (v>0) 
+    {
+      //cv::Vec3b color_rgb = rgb_img.at<cv::Vec3b>(v,u);
+
+      //go from pcl to color:
+
+      cv::Vec3b color_rgb;
+      color_rgb.r = point.r;
+      color_rgb.g = point.g;
+      color_rgb.b = point.b;
+
+      rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+    }
+    
+  }
+
+//cv::Mat depth_image = cv::Mat::zeros(row, col, CV_16UC1)   //has to be in mm so multiply by 1000
+
+
+for (uint i=0; i<input_3D_points.size(); ++i)
+  {
+    cv::Mat p_world(input_3D_points[i]);
+//   cv::Mat p_cam = rmat_inv*p_world + tvec_inv;                           //transform the 3D world Point P to the camera frame
+    cv::Mat p_cam = rmat*p_world + tvec;                           //transform the 3D world Point P to the camera frame
+    double z = p_cam.at<double>(2,0);
+    if (z>0)
+    {
+      positive_z_3D_points.push_back(cv::Point3d(p_world));       // 3d model in the world frame with positive z wrt the camera frame
+
+      cv::Mat p_proj = intrinsic * p_cam;                    // projected model with positive z into the image plane
+      double z_proj = p_proj.at<double>(2,0);
+      
+      cv::Point2d point_2D_px; 
+      point_2D_px.x = (p_proj.at<double>(0,0))/z_proj;          
+      point_2D_px.y = (p_proj.at<double>(1,0))/z_proj;          
+
+      positive_z_2D_points_projected.push_back(point_2D_px);       // projected points
+    }  
+  }
+  // this function take only the 3D points (with positive z) wich projection is inside the image plane
+  frame_->filterPointsWithinFrame(positive_z_3D_points, positive_z_2D_points_projected, visible_3D_points, visible_2D_points);
+}
+
+
+
+
 } //namespace ccny_rgbd
