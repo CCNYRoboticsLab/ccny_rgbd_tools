@@ -91,6 +91,28 @@ void transformToRotationCV( // FIXME: rename it
     rotation.at<double>(j,i) = rotation_tf[j][i];
 }
 
+tf::Transform getTfFromCVMat(const cv::Mat& M) // TODO: Revise me and make sure implementation is correct
+{
+  cv::Mat tvec = tvecFromMatrix(M);
+  cv::Mat rot_mat = rmatFromMatrix(M);
+  // extract translation
+  tf::Vector3 translation_tf;
+  translation_tf.setX(tvec.at<double>(0,0));
+  translation_tf.setY(tvec.at<double>(1,0));
+  translation_tf.setZ(tvec.at<double>(2,0));
+
+  // extract rotation
+  tf::Matrix3x3 rotation_tf;
+  rotation_tf.setValue(rot_mat.at<double>(0,0), rot_mat.at<double>(0,1), rot_mat.at<double>(0,2),
+                       rot_mat.at<double>(1,0), rot_mat.at<double>(1,1), rot_mat.at<double>(1,2),
+                       rot_mat.at<double>(2,0), rot_mat.at<double>(2,1), rot_mat.at<double>(2,2)
+                    );
+  tf::Transform transform;
+  transform.setOrigin(translation_tf);
+  transform.setBasis(rotation_tf);
+  return transform;
+}
+
 cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec)
 {
   cv::Mat rmat;

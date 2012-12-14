@@ -81,6 +81,10 @@ void transformToRotationCV(
   cv::Mat& translation,
   cv::Mat& rotation);
 
+/* coverts a 3x4 Extrinsic matrix (OpenCV) into a tf::Transform
+ */
+tf::Transform getTfFromCVMat(const cv::Mat& M);
+
 /* decomposes a 3x4 Extrinsic matrix into a 3x3 OpenCV rotation matrix
  */
 cv::Mat rmatFromMatrix(const cv::Mat& E);

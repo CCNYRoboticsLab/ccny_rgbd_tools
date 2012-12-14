@@ -293,13 +293,13 @@ void MonocularVisualOdometry::project3DTo2D(const std::vector<cv::Point3d> &inpu
     m_hom.at<double>(2,0) = m.at<double>(2,0);
     m_hom.at<double>(3,0) = 1.0;
 
-    cv::Mat m_proj = intrinsic * extrinsic * m_hom;
+    cv::Mat p = intrinsic * extrinsic * m_hom;
     
-    double z_proj = m_proj.at<double>(2,0);
-    cv::Point2d temp_2D; 
-    temp_2D.x = (m_proj.at<double>(0,0))/z_proj;          
-    temp_2D.y = (m_proj.at<double>(1,0))/z_proj;
-    vector_2D_points.push_back(temp_2D);
+    double z_proj = p.at<double>(2,0);
+    cv::Point2d point_2D_px; 
+    point_2D_px.x = (p.at<double>(0,0))/z_proj;          
+    point_2D_px.y = (p.at<double>(1,0))/z_proj;
+    vector_2D_points.push_back(point_2D_px);
     
   }
 }   
@@ -313,32 +313,30 @@ void MonocularVisualOdometry::getVisible3DPoints(const std::vector<cv::Point3d> 
   cv::Mat rmat = rmatFromMatrix(extrinsic);
   cv::Mat tvec = tvecFromMatrix(extrinsic);
   std::vector<cv::Point3d> positive_z_3D_points;
-  std::vector<cv::Point3d> positive_z_3D_points_tf;
-  std::vector<cv::Point2d> projected_positive_z_points;
+  std::vector<cv::Point2d> positive_z_2D_points_projected;
   std::vector<cv::Point2d> valid_2D_points;
 
   for (uint i=0; i<input_3D_points.size(); ++i)
   {
-    cv::Mat m(input_3D_points[i]);
-    cv::Mat m_tf = rmat*m + tvec;                           //transform the model to the camera frame
-    double z = m_tf.at<double>(2,0);
-    if (z>0) 
+    cv::Mat P(input_3D_points[i]);
+    cv::Mat p = rmat*P + tvec;                           //transform the 3D world Point P to the camera frame
+    double z = p.at<double>(2,0);
+    if (z>0)  // FIXME: it cannot always be the case???
     {
-      positive_z_3D_points.push_back(cv::Point3d(m));       // 3d model in the world frame with positive z wrt the camera frame
-      positive_z_3D_points_tf.push_back(cv::Point3d(m_tf)); // 3d model with positive z (camera frame)      
+      positive_z_3D_points.push_back(cv::Point3d(P));       // 3d model in the world frame with positive z wrt the camera frame
 
-      cv::Mat m_proj = intrinsic * m_tf;                    // projected model with positive z into the image plane
-      double z_proj = m_proj.at<double>(2,0);
+      cv::Mat p_proj = intrinsic * p;                    // projected model with positive z into the image plane
+      double z_proj = p_proj.at<double>(2,0);
       
-      cv::Point2d temp_2D; 
-      temp_2D.x = (m_proj.at<double>(0,0))/z_proj;          
-      temp_2D.y = (m_proj.at<double>(1,0))/z_proj;          
+      cv::Point2d point_2D_px; 
+      point_2D_px.x = (p_proj.at<double>(0,0))/z_proj;          
+      point_2D_px.y = (p_proj.at<double>(1,0))/z_proj;          
 
-      projected_positive_z_points.push_back(temp_2D);       // projected points 
+      positive_z_2D_points_projected.push_back(point_2D_px);       // projected points
     }  
   }
   // this function take only the 3D points (with positive z) wich projection is inside the image plane
-  frame_->filterPointsWithinFrame(positive_z_3D_points, projected_positive_z_points, visible_3D_points, valid_2D_points);
+  frame_->filterPointsWithinFrame(positive_z_3D_points, positive_z_2D_points_projected, visible_3D_points, valid_2D_points);
 }
 
 void MonocularVisualOdometry::estimateMotion(
@@ -350,15 +348,26 @@ void MonocularVisualOdometry::estimateMotion(
 {
   // **** build kd tree
 
-  int number_of_random_trees = 4;
   cv::Mat train_points; // observed 2d features
   convert2DPointVectorToMatrix(features, train_points, CV_32FC1);
 
   //cv::Mat train_points(features);
   //train_points.convertTo(train_points, CV_32FC1);
   
-  cv::flann::LinearIndexParams indexParams;
-  cv::flann::Index kd_tree(train_points, indexParams);
+  cv::flann::Index kd_tree;
+  if(number_of_random_trees_ > 1)
+  {
+  // KdTree with 5 random trees
+    cv::flann::KDTreeIndexParams indexParams(number_of_random_trees_);
+    // Create the Index
+    kd_tree.build(train_points, indexParams);
+  }
+  else// You can also use LinearIndex
+  {
+    cv::flann::LinearIndexParams indexParams;
+    // Create the Index
+    kd_tree.build(train_points, indexParams);
+  }
 
   // **************************************************
 
@@ -442,7 +451,7 @@ bool MonocularVisualOdometry::getCorrespondences(
     // Filter points according to threshold distance
     for(uint i = 0 ; i < match_indices.size(); i++)
     {
-      if(match_distances[i] < distance_threshold_)
+      if(match_distances[i] < (float) distance_threshold_)
       {
         int query_idx = i;
         int train_idx = match_indices[i];
@@ -512,15 +521,15 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     // TODO:
     // Estimate initial camera pose relative to the model
     feature_detector_->onlyFind2DFeatures(*frame_);
-    if(frame_->buildKDTreeFromKeypoints(number_of_random_trees_))
-    {
+//    if(frame_->buildKDTreeFromKeypoints(number_of_random_trees_))
+//    {
       frame_->getFeaturesVector(features_vector);
       E_ = estimateFirstPose(frame_->getIntrinsicCameraMatrix(), model_cloud_vector_, features_vector, min_inliers_, max_iterations_, distance_threshold_);
 
       frame_->setExtrinsicMatrix(E_);
-    }
-    else
-      initialized_ = false;
+//    }
+//    else
+//      initialized_ = false;
 
     if (!initialized_) return;
 
@@ -541,34 +550,23 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
  // {
     frame_->getFeaturesVector(features_vector);
 
-    ros::WallTime start_3D_cloud_projection = ros::WallTime::now();
+    ros::WallTime start_PnP_reg = ros::WallTime::now();
     cv::Mat E_new;
     estimateMotion(E_, E_new, model_cloud_vector_, features_vector, max_PnP_iterations_);
+    ros::WallTime end_PnP_reg = ros::WallTime::now();
+
     // Update extrinsic matrix
     E_ = E_new;
     std::cout << "Computed Translation vector at frame " << frame_count_ << ": " << tvecFromMatrix(E_) << std::endl;
-    // TODO: use E_new to compute odom!!!!
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-  // ------- Perspective projection of cloud 3D points onto image plane
-  // Assume known initial position of camera position at the origin of the world center of coordinates
-  // TODO: needs a base2cam static transformation to correct for the camera coordinates in the world where +Z is point upwards
-  // NOTE: the OpenNI driver publishes the static transformation (doing the rotation of the axis) between the rgb optical frame (/camera_rgb_optical_frame) and the /camera_link
-  // ---------------------------------------------------------------
-    ros::WallTime end_3D_cloud_projection = ros::WallTime::now();
-
-    // TODO: compute odom
-    // **** registration *************************************************
-    // TODO: with the 3Dto2D method of registration and using PnP
-    //ros::WallTime start_PnP_reg = ros::WallTime::now();
-    //  tf::Transform motion = motion_estimation_->getMotionEstimation(frame);
-    //  f2b_ = motion * f2b_; // TODO: the transformation based on motion estimation after PnP
-    //ros::WallTime end_PnP_reg = ros::WallTime::now();
+//    /*
     // **** publish motion **********************************************
-
-    publishTf(rgb_msg->header);
-
+    // Publish f2b = [b2c * f2c^-1]^-1   where f2c^-1=E
+    tf::Transform f2c_inv = getTfFromCVMat(E_);
+    tf::Transform f2b_inv = (b2c_ * f2c_inv);
+    f2b_ = f2b_inv.inverse();
+    publishTransformF2B(rgb_msg->header);
+/*
     ros::WallTime end = ros::WallTime::now();
     // **** print diagnostics *******************************************
 
@@ -576,21 +574,25 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     int n_keypoints = frame_->keypoints.size();
 
     double d_features = 1000.0 * (end_features - start_features).toSec();
-    double d_cloud_projection = 1000.0 * (end_3D_cloud_projection - start_3D_cloud_projection).toSec();
-    // double d_PnP_reg      = 1000.0 * (end_PnP_reg      - start_PnP_reg).toSec();
-    double d_PnP_reg      = 0; // TODO: ^^^^^^ compute in correct place
+    double d_PnP_pose_est      = 1000.0 * (end_PnP_reg      - start_PnP_reg).toSec();
     double d_total    = 1000.0 * (end          - start).toSec();
 
+    ROS_INFO("[%d] Fr: %2.1f s %s[%d keyspoints]: %3.1f s  \t Pose Est: %4.1f s \t TOTAL %4.1f s\n",
+             frame_count_,
+             detector_type_.c_str(),
+             n_keypoints, d_features,
+             d_PnP_pose_est,
+             d_total);
 
-/*
-  ROS_INFO("[%d] Fr: %2.1f s %s[%d keyspoints]: %3.1f s  \t Proj: %2.1f s \t Reg: %4.1f s \t TOTAL %4.1f s\n",
-    frame_count_,
-    detector_type_.c_str(),
-    n_keypoints, d_features,
-    d_cloud_projection, d_PnP_reg,
-    d_total)
-*/
-
+    double pos_x = f2b_.getOrigin().getX();
+    double pos_y = f2b_.getOrigin().getY();
+    double pos_z = f2b_.getOrigin().getZ();
+    // for position profiling
+    printf("%d \t %.2f \t %.3f \t %.3f \t %.3f \n",
+      frame_count_, time,
+      pos_x, pos_y, pos_z);
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     */
     frame_count_++;
   //}
 
@@ -654,7 +656,7 @@ bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const in
   return false;
 }
 
-void MonocularVisualOdometry::publishTf(const std_msgs::Header& header)
+void MonocularVisualOdometry::publishTransformF2B(const std_msgs::Header& header)
 {
   ROS_INFO("Transforming Fixed Frame (%s) to Base (%s)", fixed_frame_.c_str(), base_frame_.c_str());
 

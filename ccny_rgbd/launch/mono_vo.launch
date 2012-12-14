@@ -25,11 +25,11 @@
        
     #### RANSAC params for initial pose estimation ######################
     <param name="apps/mono_vo/min_inliers"          value="3"/>
-    <param name="apps/mono_vo/max_iterations"       value="10"/>
-    <param name="apps/mono_vo/distance_threshold"   value="64"/> # Squared distance
+    <param name="apps/mono_vo/max_iterations"       value="100"/>
+    <param name="apps/mono_vo/distance_threshold"   value="100"/> # Squared distance
 
     <param name="apps/mono_vo/max_PnP_iterations"   value="10"/>
-    <param name="apps/mono_vo/number_of_random_trees"   value="1"/>
+    <param name="apps/mono_vo/number_of_random_trees"   value="5"/>
     <param name="apps/mono_vo/use_opencv_projection"   value="false"/>
     <param name="apps/mono_vo/assume_initial_position"   value="true"/>
     <param name="apps/mono_vo/visualize_correspondences"   value="true"/>

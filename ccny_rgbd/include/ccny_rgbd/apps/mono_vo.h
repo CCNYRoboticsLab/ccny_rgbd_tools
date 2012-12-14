@@ -168,7 +168,7 @@ class MonocularVisualOdometry
     // **** private functions
     void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
     void initParams();
-    void publishTf(const std_msgs::Header& header);
+    void publishTransformF2B(const std_msgs::Header& header);
 
     bool getBaseToCameraTf(const std_msgs::Header& header);
     void setFeatureDetector();
