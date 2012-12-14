@@ -389,7 +389,12 @@ void MonocularVisualOdometry::estimateMotion(
   
     if(corresp_result)
     {
-      cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
+//      cv::solvePnP(vector_3d_corr, vector_2d_corr, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
+      std::vector<cv::Point3f> vector_3d_corr_as_float;
+      convert3DPointDoubleVectorToFloatVector(vector_3d_corr, vector_3d_corr_as_float);
+      std::vector<cv::Point2f> vector_2d_corr_as_float;
+      convert2DPointDoubleVectorToFloatVector(vector_2d_corr, vector_2d_corr_as_float);
+      cv::solvePnPRansac(vector_3d_corr_as_float, vector_2d_corr_as_float, intrinsic_matrix, cv::Mat(), rvec, tvec, true);
       E_new = matrixFromRvecTvec(rvec, tvec);
 
       // output 

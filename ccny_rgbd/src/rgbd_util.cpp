@@ -260,4 +260,16 @@ void convert2DPointDoubleVectorToFloatVector(const std::vector<cv::Point2d> &dou
   }
 }
 
+void convert3DPointDoubleVectorToFloatVector(const std::vector<cv::Point3d> &double_points, std::vector<cv::Point3f> &float_points)
+{
+  float_points.clear();
+  float_points.resize(double_points.size());
+  for(uint row = 0 ; row < double_points.size() ; row++)
+  {
+    float_points[row].x = (float) double_points[row].x;
+    float_points[row].y = (float) double_points[row].y;
+    float_points[row].z = (float) double_points[row].z;
+  }
+}
+
 } //namespace ccny_rgbd
