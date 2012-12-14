@@ -402,6 +402,7 @@ void MonocularVisualOdometry::estimateMotion(
   cv::Rodrigues(rvec, rmat);
   std::cout << "tvec: " << std::endl << tvec << std::endl;
   std::cout << "rmat: " << std::endl << rmat << std::endl;
+  bool last_iteration = false;
 
   for (int i=0; i <= max_PnP_iterations; ++i) 
   {
@@ -410,8 +411,13 @@ void MonocularVisualOdometry::estimateMotion(
     std::vector<cv::Point2d> vector_2d_corr;
     std::vector<cv::Point3d> vector_3d_corr;    
 
-
-    bool corresp_result = getCorrespondences(kd_tree, visible_3d_points, features, E_new, vector_3d_corr, vector_2d_corr);
+    
+    if (i==max_PnP_iterations)
+    {
+      last_iteration = true;
+    }
+    bool corresp_result = getCorrespondences(kd_tree, visible_3d_points,
+                                             features, E_new, vector_3d_corr, vector_2d_corr, last_iteration);
   
     if(corresp_result)
     {
@@ -430,7 +436,8 @@ void MonocularVisualOdometry::estimateMotion(
       ROS_WARN("Could not estimate correspondences. Leaving estimateMotion loop.");
       break;
     }
-  } 
+  }
+//vis 
 }
 
 bool MonocularVisualOdometry::getCorrespondences(
@@ -440,6 +447,7 @@ bool MonocularVisualOdometry::getCorrespondences(
   const cv::Mat &E, 
   std::vector<cv::Point3d> &corr_3D_points, 
   std::vector<cv::Point2d> &corr_2D_points, 
+  bool last_iteration,
   bool use_opencv_projection )
 {
   // Clean old results (if any)
@@ -517,7 +525,7 @@ bool MonocularVisualOdometry::getCorrespondences(
     }
     printf("Found %d good matches out of %d train-points (in tree) and %d query-points\n", corr_2D_points.size(), train_points_vector.size(), query_points_vector.size());
 
-    if (visualize_correspondences_)
+   if ((visualize_correspondences_) && (last_iteration==true))
     {
       std::vector<cv::KeyPoint> train_keypoints;
       std::vector<cv::KeyPoint> query_keypoints;
