@@ -134,6 +134,7 @@ class MonocularVisualOdometry
     bool use_opencv_projection_; ///< To indicate whether the projection is done using the OpenCV function or our own implementation
     bool assume_initial_position_; ///< To indicate whether the assumption of known initial position of the camera pose is applied
     bool visualize_correspondences_; ///< To indicate whether correspondeces (matched points) will be vizualized in the frame
+    bool build_tree_using_detected_features_; ///< To indicate whether detected 2D features will be use to build the kd-tree. Otherwise, projections will be used.
     int  frame_count_;
     ros::Time init_time_;
 
@@ -192,13 +193,14 @@ class MonocularVisualOdometry
 
     void project3DTo2D(const std::vector<cv::Point3d> &input_3D_points,
 					             const cv::Mat &extrinsic, 
-  					           const cv::Mat &intrinsic, 
+					             const cv::Mat &intrinsic,
 					             std::vector<cv::Point2d> &vector_2D_points);
 
     void getVisible3DPoints(const std::vector<cv::Point3d> &input_3D_points,
 					             const cv::Mat &extrinsic,
-  					           const cv::Mat &intrinsic,
-					             std::vector<cv::Point3d> &visible_3D_points);
+					             const cv::Mat &intrinsic,
+					             std::vector<cv::Point3d> &visible_3D_points,
+					             std::vector<cv::Point2d> &visible_2D_points);
 };
 
 } //namespace ccny_rgbd

@@ -209,6 +209,8 @@ void MonocularVisualOdometry::initParams()
     number_of_random_trees_ = 1;
   if (!nh_private_.getParam ("apps/mono_vo/use_opencv_projection", use_opencv_projection_))
     use_opencv_projection_ = true;
+  if (!nh_private_.getParam ("apps/mono_vo/build_tree_using_detected_features", build_tree_using_detected_features_))
+    build_tree_using_detected_features_ = true;
   if (!nh_private_.getParam ("apps/mono_vo/assume_initial_position", assume_initial_position_))
     assume_initial_position_ = true;
   if (!nh_private_.getParam ("apps/mono_vo/visualize_correspondences", visualize_correspondences_))
@@ -308,8 +310,12 @@ void MonocularVisualOdometry::project3DTo2D(const std::vector<cv::Point3d> &inpu
 void MonocularVisualOdometry::getVisible3DPoints(const std::vector<cv::Point3d> &input_3D_points,
                                                  const cv::Mat &extrinsic,
                                                  const cv::Mat &intrinsic,
-                                                 std::vector<cv::Point3d> &visible_3D_points)
+                                                 std::vector<cv::Point3d> &visible_3D_points,
+                                                 std::vector<cv::Point2d> &visible_2D_points)
 {
+  visible_3D_points.clear();
+  visible_2D_points.clear();
+
   cv::Mat rmat = rmatFromMatrix(extrinsic);
   cv::Mat tvec = tvecFromMatrix(extrinsic);
   std::vector<cv::Point3d> positive_z_3D_points;
@@ -336,7 +342,7 @@ void MonocularVisualOdometry::getVisible3DPoints(const std::vector<cv::Point3d> 
     }  
   }
   // this function take only the 3D points (with positive z) wich projection is inside the image plane
-  frame_->filterPointsWithinFrame(positive_z_3D_points, positive_z_2D_points_projected, visible_3D_points, valid_2D_points);
+  frame_->filterPointsWithinFrame(positive_z_3D_points, positive_z_2D_points_projected, visible_3D_points, visible_2D_points);
 }
 
 void MonocularVisualOdometry::estimateMotion(
@@ -346,10 +352,25 @@ void MonocularVisualOdometry::estimateMotion(
   const std::vector<cv::Point2d>& features,     // observed 2D features
   int max_PnP_iterations)
 {
+  // **************************************************
+
+  cv::Mat intrinsic_matrix = frame_->getIntrinsicCameraMatrix();
+
+  cv::Mat rvec = rvecFromMatrix(E_prev);
+  cv::Mat tvec = tvecFromMatrix(E_prev);
+
+  std::vector<cv::Point3d> visible_3d_points;
+  std::vector<cv::Point2d> visible_2d_points;
+  getVisible3DPoints(model, E_prev, intrinsic_matrix, visible_3d_points, visible_2d_points);
+
   // **** build kd tree
 
   cv::Mat train_points; // observed 2d features
-  convert2DPointVectorToMatrix(features, train_points, CV_32FC1);
+
+  if(build_tree_using_detected_features_)
+    convert2DPointVectorToMatrix(features, train_points, CV_32FC1);
+  else
+    convert2DPointVectorToMatrix(visible_2d_points, train_points, CV_32FC1);
 
   //cv::Mat train_points(features);
   //train_points.convertTo(train_points, CV_32FC1);
@@ -369,15 +390,7 @@ void MonocularVisualOdometry::estimateMotion(
     kd_tree.build(train_points, indexParams);
   }
 
-  // **************************************************
-
-  cv::Mat intrinsic_matrix = frame_->getIntrinsicCameraMatrix();
-
-  cv::Mat rvec = rvecFromMatrix(E_prev);
-  cv::Mat tvec = tvecFromMatrix(E_prev);
-
-  std::vector<cv::Point3d> visible_3d_points;
-  getVisible3DPoints(model, E_prev, intrinsic_matrix, visible_3d_points);
+  // ***********************************************************************
 
   E_new = E_prev;
 

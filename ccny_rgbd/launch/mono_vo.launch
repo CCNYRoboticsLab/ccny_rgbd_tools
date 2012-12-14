@@ -32,6 +32,7 @@
     <param name="apps/mono_vo/number_of_random_trees"   value="5"/>
     <param name="apps/mono_vo/use_opencv_projection"   value="false"/>
     <param name="apps/mono_vo/assume_initial_position"   value="true"/>
+    <param name="apps/mono_vo/build_tree_using_detected_features"   value="true"/>
     <param name="apps/mono_vo/visualize_correspondences"   value="true"/>
     
     #### features #####################################
