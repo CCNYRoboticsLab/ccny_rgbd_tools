@@ -35,9 +35,9 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
     n_nearest_neighbors_ = 4;
 
-  if (!nh_private_.getParam ("publish_model", publish_model_))
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model", publish_model_))
     publish_model_ = false;
-  if (!nh_private_.getParam ("publish_model_cov", publish_model_cov_))
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cov", publish_model_cov_))
     publish_model_cov_ = true;
 
   // **** variables

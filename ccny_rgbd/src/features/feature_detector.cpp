@@ -17,9 +17,9 @@ FeatureDetector::FeatureDetector(ros::NodeHandle nh, ros::NodeHandle nh_private)
   if (!nh_private_.getParam ("feature/show_keypoints", show_keypoints_))
     show_keypoints_ = false;
   if (!nh_private_.getParam ("feature/publish_features", publish_features_))
-    publish_features_ = true;
+    publish_features_ = false;
   if (!nh_private_.getParam ("feature/publish_covariances", publish_covariances_))
-    publish_covariances_ = true;
+    publish_covariances_ = false;
 
   if (publish_features_)
   {

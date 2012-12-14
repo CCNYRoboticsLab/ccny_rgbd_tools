@@ -15,14 +15,17 @@
     <param name="base_frame"  value="/camera_link"/>
        
     #### features #####################################
-
-    <param name="feature/detector_type"       value="$(arg detector_type)"/> #  ORB, SURF, or GFT (Good features to track)
+    
+    #  ORB, SURF, or GFT (Good features to track)
+    <param name="feature/detector_type"       value="$(arg detector_type)"/> 
     <param name="feature/compute_descriptors" value="false"/>
     <param name="feature/smooth"              value="0"/>
     <param name="feature/max_range"           value="7.0"/>
     <param name="feature/max_stdev"           value="0.03"/>
     <param name="feature/show_image"          value="false"/>
     <param name="feature/show_keypoints"      value="false"/>
+    <param name="feature/publish_features"    value="true"/>
+    <param name="feature/publish_covariances" value="false"/>
 
     #### features: GFT ################################
 
@@ -47,21 +50,20 @@
 
     #### registration: ICP ############################
 
+    <param name="reg/ICPProbModel/max_iterations" value="10"/>
     <param name="reg/ICP/history_size"            value="5"/>
-    <param name="reg/ICP/max_iterations"          value="10"/>
-    <param name="reg/ICP/max_corresp_dist"        value="0.20"/>
-    <param name="reg/ICP/tf_epsilon"              value="1e-4"/>
+    <param name="reg/ICP/max_corresp_dist_eucl"   value="0.15"/>
+    <param name="reg/ICP/publish_model"           value="true"/>
 
     #### registration: ICP Prob Model #################
 
-    <param name="reg/ICPProbModel/max_iterations"       value="10"/>
-    <param name="reg/ICPProbModel/max_model_size"       value="3000"/>
-    <param name="reg/ICPProbModel/n_nearest_neighbors"  value="4"/>
-
+    <param name="reg/ICPProbModel/max_iterations"        value="10"/>
+    <param name="reg/ICPProbModel/max_model_size"        value="3000"/>
+    <param name="reg/ICPProbModel/n_nearest_neighbors"   value="4"/>
     <param name="reg/ICPProbModel/max_assoc_dist_mah"    value="10.0"/>
     <param name="reg/ICPProbModel/max_corresp_dist_eucl" value="0.15"/>
-    <param name="reg/ICPProbModel/max_corresp_dist_mah"  value="10.0"/>
- 
+    <param name="reg/ICPProbModel/publish_model"         value="true"/>
+    <param name="reg/ICPProbModel/publish_model_cov"     value="false"/>
   </node>
 
 </launch>
