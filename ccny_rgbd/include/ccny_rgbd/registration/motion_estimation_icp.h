@@ -2,19 +2,19 @@
 #define CCNY_RGBD_MOTION_ESTIMATION_ICP_H
 
 #include <tf/transform_datatypes.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 
 #include "ccny_rgbd/structures/feature_history.h"
 #include "ccny_rgbd/registration/motion_estimation.h"
-#include "ccny_rgbd/registration/iterative_closest_point.h"
+
 
 namespace ccny_rgbd
 {
 
 class MotionEstimationICP: public MotionEstimation
 {
-  typedef ccny_rgbd::IterativeClosestPoint<PointFeature, PointFeature> ICP;
   typedef pcl::KdTreeFLANN<PointFeature> KdTree;
 
   public:
