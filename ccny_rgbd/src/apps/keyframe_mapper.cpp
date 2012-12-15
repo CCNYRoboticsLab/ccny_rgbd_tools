@@ -25,6 +25,10 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
   recolor_service_ = nh_.advertiseService(
     "recolor", &KeyframeMapper::recolorSrvCallback, this);
+  save_kf_service_ = nh_.advertiseService(
+    "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
+  save_kf_ff_service_ = nh_.advertiseService(
+    "save_keyframes_ff", &KeyframeMapper::saveKeyframesFFSrvCallback, this);
 
   // **** subscribers
 
@@ -251,6 +255,24 @@ void KeyframeMapper::publishKeyframePose(int i)
   marker_text.scale.z = 0.05; // shaft radius
 
   poses_pub_.publish(marker_text);
+}
+
+bool KeyframeMapper::saveKeyframesSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
+{
+  ROS_INFO("Saving keyframes...\n");
+  std::string path = request.filename;
+  return saveKeyframes(keyframes_, path);
+}
+
+bool KeyframeMapper::saveKeyframesFFSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
+{
+  ROS_INFO("Saving keyframes (in fixed frame)...\n");
+  std::string path = request.filename;
+  return saveKeyframes(keyframes_, path, true);
 }
 
 } // namespace ccny_rgbd

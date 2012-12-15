@@ -2,6 +2,10 @@
 #define CCNY_RGBD_RGBD_KEYFRAME_H
 
 #include <boost/filesystem.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
+
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
 namespace ccny_rgbd
@@ -13,6 +17,8 @@ class RGBDKeyframe: public RGBDFrame
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+    RGBDKeyframe();
+  
     RGBDKeyframe(const RGBDFrame& frame);
   
     tf::Transform pose;
@@ -31,9 +37,19 @@ class RGBDKeyframe: public RGBDFrame
 typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
 typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
 
-bool saveKeyframe(const RGBDKeyframe& keyframe, const std::string& path);
+bool saveKeyframe(
+  const RGBDKeyframe& keyframe, 
+  const std::string& path,
+  bool in_fixed_frame);
 
-bool loadKeyframe(RGBDKeyframe& keyframe, const std::string& path);
+bool loadKeyframe(
+  RGBDKeyframe& keyframe, 
+  const std::string& path);
+
+bool saveKeyframes(
+  const KeyframeVector& keyframes, 
+  const std::string& path,
+  bool in_fixed_frame = false);
 
 } //namespace ccny_rgbd
 

@@ -3,11 +3,17 @@
 namespace ccny_rgbd
 {
 
+RGBDKeyframe::RGBDKeyframe():
+  manually_added(false)
+{
+ 
+}
+
 RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
   RGBDFrame(frame),
   manually_added(false)
 {
-
+  
 }
 
 void RGBDKeyframe::constructDensePointCloud(
@@ -76,7 +82,10 @@ void RGBDKeyframe::constructDensePointCloud(
   cloud.is_dense = false;
 }
 
-bool saveKeyframe(const RGBDKeyframe& keyframe, const std::string& path)
+bool saveKeyframe(
+  const RGBDKeyframe& keyframe, 
+  const std::string& path,
+  bool in_fixed_frame)
 {
   std::string cloud_filename = path + "/cloud.pcd";
   std::string pose_filename  = path + "/pose.yaml";
@@ -86,9 +95,20 @@ bool saveKeyframe(const RGBDKeyframe& keyframe, const std::string& path)
   bool save_frame_result = saveFrame(keyframe, path);
   if (!save_frame_result) return false;
   
-  // save cloud as pcd
+  // save cloud
+
   pcl::PCDWriter writer;
-  int result_pcd = writer.writeBinary<PointT>(cloud_filename, keyframe.cloud);
+  int result_pcd;
+
+  // derotate to fixed frame if needed
+  if (in_fixed_frame)
+  {
+    PointCloudT cloud_rotated;
+    pcl::transformPointCloud(keyframe.cloud, cloud_rotated, eigenFromTf(keyframe.pose));
+    result_pcd = writer.writeBinary<PointT>(cloud_filename, cloud_rotated);  
+  }
+  else
+    result_pcd = writer.writeBinary<PointT>(cloud_filename, keyframe.cloud);  
 
   if (result_pcd != 0) 
   {
@@ -98,7 +118,11 @@ bool saveKeyframe(const RGBDKeyframe& keyframe, const std::string& path)
 
   // save pose as OpenCV rmat and tvec
   cv::Mat rmat, tvec;
-  tfToOpenCVRt(keyframe.pose, rmat, tvec);
+  if (in_fixed_frame)
+    tfToOpenCVRt(tf::Transform::getIdentity(), rmat, tvec);
+  else
+    tfToOpenCVRt(keyframe.pose, rmat, tvec);
+
   cv::FileStorage fs_m(pose_filename, cv::FileStorage::WRITE);
   fs_m << "rmat" << rmat;
   fs_m << "tvec" << tvec;
@@ -150,6 +174,25 @@ bool loadKeyframe(RGBDKeyframe& keyframe, const std::string& path)
   fs_p["manually_added"]      >> keyframe.manually_added;
   fs_p["path_length_linear"]  >> keyframe.path_length_linear;
   fs_p["path_length_angular"] >> keyframe.path_length_angular;
+
+  return true;
+}
+
+bool saveKeyframes(
+  const KeyframeVector& keyframes, 
+  const std::string& path,
+  bool in_fixed_frame)
+{
+  for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
+  {
+    std::stringstream ss_idx;
+    ss_idx << std::setw(4) << std::setfill('0') << kf_idx;
+    
+    std::string kf_path = path + "/" + ss_idx.str();
+
+    bool save_result = saveKeyframe(keyframes[kf_idx], kf_path, in_fixed_frame); 
+    if (!save_result) return false;
+  }
 
   return true;
 }

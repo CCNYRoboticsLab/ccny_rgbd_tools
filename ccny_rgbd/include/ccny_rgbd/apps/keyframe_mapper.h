@@ -9,10 +9,12 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 
+#include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/mapping/keyframe_generator.h"
 #include "ccny_rgbd/PublishKeyframe.h"
 #include "ccny_rgbd/PublishAllKeyframes.h"
 #include "ccny_rgbd/Recolor.h"
+#include "ccny_rgbd/Save.h"
 
 namespace ccny_rgbd
 {
@@ -33,6 +35,12 @@ class KeyframeMapper: public KeyframeGenerator
     bool recolorSrvCallback(Recolor::Request& request,
                             Recolor::Response& response);
 
+    bool saveKeyframesSrvCallback(Save::Request& request,
+                                  Save::Response& response);
+
+    bool saveKeyframesFFSrvCallback(Save::Request& request,
+                                    Save::Response& response);
+
   protected:
 
     virtual void RGBDCallback(
@@ -48,6 +56,8 @@ class KeyframeMapper: public KeyframeGenerator
     ros::ServiceServer pub_frames_service_;
     ros::ServiceServer pub_frame_service_;
     ros::ServiceServer recolor_service_;
+    ros::ServiceServer save_kf_service_;
+    ros::ServiceServer save_kf_ff_service_;
 
     tf::TransformListener tf_listener_;
 
