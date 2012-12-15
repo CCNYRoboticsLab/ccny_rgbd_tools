@@ -102,9 +102,9 @@ bool KeyframeMapper::recolorSrvCallback(
     int g = rand() % 255;
     int b = rand() % 255;
 
-    for (unsigned int pt_idx = 0; pt_idx < keyframe.data.points.size(); ++pt_idx)
+    for (unsigned int pt_idx = 0; pt_idx < keyframe.cloud.points.size(); ++pt_idx)
     {
-      PointT& p = keyframe.data.points[pt_idx];
+      PointT& p = keyframe.cloud.points[pt_idx];
       
       p.r = r;
       p.g = g;
@@ -148,7 +148,7 @@ void KeyframeMapper::publishKeyframeData(int i)
   PointCloudT keyframe_data_ff; // data transformed to the fixed frame
   
   pcl::transformPointCloud(
-    keyframe.data, keyframe_data_ff, eigenFromTf(keyframe.pose));
+    keyframe.cloud, keyframe_data_ff, eigenFromTf(keyframe.pose));
 
   keyframe_data_ff.header.frame_id = fixed_frame_;
 

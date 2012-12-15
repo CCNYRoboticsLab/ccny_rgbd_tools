@@ -82,11 +82,11 @@ void OctreeMapper::RGBDCallback(
   // TODO: cleanup constructors
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
   RGBDKeyframe keyframe(frame);
-  keyframe.constructDataCloud();
+  keyframe.constructDensePointCloud();
 
   // transform to world frame
   PointCloudT cloud_tf;
-  pcl_ros::transformPointCloud (keyframe.data, cloud_tf, transform);
+  pcl_ros::transformPointCloud (keyframe.cloud, cloud_tf, transform);
   cloud_tf.header.frame_id = fixed_frame_;
 
   // add to map
@@ -175,7 +175,6 @@ bool OctreeMapper::saveSrvCallback(
   ROS_INFO("Map has %dK points", (int)map_->points.size()/1024);
 
   pcl::io::savePCDFileBinary<PointT>(request.filename, *map_);
-  //pcl::io::savePLYFile<PointT>(request.filename + ".ply", *map_);
 
   ROS_INFO("Save successful");
   return true;
