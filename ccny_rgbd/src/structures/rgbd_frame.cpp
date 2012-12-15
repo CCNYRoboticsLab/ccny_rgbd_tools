@@ -8,6 +8,14 @@ RGBDFrame::RGBDFrame()
 
 }
 
+RGBDFrame::RGBDFrame(const RGBDFrame& other)
+{
+  rgb_img   = other.rgb_img.clone();
+  depth_img = other.depth_img.clone();
+  header    = other.header;
+  model     = other.model;
+}
+
 RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
                      const sensor_msgs::ImageConstPtr& depth_msg,
                      const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -238,11 +246,11 @@ bool saveFrame(const RGBDFrame& frame, const std::string& path)
   cv::FileStorage fs_h(header_filename, cv::FileStorage::WRITE);
   fs_h << "frame_id"   << frame.header.frame_id;
   fs_h << "seq"        << (int)frame.header.seq;
-  fs_h << "stamp.sec"  << (int)frame.header.stamp.sec;
-  fs_h << "stamp.nsec" << (int)frame.header.stamp.nsec;
+  fs_h << "stamp_sec"  << (int)frame.header.stamp.sec;
+  fs_h << "stamp_nsec" << (int)frame.header.stamp.nsec;
 
-  // save images
-  cv::imwrite(rgb_filename, frame.rgb_img);
+  // save images 
+  cv::imwrite(rgb_filename,   frame.rgb_img);
   cv::imwrite(depth_filename, frame.depth_img);
   
   // save intrinsic matrix
@@ -276,8 +284,8 @@ bool loadFrame(RGBDFrame& frame, const std::string& path)
 
   fs_h["frame_id"]   >> frame.header.frame_id;
   fs_h["seq"]        >> seq;
-  fs_h["stamp.sec"]  >> sec;
-  fs_h["stamp.nsec"] >> nsec;
+  fs_h["stamp_sec"]  >> sec;
+  fs_h["stamp_nsec"] >> nsec;
 
   frame.header.seq = seq;
   frame.header.stamp.sec = sec;
