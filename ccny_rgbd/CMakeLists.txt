@@ -78,6 +78,17 @@ target_link_libraries(ccny_rgbd_mapping ccny_gicp)
 # Build visual odometry application
 ################################################################
 
+rosbuild_add_executable(normals_test
+  src/rgbd_normals.cpp)
+
+target_link_libraries (normals_test
+  ccny_rgbd_structures
+  ccny_rgbd_util
+  ${OPENCV_LIBRARIES}
+  boost_signals 
+  boost_system
+)
+
 rosbuild_add_executable(visual_odometry_node 
   src/node/visual_odometry_node.cpp
   src/apps/visual_odometry.cpp)
