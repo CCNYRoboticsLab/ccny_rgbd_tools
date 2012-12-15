@@ -143,8 +143,6 @@ void KeyframeMapper::publishKeyframeData(int i)
 
   // **** publish PointCloud data
 
-  //keyframe.constructDataCloud();
-
   PointCloudT keyframe_data_ff; // data transformed to the fixed frame
   
   pcl::transformPointCloud(

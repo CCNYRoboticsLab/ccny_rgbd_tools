@@ -1,6 +1,7 @@
 #ifndef CCNY_RGBD_RGBD_KEYFRAME_H
 #define CCNY_RGBD_RGBD_KEYFRAME_H
 
+#include <boost/filesystem.hpp>
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
 namespace ccny_rgbd
@@ -29,6 +30,10 @@ class RGBDKeyframe: public RGBDFrame
 
 typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
 typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
+
+bool saveKeyframe(const RGBDKeyframe& keyframe, const std::string& path);
+
+bool loadKeyframe(RGBDKeyframe& keyframe, const std::string& path);
 
 } //namespace ccny_rgbd
 

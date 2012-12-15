@@ -1,7 +1,12 @@
 #ifndef CCNY_RGBD_KEYFRAME_MAPPER_H
 #define CCNY_RGBD_KEYFRAME_MAPPER_H
 
+#include <ros/ros.h>
 #include <ros/publisher.h>
+#include <pcl/point_cloud.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
+#include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 
 #include "ccny_rgbd/mapping/keyframe_generator.h"

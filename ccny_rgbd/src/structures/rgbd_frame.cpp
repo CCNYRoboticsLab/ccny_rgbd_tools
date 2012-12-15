@@ -217,4 +217,86 @@ void RGBDFrame::constructFeaturePointCloud(
   cloud.header = header;    
 }
 
+bool saveFrame(const RGBDFrame& frame, const std::string& path)
+{
+  // set the filenames
+  std::string rgb_filename    = path + "/rgb.png";
+  std::string depth_filename  = path + "/depth.png";
+  std::string header_filename = path + "/header.yml";
+  std::string intr_filename   = path + "/intr.yml"; 
+
+  // create the directory
+  bool directory_result = boost::filesystem::create_directory(path); 
+
+  if (!directory_result)    
+  {
+    ROS_ERROR("Could not create directory: %s", path.c_str());
+    return false;
+  }
+
+  // save header
+  cv::FileStorage fs_h(header_filename, cv::FileStorage::WRITE);
+  fs_h << "frame_id"   << frame.header.frame_id;
+  fs_h << "seq"        << (int)frame.header.seq;
+  fs_h << "stamp.sec"  << (int)frame.header.stamp.sec;
+  fs_h << "stamp.nsec" << (int)frame.header.stamp.nsec;
+
+  // save images
+  cv::imwrite(rgb_filename, frame.rgb_img);
+  cv::imwrite(depth_filename, frame.depth_img);
+  
+  // save intrinsic matrix
+  cv::FileStorage fs_p(intr_filename, cv::FileStorage::WRITE);
+  fs_p << "intr" << frame.model.fullIntrinsicMatrix();
+
+  return true;
+}
+
+bool loadFrame(RGBDFrame& frame, const std::string& path)
+{
+  // set the filenames
+  std::string rgb_filename    = path + "/rgb.png";
+  std::string depth_filename  = path + "/depth.png";
+  std::string header_filename = path + "/header.yml";
+  std::string intr_filename   = path + "/intr.yml"; 
+
+  // check if files exist
+  if (!boost::filesystem::exists(rgb_filename)    ||
+      !boost::filesystem::exists(depth_filename)  ||
+      !boost::filesystem::exists(header_filename) ||
+      !boost::filesystem::exists(intr_filename) )
+  {
+    ROS_ERROR("files for loading frame not found");
+    return false;
+  }
+
+  // load header
+  cv::FileStorage fs_h(header_filename, cv::FileStorage::READ);
+  int seq, sec, nsec;
+
+  fs_h["frame_id"]   >> frame.header.frame_id;
+  fs_h["seq"]        >> seq;
+  fs_h["stamp.sec"]  >> sec;
+  fs_h["stamp.nsec"] >> nsec;
+
+  frame.header.seq = seq;
+  frame.header.stamp.sec = sec;
+  frame.header.stamp.nsec = nsec;
+
+  // load images
+  frame.rgb_img = cv::imread(rgb_filename);
+  frame.depth_img = cv::imread(depth_filename, -1);
+
+  // load intrinsic matrix
+  cv::FileStorage fs_m(header_filename, cv::FileStorage::READ);
+
+  cv::Mat intr;
+  CameraInfoMsg info_msg;
+  fs_h["intr"] >> intr;
+  convertMatToCameraInfo(intr, info_msg);
+  frame.model.fromCameraInfo(info_msg);
+
+  return true;
+}
+
 } // namespace ccny_rgbd

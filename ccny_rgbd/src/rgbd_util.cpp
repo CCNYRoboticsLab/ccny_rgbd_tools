@@ -138,6 +138,94 @@ void tfToEigenRt(
    t(2, 0) = origin.z();
 }
 
+void tfToOpenCVRt(
+  const tf::Transform& transform,
+  cv::Mat& R,
+  cv::Mat& t)
+{
+  // extract translation
+  tf::Vector3 translation_tf = transform.getOrigin();
+  t = cv::Mat(3, 1, CV_64F);
+  t.at<double>(0,0) = translation_tf.getX();
+  t.at<double>(1,0) = translation_tf.getY();
+  t.at<double>(2,0) = translation_tf.getZ();
+
+  // extract rotation
+  tf::Matrix3x3 rotation_tf(transform.getRotation());
+  R = cv::Mat(3, 3, CV_64F);
+  for(int i = 0; i < 3; ++i)
+  for(int j = 0; j < 3; ++j)     
+    R.at<double>(j,i) = rotation_tf[j][i];
+}
+
+void openCVRtToTf(
+  const cv::Mat& R,
+  const cv::Mat& t,
+  tf::Transform& transform)
+{
+  tf::Vector3 translation_tf(
+    t.at<double>(0,0),
+    t.at<double>(1,0),
+    t.at<double>(2,0));
+
+  tf::Matrix3x3 rotation_tf;
+  for(int i = 0; i < 3; ++i)
+  for(int j = 0; j < 3; ++j)     
+    rotation_tf[j][i] = R.at<double>(j,i);
+
+  transform.setOrigin(translation_tf);
+  transform.setBasis(rotation_tf);
+}
+
+void convertCameraInfoToMats(
+  const CameraInfoMsg::ConstPtr camera_info_msg,
+  cv::Mat& intr,
+  cv::Mat& dist)
+{
+  // set intrinsic matrix from K vector
+  intr = cv::Mat(3, 3, CV_64FC1);
+  for (int idx = 0; idx < 9; ++idx)
+  {
+    int i = idx % 3;
+    int j = idx / 3;
+    intr.at<double>(j, i) = camera_info_msg->K[idx];
+  }
+  
+  // set distortion matrix from D vector
+  int d_size = camera_info_msg->D.size();
+  dist = cv::Mat(1, d_size, CV_64FC1);
+  for (int idx = 0; idx < d_size; ++idx)
+  {
+    dist.at<double>(0, idx) = camera_info_msg->D[idx];   
+  }
+}
+
+void convertMatToCameraInfo(
+  const cv::Mat& intr,
+  CameraInfoMsg& camera_info_msg)
+{
+  // set D matrix to 0
+  camera_info_msg.D.resize(5);
+  std::fill(camera_info_msg.D.begin(), camera_info_msg.D.end(), 0.0);
+  
+  // set K matrix to optimal new camera matrix
+  for (int i = 0; i < 3; ++i)
+  for (int j = 0; j < 3; ++j)
+    camera_info_msg.K[j*3 + i] = intr.at<double>(j,i);
+  
+  // set R matrix to identity
+  std::fill(camera_info_msg.R.begin(), camera_info_msg.R.end(), 0.0);  
+  camera_info_msg.R[0*3 + 0] = 1.0;
+  camera_info_msg.R[1*3 + 1] = 1.0;
+  camera_info_msg.R[2*3 + 2] = 1.0;
+    
+  //set P matrix to K
+  std::fill(camera_info_msg.P.begin(), camera_info_msg.P.end(), 0.0);  
+  for (int i = 0; i < 3; ++i)
+  for (int j = 0; j < 3; ++j)
+    camera_info_msg.P[j*4 + i] = intr.at<double>(j,i);
+}
+
 void transformMeans(
   Vector3fVector& means,
   const tf::Transform& transform)
