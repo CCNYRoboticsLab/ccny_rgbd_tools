@@ -65,16 +65,11 @@ bool MotionEstimationICP::getMotionEstimationImpl(
   // TODO: ignores prediction
   bool result;
  
-  // **** create a data cloud from the dsitributions
+  // **** create a data cloud from the means
   
   Vector3fVector data_means;
-  Matrix3fVector data_covariances;
-  
-  removeInvalidFeatures(
-    frame.kp_means, frame.kp_covariances, frame.kp_valid,
-    data_means, data_covariances);
-
-  transformDistributions(data_means, data_covariances, f2b_ * b2c_);
+  removeInvalidMeans(frame.kp_means, frame.kp_valid, data_means);
+  transformMeans(data_means, f2b_ * b2c_);
   
   // **** align ********************************************************
  
@@ -105,8 +100,8 @@ bool MotionEstimationICP::getMotionEstimationImpl(
  
   // transform features using the new estimate for the fixed frame
   PointCloudFeature features;
-  frame.constructFeaturesCloud();
-  pcl::transformPointCloud(frame.kp_cloud , features, eigenFromTf(f2b_* b2c_));
+  frame.constructFeaturePointCloud(features);
+  pcl::transformPointCloud(features , features, eigenFromTf(f2b_* b2c_));
   
   // aggregate in feature history
   features.header.frame_id = fixed_frame_;
@@ -138,7 +133,7 @@ bool MotionEstimationICP::alignICPEuclidean(
 
   // create a point cloud from the means
   PointCloudFeature data_cloud;
-  getPointCloudFromDistributions(data_means, data_cloud);
+  pointCloudFromMeans(data_means, data_cloud);
 
   // initialize the result transform
   Eigen::Matrix4f final_transformation; 

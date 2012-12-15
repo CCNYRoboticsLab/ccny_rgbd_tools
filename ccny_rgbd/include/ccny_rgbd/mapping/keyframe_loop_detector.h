@@ -3,6 +3,8 @@
 
 #include <tf/transform_datatypes.h>
 #include <boost/thread/mutex.hpp>
+#include <pcl/registration/transformation_estimation_svd.h>
+#include <opencv2/nonfree/features2d.hpp>
 
 #include <ccny_gicp/gicp.h>
 #include <ccny_gicp/types.h>

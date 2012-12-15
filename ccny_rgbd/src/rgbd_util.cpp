@@ -18,7 +18,7 @@ void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist
 
 tf::Transform tfFromEigen(Eigen::Matrix4f trans)
 {
-  MyMatrix btm;
+  tf::Matrix3x3 btm;
   btm.setValue(trans(0,0),trans(0,1),trans(0,2),
             trans(1,0),trans(1,1),trans(1,2),
             trans(2,0),trans(2,1),trans(2,2));
@@ -49,15 +49,16 @@ Eigen::Matrix4f eigenFromTf(const tf::Transform& tf)
    return out_mat;
 }
 
-void getXYZRPY(const tf::Transform& t,
-                     double& x,    double& y,     double& z,
-                     double& roll, double& pitch, double& yaw)
+void getXYZRPY(
+  const tf::Transform& t,
+  double& x,    double& y,     double& z,
+  double& roll, double& pitch, double& yaw)
 {
   x = t.getOrigin().getX();
   y = t.getOrigin().getY();
   z = t.getOrigin().getZ();
 
-  MyMatrix m(t.getRotation());
+  tf::Matrix3x3  m(t.getRotation());
   m.getRPY(roll, pitch, yaw);
 }
 
@@ -76,72 +77,28 @@ bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
   return false;
 }
 
-void tfToCV(
-  const tf::Transform& transform,
-  cv::Mat& rotation,
-  cv::Mat& translation)
-{
-  // extract translation
-  tf::Vector3 translation_tf = transform.getOrigin();
-  translation = cv::Mat(3, 1, CV_64F);
-  translation.at<double>(0,0) = translation_tf.getX();
-  translation.at<double>(1,0) = translation_tf.getY();
-  translation.at<double>(2,0) = translation_tf.getZ();
-
-  // extract rotation
-  tf::Matrix3x3 rotation_tf(transform.getRotation());
-  rotation = cv::Mat(3, 3, CV_64F);
-  for(int i = 0; i < 3; ++i)
-  for(int j = 0; j < 3; ++j)     
-    rotation.at<double>(j,i) = rotation_tf[j][i];
-}
-
-cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec)
-{
-  cv::Mat rmat;
-  cv::Rodrigues(rvec, rmat);
-  return matrixFromRT(rmat, tvec);
-}
-
-cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec)
-{   
-  cv::Mat E = cv::Mat::zeros(3, 4, CV_64FC1);
-  
-  E.at<double>(0,0) = rmat.at<double>(0,0);
-  E.at<double>(0,1) = rmat.at<double>(0,1);
-  E.at<double>(0,2) = rmat.at<double>(0,2);
-  E.at<double>(1,0) = rmat.at<double>(1,0);
-  E.at<double>(1,1) = rmat.at<double>(1,1);
-  E.at<double>(1,2) = rmat.at<double>(1,2);
-  E.at<double>(2,0) = rmat.at<double>(2,0);
-  E.at<double>(2,1) = rmat.at<double>(2,1);
-  E.at<double>(2,2) = rmat.at<double>(2,2);
-
-  E.at<double>(0,3) = tvec.at<double>(0,0);
-  E.at<double>(1,3) = tvec.at<double>(1,0);
-  E.at<double>(2,3) = tvec.at<double>(2,0);
-
-  return E;
-}
-
-cv::Mat m4(const cv::Mat& m3)
-{
-  cv::Mat m4 = cv::Mat::zeros(4, 4, CV_64FC1);
-
-  for (int i = 0; i < 4; ++i)
-  for (int j = 0; j < 3; ++j) 
-    m4.at<double>(j,i) = m3.at<double>(j,i);
-
-  m4.at<double>(3,3) = 1.0;
-  return m4;
-}
-
 double getMsDuration(const ros::WallTime& start)
 {
   return (ros::WallTime::now() - start).toSec() * 1000.0;
 }
 
-void removeInvalidFeatures(
+void removeInvalidMeans(
+  const Vector3fVector& means,
+  const BoolVector& valid,
+  Vector3fVector& means_f)
+{
+  unsigned int size = valid.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    if (valid[i])
+    {
+      const Vector3f& mean = means[i];
+      means_f.push_back(mean);
+    }
+  }
+}
+
+void removeInvalidDistributions(
   const Vector3fVector& means,
   const Matrix3fVector& covariances,
   const BoolVector& valid,
@@ -159,42 +116,6 @@ void removeInvalidFeatures(
       means_f.push_back(mean);
       covariances_f.push_back(cov);
     }
-  }
-}
-
-void cvMatToEigenMatrix3f(
-  const cv::Mat mat_cv, 
-  Matrix3f& mat_eigen)
-{
-  for (int j = 0; j < 3; ++j)
-  for (int i = 0; i < 3; ++i)
-    mat_eigen(j, i) = mat_cv.at<double>(j, i);
-}
-
-void cvMatToEigenVector3f(
-  const cv::Mat mat_cv, 
-  Vector3f& mat_eigen)
-{
-  for (int j = 0; j < 3; ++j)
-    mat_eigen(j, 0) = mat_cv.at<double>(j, 0);
-}
-
-void transformDistributions(
-  MatVector& means,
-  MatVector& covariances,
-  const tf::Transform& transform)
-{
-  cv::Mat R, t;
-  tfToCV(transform, R, t);
-  cv::Mat Rt = R.t();
-  
-  unsigned int size = means.size(); 
-  for(unsigned int i = 0; i < size; ++i)
-  {
-    cv::Mat& m = means[i];
-    cv::Mat& c = covariances[i];
-    m = R * m + t;
-    c = R * c * Rt;
   }
 }
 
@@ -217,6 +138,22 @@ void tfToEigenRt(
    t(2, 0) = origin.z();
 }
 
+void transformMeans(
+  Vector3fVector& means,
+  const tf::Transform& transform)
+{
+  Matrix3f R;
+  Vector3f t;
+  tfToEigenRt(transform, R, t);
+  
+  unsigned int size = means.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    Vector3f& m = means[i];
+    m = R * m + t;
+  }  
+}
+
 void transformDistributions(
   Vector3fVector& means,
   Matrix3fVector& covariances,
@@ -237,24 +174,7 @@ void transformDistributions(
   }
 }
 
-void getPointCloudFromDistributions(
-  const MatVector& means,
-  PointCloudFeature& cloud)
-{
-  unsigned int size = means.size(); 
-  cloud.points.resize(size);
-  for(unsigned int i = 0; i < size; ++i)
-  {
-    const cv::Mat& m = means[i];
-    PointFeature& p = cloud.points[i];
-
-    p.x = m.at<double>(0,0);
-    p.y = m.at<double>(1,0);
-    p.z = m.at<double>(2,0);
-  }
-}
-
-void getPointCloudFromDistributions(
+void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud)
 {
@@ -269,6 +189,10 @@ void getPointCloudFromDistributions(
     p.y = m(1,0);
     p.z = m(2,0);
   }
+  
+  cloud.height = 1;
+  cloud.width = size;
+  cloud.is_dense = true;
 }
 
 void projectCloudToImage(PointCloudT cloud,

@@ -205,27 +205,16 @@ void RGBDFrame::computeDistributions(
   }
 }
 
-void RGBDFrame::constructFeaturesCloud()
+void RGBDFrame::constructFeaturePointCloud(
+  PointCloudFeature& cloud)
 {
-  for (unsigned int kp_idx = 0; kp_idx < keypoints.size(); ++kp_idx)
-  {
-    if (!kp_valid[kp_idx]) continue;
+  // filter invalid
+  Vector3fVector means_f;
+  removeInvalidMeans(kp_means, kp_valid, means_f);
 
-    const Vector3f& kp_mean = kp_means[kp_idx];
-
-    PointFeature p;
-
-    p.x = kp_mean(0,0);
-    p.y = kp_mean(1,0);
-    p.z = kp_mean(2,0);
-
-    kp_cloud.points.push_back(p);
-  }
-
-  kp_cloud.header = header;
-  kp_cloud.height = 1;
-  kp_cloud.width = kp_cloud.points.size();
-  kp_cloud.is_dense = true;
+  // create point cloud
+  pointCloudFromMeans(means_f, cloud);
+  cloud.header = header;    
 }
 
 } // namespace ccny_rgbd
