@@ -89,58 +89,6 @@ bool RGBDImageProc::loadCalibration()
   return true;
 }
 
-void RGBDImageProc::convertCameraInfoToMats(
-  const CameraInfoMsg::ConstPtr camera_info_msg,
-  cv::Mat& intr,
-  cv::Mat& dist)
-{
-  // set intrinsic matrix from K vector
-  intr = cv::Mat(3, 3, CV_64FC1);
-  for (int idx = 0; idx < 9; ++idx)
-  {
-    int i = idx % 3;
-    int j = idx / 3;
-    intr.at<double>(j, i) = camera_info_msg->K[idx];
-  }
-  
-  // set distortion matrix from D vector
-  int d_size = camera_info_msg->D.size();
-  dist = cv::Mat(1, d_size, CV_64FC1);
-  for (int idx = 0; idx < d_size; ++idx)
-  {
-    dist.at<double>(0, idx) = camera_info_msg->D[idx];   
-  }
-}
-
-/* sets the info message to a given intrinsic matrix,
- * with D = 0 and R = identity
- */
-void RGBDImageProc::convertMatToCameraInfo(
-  const cv::Mat& intr,
-  CameraInfoMsg& camera_info_msg)
-{
-  // set D matrix to 0
-  camera_info_msg.D.resize(5);
-  std::fill(camera_info_msg.D.begin(), camera_info_msg.D.end(), 0.0);
-  
-  // set K matrix to optimal new camera matrix
-  for (int i = 0; i < 3; ++i)
-  for (int j = 0; j < 3; ++j)
-    camera_info_msg.K[j*3 + i] = intr.at<double>(j,i);
-  
-  // set R matrix to identity
-  std::fill(camera_info_msg.R.begin(), camera_info_msg.R.end(), 0.0);  
-  camera_info_msg.R[0*3 + 0] = 1.0;
-  camera_info_msg.R[1*3 + 1] = 1.0;
-  camera_info_msg.R[2*3 + 2] = 1.0;
-    
-  //set P matrix to K
-  std::fill(camera_info_msg.P.begin(), camera_info_msg.P.end(), 0.0);  
-  for (int i = 0; i < 3; ++i)
-  for (int j = 0; j < 3; ++j)
-    camera_info_msg.P[j*4 + i] = intr.at<double>(j,i);
-}
-
 void RGBDImageProc::initMaps(
   const CameraInfoMsg::ConstPtr& rgb_info_msg,
   const CameraInfoMsg::ConstPtr& depth_info_msg)

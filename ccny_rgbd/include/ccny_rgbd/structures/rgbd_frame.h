@@ -7,8 +7,10 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
 #include <image_geometry/pinhole_camera_model.h>
-#include <pcl_ros/transforms.h>
+#include <boost/filesystem.hpp>
+#include <pcl/io/pcd_io.h>
 
+#include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 
 namespace ccny_rgbd
@@ -79,6 +81,10 @@ class RGBDFrame
     void getGaussianDistribution(int u, int v, double& z_mean, double& z_var);
     void getGaussianMixtureDistribution(int u, int v, double& z_mean, double& z_var);
 };
+
+bool saveFrame(const RGBDFrame&, const std::string& path);
+
+bool loadFrame(RGBDFrame&, const std::string& path);
 
 } // namespace ccny_rgbd
 
