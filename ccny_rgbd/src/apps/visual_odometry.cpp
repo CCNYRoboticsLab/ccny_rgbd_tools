@@ -25,6 +25,8 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
     feature_detector_ = new SurfDetector(nh_, nh_private_);
   else if (detector_type_ == "GFT")
     feature_detector_ = new GftDetector(nh_, nh_private_);
+  else if (detector_type_ == "STAR")
+    feature_detector_ = new StarDetector(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
 

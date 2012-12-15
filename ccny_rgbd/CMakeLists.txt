@@ -47,6 +47,7 @@ rosbuild_add_library (ccny_rgbd_features
   src/features/orb_detector.cpp
   src/features/gft_detector.cpp
   src/features/surf_detector.cpp
+  src/features/star_detector.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_registration
@@ -54,7 +55,6 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation_icp.cpp
   src/registration/motion_estimation_icp_prob_model.cpp
   src/registration/motion_prediction_imu.cpp
-  src/registration/iterative_closest_point.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_mapping

@@ -35,9 +35,9 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
     n_nearest_neighbors_ = 4;
 
-  if (!nh_private_.getParam ("publish_model", publish_model_))
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model", publish_model_))
     publish_model_ = false;
-  if (!nh_private_.getParam ("publish_model_cov", publish_model_cov_))
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cov", publish_model_cov_))
     publish_model_cov_ = true;
 
   // **** variables
@@ -123,7 +123,7 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   Matrix3fVector data_covariances;
 
   // remove nans from distributinos
-  removeInvalidFeatures(
+  removeInvalidDistributions(
     frame.kp_means, frame.kp_covariances, frame.kp_valid,
     data_means, data_covariances);
   
@@ -189,7 +189,7 @@ bool MotionEstimationICPProbModel::alignICPMahalanobis(
   
   // create a point cloud from the means
   PointCloudFeature data_cloud;
-  getPointCloudFromDistributions(data_means, data_cloud);
+  pointCloudFromMeans(data_means, data_cloud);
 
   for (int iteration = 0; iteration < max_iterations_; ++iteration)
   {    
@@ -244,7 +244,7 @@ bool MotionEstimationICPProbModel::alignICPEuclidean(
 
   // create a point cloud from the means
   PointCloudFeature data_cloud;
-  getPointCloudFromDistributions(data_means, data_cloud);
+  pointCloudFromMeans(data_means, data_cloud);
 
   // initialize the result transform
   Eigen::Matrix4f final_transformation; 
@@ -344,7 +344,6 @@ void MotionEstimationICPProbModel::getCorrespEuclidean(
     }
   }  
 }
-
 
 bool MotionEstimationICPProbModel::getNNEuclidean(
   const PointFeature& data_point,
