@@ -51,6 +51,10 @@ bool saveKeyframes(
   const std::string& path,
   bool in_fixed_frame = false);
 
+bool loadKeyframes(
+  KeyframeVector& keyframes, 
+  const std::string& path);
+
 } //namespace ccny_rgbd
 
 

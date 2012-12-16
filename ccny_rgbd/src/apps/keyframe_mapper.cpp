@@ -29,6 +29,8 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
   save_kf_ff_service_ = nh_.advertiseService(
     "save_keyframes_ff", &KeyframeMapper::saveKeyframesFFSrvCallback, this);
+ load_kf_service_ = nh_.advertiseService(
+    "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
 
   // **** subscribers
 
@@ -145,10 +147,8 @@ void KeyframeMapper::publishKeyframeData(int i)
 {
   RGBDKeyframe& keyframe = keyframes_[i];
 
-  // **** publish PointCloud data
-
-  PointCloudT keyframe_data_ff; // data transformed to the fixed frame
-  
+  // data transformed to the fixed frame
+  PointCloudT keyframe_data_ff; 
   pcl::transformPointCloud(
     keyframe.cloud, keyframe_data_ff, eigenFromTf(keyframe.pose));
 
@@ -261,7 +261,7 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
   Save::Request& request,
   Save::Response& response)
 {
-  ROS_INFO("Saving keyframes...\n");
+  ROS_INFO("Saving keyframes...");
   std::string path = request.filename;
   return saveKeyframes(keyframes_, path);
 }
@@ -270,9 +270,19 @@ bool KeyframeMapper::saveKeyframesFFSrvCallback(
   Save::Request& request,
   Save::Response& response)
 {
-  ROS_INFO("Saving keyframes (in fixed frame)...\n");
+  ROS_INFO("Saving keyframes (in fixed frame)...");
   std::string path = request.filename;
   return saveKeyframes(keyframes_, path, true);
 }
+
+bool KeyframeMapper::loadKeyframesSrvCallback(
+  Load::Request& request,
+  Load::Response& response)
+{
+  ROS_INFO("Loading keyframes...");
+  std::string path = request.filename;
+  return loadKeyframes(keyframes_, path);
+}
+
 
 } // namespace ccny_rgbd

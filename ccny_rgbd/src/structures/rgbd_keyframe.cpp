@@ -10,10 +10,13 @@ RGBDKeyframe::RGBDKeyframe():
 }
 
 RGBDKeyframe::RGBDKeyframe(const RGBDFrame& frame):
-  RGBDFrame(frame),
+  RGBDFrame(),
   manually_added(false)
 {
-  
+  rgb_img   = frame.rgb_img.clone();
+  depth_img = frame.depth_img.clone();
+  header    = frame.header;
+  model     = frame.model;
 }
 
 void RGBDKeyframe::constructDensePointCloud(
@@ -195,6 +198,39 @@ bool saveKeyframes(
   }
 
   return true;
+}
+
+bool loadKeyframes(
+  KeyframeVector& keyframes, 
+  const std::string& path)
+{
+  keyframes.clear();
+
+  int kf_idx = 0;
+
+  while(true)
+  {
+    std::stringstream ss_idx;
+    ss_idx << std::setw(4) << std::setfill('0') << kf_idx;
+
+    std::string path_kf = path + "/" + ss_idx.str();
+
+    if (boost::filesystem::exists(path_kf))
+    {
+      ROS_INFO("Loading %s", path_kf.c_str());
+      RGBDKeyframe keyframe;
+      bool result_load = loadKeyframe(keyframe, path_kf);
+      if (result_load) keyframes.push_back(keyframe);
+      else
+      {
+        ROS_WARN("Error loading"); 
+        return false;
+      }
+    } 
+    else return true;
+
+    kf_idx++;
+  }
 }
 
 } // namespace
