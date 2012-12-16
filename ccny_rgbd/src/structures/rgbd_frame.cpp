@@ -248,7 +248,6 @@ bool saveFrame(const RGBDFrame& frame, const std::string& path)
   // save intrinsic matrix
   cv::FileStorage fs_mat(intr_filename, cv::FileStorage::WRITE);
   cv::Mat intr = frame.model.intrinsicMatrix();
-  std::cout << intr << std::endl;
   fs_mat << "intr" << intr;
 
   return true;
@@ -295,7 +294,6 @@ bool loadFrame(RGBDFrame& frame, const std::string& path)
   cv::Mat intr;
   CameraInfoMsg info_msg;
   fs_mat["intr"] >> intr;
-  //std::cout << intr << std::endl;
   convertMatToCameraInfo(intr, info_msg);
   frame.model.fromCameraInfo(info_msg);
 
