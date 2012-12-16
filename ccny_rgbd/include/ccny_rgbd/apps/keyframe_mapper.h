@@ -39,6 +39,9 @@ class KeyframeMapper: public KeyframeGenerator
     bool saveKeyframesSrvCallback(Save::Request& request,
                                   Save::Response& response);
 
+    bool saveFullSrvCallback(Save::Request& request,
+                             Save::Response& response);
+
     bool saveKeyframesFFSrvCallback(Save::Request& request,
                                     Save::Response& response);
 
@@ -61,6 +64,7 @@ class KeyframeMapper: public KeyframeGenerator
     ros::ServiceServer pub_frame_service_;
     ros::ServiceServer recolor_service_;
     ros::ServiceServer save_kf_service_;
+    ros::ServiceServer save_full_service_;
     ros::ServiceServer load_kf_service_;
     ros::ServiceServer save_kf_ff_service_;
 
@@ -78,6 +82,8 @@ class KeyframeMapper: public KeyframeGenerator
     void publishKeyframeData(int i);
     void publishKeyframePose(int i);
     void publishEdges();
+
+    bool saveFullMap(const std::string& path);
 };
 
 } //namespace ccny_rgbd
