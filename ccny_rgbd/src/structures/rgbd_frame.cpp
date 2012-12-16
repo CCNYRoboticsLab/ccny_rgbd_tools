@@ -8,14 +8,6 @@ RGBDFrame::RGBDFrame()
 
 }
 
-RGBDFrame::RGBDFrame(const RGBDFrame& other)
-{
-  rgb_img   = other.rgb_img.clone();
-  depth_img = other.depth_img.clone();
-  header    = other.header;
-  model     = other.model;
-}
-
 RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
                      const sensor_msgs::ImageConstPtr& depth_msg,
                      const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -254,8 +246,10 @@ bool saveFrame(const RGBDFrame& frame, const std::string& path)
   cv::imwrite(depth_filename, frame.depth_img);
   
   // save intrinsic matrix
-  cv::FileStorage fs_p(intr_filename, cv::FileStorage::WRITE);
-  fs_p << "intr" << frame.model.fullIntrinsicMatrix();
+  cv::FileStorage fs_mat(intr_filename, cv::FileStorage::WRITE);
+  cv::Mat intr = frame.model.intrinsicMatrix();
+  std::cout << intr << std::endl;
+  fs_mat << "intr" << intr;
 
   return true;
 }
@@ -296,11 +290,12 @@ bool loadFrame(RGBDFrame& frame, const std::string& path)
   frame.depth_img = cv::imread(depth_filename, -1);
 
   // load intrinsic matrix
-  cv::FileStorage fs_m(header_filename, cv::FileStorage::READ);
+  cv::FileStorage fs_mat(intr_filename, cv::FileStorage::READ);
 
   cv::Mat intr;
   CameraInfoMsg info_msg;
-  fs_h["intr"] >> intr;
+  fs_mat["intr"] >> intr;
+  //std::cout << intr << std::endl;
   convertMatToCameraInfo(intr, info_msg);
   frame.model.fromCameraInfo(info_msg);
 

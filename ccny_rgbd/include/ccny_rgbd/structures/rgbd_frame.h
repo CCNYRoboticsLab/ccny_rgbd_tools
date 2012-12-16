@@ -28,8 +28,6 @@ class RGBDFrame
 
     RGBDFrame();
 
-    RGBDFrame(const RGBDFrame& other);
-
     RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
               const sensor_msgs::ImageConstPtr& depth_msg,
               const sensor_msgs::CameraInfoConstPtr& info_msg);
