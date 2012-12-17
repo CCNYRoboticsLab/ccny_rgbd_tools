@@ -59,6 +59,11 @@ void openCVRtToTf(
   const cv::Mat& t,
   tf::Transform& transform);
 
+//transforms a 3x3 Opencv matrix to a 3x3 Eigen matrix
+void openCVRToEigenR(
+  const cv::Mat& R,
+  Matrix3f& R_eigen);
+
 /* decomposes a tf::Transform into x, y, z, roll, pitch, yaw
  * TODO: rename to tfToXYZRPY
  */
@@ -119,6 +124,15 @@ void transformDistributions(
 void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud);
+
+void projectCloudToImage(const PointCloudT& cloud,
+                         const Matrix3f& rmat,
+                         const Vector3f& tvec,
+                         const Matrix3f& intrinsic,
+                         uint width,
+                         uint height,
+                         cv::Mat& rgb_img,
+                         cv::Mat& depth_img);
 
 } // namespace ccny_rgbd
 

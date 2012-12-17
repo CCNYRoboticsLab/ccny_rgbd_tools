@@ -158,6 +158,15 @@ void tfToOpenCVRt(
     R.at<double>(j,i) = rotation_tf[j][i];
 }
 
+void openCVRToEigenR(
+  const cv::Mat& R,
+  Matrix3f& R_eigen)
+{
+  for(int i = 0; i < 3; ++i)
+  for(int j = 0; j < 3; ++j)
+    R_eigen(j,i) =  R.at<double>(j,i); 
+}
+
 void openCVRtToTf(
   const cv::Mat& R,
   const cv::Mat& t,
