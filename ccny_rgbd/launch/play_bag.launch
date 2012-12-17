@@ -1,0 +1,15 @@
+<!-- Play BAG for Visual Odometry -->
+
+<launch>
+  <arg name="PATH_TO_BAG" default="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" default="ccny_rooms_03" /> # Bag name only (Without extension)
+  <arg name="FULL_BAG_NAME" default="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
+  <arg name="BAG_PLAY_DELAY" default="0.0" /> # Delay in seconds to start the bag's playback
+  
+  <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
+      <arg name="path" value="$(arg PATH_TO_BAG)" />
+      <arg name="bag_name" value="$(arg BAG_NAME).bag" />
+      <arg name="play_delay" value="$(arg BAG_PLAY_DELAY)" />
+  </include>
+
+</launch>
