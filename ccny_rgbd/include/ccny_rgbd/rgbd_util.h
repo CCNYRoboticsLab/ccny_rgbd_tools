@@ -30,6 +30,7 @@
 #include <tf/transform_datatypes.h>
 #include <pcl/filters/voxel_grid.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/nonfree/features2d.hpp> // FIXME: only needed for SURF feature detection/description
 
 #include "ccny_rgbd/types.h"
 
@@ -279,6 +280,11 @@ void depthImageFloatTo16bit(
   const cv::Mat& depth_image_in,
   cv::Mat& depth_image_out);
 
+/* creates a 4x4 perspective transformation matrix (OpenCV) from a 3x3 intrinsic matrix (Eigen)
+ */
+void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat& Q);
+
+
 /** @brief converts a pair of virtual rgb/depth images from a point cloud projection
  *
  * @param cloud the input point cloud model (map)
@@ -306,7 +312,10 @@ void tfFromImagePair(
   const cv::Mat& virtual_img,
   const cv::Mat& virtual_depth_img,
   const Matrix3f& intrinsic_matrix,
-  tf::Transform& transform);
+  tf::Transform& transform,
+  std::string feature_detection_alg = "GFT",
+  std::string feature_descriptor_alg = "ORB"
+);
 
 } // namespace ccny_rgbd
 
