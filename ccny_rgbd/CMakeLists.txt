@@ -172,4 +172,18 @@ target_link_libraries (avg_logger_node
   ${OPENCV_LIBRARIES}
 )
 
+################################################################
+# test projection function
+################################################################
 
+rosbuild_add_executable(test_projection
+  src/test_projection.cpp)
+
+target_link_libraries (test_projection
+  ccny_rgbd_structures
+  ccny_rgbd_util
+  boost_signals
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
