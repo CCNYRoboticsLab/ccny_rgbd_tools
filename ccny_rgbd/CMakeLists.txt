@@ -172,4 +172,19 @@ target_link_libraries (avg_logger_node
   ${OPENCV_LIBRARIES}
 )
 
+################################################################
+# normals test app
+################################################################
+
+rosbuild_add_executable(normals
+  src/rgbd_normals.cpp)
+
+target_link_libraries (normals
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
 
