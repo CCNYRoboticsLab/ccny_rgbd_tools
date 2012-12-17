@@ -7,6 +7,7 @@
 #include <tf/transform_datatypes.h>
 #include <pcl/filters/voxel_grid.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/nonfree/features2d.hpp> // FIXME: only needed for SURF feature detection/description
 
 #include "ccny_rgbd/types.h"
 
@@ -120,6 +121,10 @@ void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud);
 
+/* creates a 4x4 perspective transformation matrix (OpenCV) from a 3x3 intrinsic matrix (Eigen)
+ */
+void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat& Q);
+
 /* generates an RGB and depth images from the projection of a point cloud
  */
 void projectCloudToImage(const PointCloudT& cloud,
@@ -138,7 +143,10 @@ void tfFromImagePair(
   const cv::Mat& virtual_img,
   const cv::Mat& virtual_depth_img,
   const Matrix3f& intrinsic_matrix,
-  tf::Transform& transform);
+  tf::Transform& transform,
+  std::string feature_detection_alg = "GFT",
+  std::string feature_descriptor_alg = "ORB"
+);
 
 } // namespace ccny_rgbd
 
