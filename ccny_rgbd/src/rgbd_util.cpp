@@ -496,5 +496,14 @@ void projectCloudToImage(const PointCloudT& cloud,
   }   
 }
 
+void tfFromImagePair(
+  const cv::Mat& reference_img,
+  const cv::Mat& virtual_img,
+  const cv::Mat& virtual_depth_img,
+  const Matrix3f& intrinsic_matrix,
+  tf::Transform& transform)
+{
+
+}
 
 } //namespace ccny_rgbd
