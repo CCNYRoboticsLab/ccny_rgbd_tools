@@ -115,6 +115,11 @@ void openCVRtToTf(
   const cv::Mat& t,
   tf::Transform& transform);
 
+//transforms a 3x3 Opencv matrix to a 3x3 Eigen matrix
+void openCVRToEigenR(
+  const cv::Mat& R,
+  Matrix3f& R_eigen);
+
 /** @brief Decomposes a tf::Transform into x, y, z, roll, pitch, yaw
  * 
  * @param t the input transform
