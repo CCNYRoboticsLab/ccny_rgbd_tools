@@ -274,6 +274,26 @@ void depthImageFloatTo16bit(
   const cv::Mat& depth_image_in,
   cv::Mat& depth_image_out);
 
+/** @brief converts a pair of virtual rgb/depth images from a point cloud projection
+ *
+ * @param cloud the input point cloud model (map)
+ * @param rmat the virtual camera's rotation matrix
+ * @param tvec the virtual camera's translation vector
+ * @param intrinsic the virtual camera's intrinsic matrix
+ * @param width the virtual camera's width (in pixels)
+ * @param height the virtual camera's height (in pixels)
+ * @param rgb_img the output virtual RGB-image
+ * @param depth_img the output virtual depth-image
+ */
+void projectCloudToImage(const PointCloudT& cloud,
+                         const Matrix3f& rmat,
+                         const Vector3f& tvec,
+                         const Matrix3f& intrinsic,
+                         uint width,
+                         uint height,
+                         cv::Mat& rgb_img,
+                         cv::Mat& depth_img);
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_UTIL_H

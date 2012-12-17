@@ -306,46 +306,6 @@ void pointCloudFromMeans(
 
 
 void buildPointCloud(
-  const cv::Mat& depth_img_rect,
-  const cv::Mat& intr_rect_ir,
-  PointCloudT& cloud)
-{
-  int w = depth_img_rect.cols;
-  int h = depth_img_rect.rows;
-  
-  double cx = intr_rect_ir.at<double>(0,2);
-  double cy = intr_rect_ir.at<double>(1,2);
-  double fx_inv = 1.0 / intr_rect_ir.at<double>(0,0);
-  double fy_inv = 1.0 / intr_rect_ir.at<double>(1,1);
-
-  cloud.resize(w*h);
-
-  for (int u = 0; u < w; ++u)
-  for (int v = 0; v < h; ++v)
-  {
-    uint16_t z = depth_img_rect.at<uint16_t>(v, u);   
-    PointT& pt = cloud.points[v*w + u];
-    
-    if (z != 0)
-    {  
-      double z_metric = z * 0.001;
-             
-      pt.x = z_metric * ((u - cx) * fx_inv);
-      pt.y = z_metric * ((v - cy) * fy_inv);
-      pt.z = z_metric;  
-    }
-    else
-    {
-      pt.x = pt.y = pt.z = std::numeric_limits<float>::quiet_NaN();
-    }
-  }  
-  
-  cloud.width = w;
-  cloud.height = h;
-  cloud.is_dense = true;
-}
-
-void buildPointCloud(
   const cv::Mat& depth_img_rect_reg,
   const cv::Mat& rgb_img_rect,
   const cv::Mat& intr_rect_rgb,
@@ -479,81 +439,62 @@ void depthImageFloatTo16bit(
   depth_image_in.convertTo(depth_image_out, CV_16UC1, 1000.0);
 }
 
-void projectCloudToImage(PointCloudT cloud,
-                         Matrix3f rmat,
-                         Vector3f tvec,
-                         Matrix3f intrinsic,
-                         int width,
-                         int height,
-                         cv::Mat rgb_img,
-                         cv::Mat depth_img)
+void projectCloudToImage(const PointCloudT& cloud,
+                         const Matrix3f& rmat,
+                         const Vector3f& tvec,
+                         const Matrix3f& intrinsic,
+                         uint width,
+                         uint height,
+                         cv::Mat& rgb_img,
+                         cv::Mat& depth_img)
 {
   
-  cv::Mat rgb_img(width, height, CV_8UC3);
-  
+  rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
+  depth_img = cv::Mat::zeros(height, width, CV_16UC1);
+
   for (uint i=0; i<cloud.points.size(); ++i)
   {
     // convert from pcl PointT to Eigen Vector3f
-         
     PointT point = cloud.points[i];
     Vector3f p_world;
-    Vector3f p_world(0,0) = point.x;
-    Vector3f p_world(1,0) = point.y;
-    Vector3f p_world(2,0) = point.z;
-
-    Vector3f p_cam = rmat * p_world + tvec; 
+    p_world(0,0) = point.x;
+    p_world(1,0) = point.y;
+    p_world(2,0) = point.z;
     
-       
+    // transforms into the camera frame  
+    Vector3f p_cam = rmat * p_world + tvec; 
+    double depth = p_cam(2,0) * 1000.0;       //depth in millimiter
+    
+    if (depth <= 0) continue;
+
+    //projection into the imiage plane   
     Vector3f p_proj = intrinsic * p_cam;                    
     double z_proj = p_proj(2,0);
 
-    uint u = (p_proj<double>(0,0))/z_proj;
-    uint v = (p_proj.at<double>(1,0))/z_proj;
+    int u = (p_proj(0,0))/z_proj;
+    int v = (p_proj(1,0))/z_proj;
     
-    if (u<width) && (u>0) && (v<height) && (v>0) 
+    //takes only the visible points  
+    if ((u<width) && (u>=0) && (v<height) && (v>=0)) 
     {
-      //cv::Vec3b color_rgb = rgb_img.at<cv::Vec3b>(v,u);
-
-      //go from pcl to color:
-
       cv::Vec3b color_rgb;
-      color_rgb.r = point.r;
-      color_rgb.g = point.g;
-      color_rgb.b = point.b;
-
-      rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+      color_rgb[0] = point.b;  
+      color_rgb[1] = point.g;
+      color_rgb[2] = point.r;
+          
+      if (depth_img.at<uint16_t>(v,u) == 0)
+      {
+        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;           
+        depth_img.at<uint16_t>(v,u) = depth; 
+      }
+      else if  (depth > 0 && depth < depth_img.at<uint16_t>(v,u))
+      {
+        depth_img.at<uint16_t>(v,u) = depth;
+        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+      }
     }
-    
-  }
-
-//cv::Mat depth_image = cv::Mat::zeros(row, col, CV_16UC1)   //has to be in mm so multiply by 1000
-
-
-for (uint i=0; i<input_3D_points.size(); ++i)
-  {
-    cv::Mat p_world(input_3D_points[i]);
-//   cv::Mat p_cam = rmat_inv*p_world + tvec_inv;                           //transform the 3D world Point P to the camera frame
-    cv::Mat p_cam = rmat*p_world + tvec;                           //transform the 3D world Point P to the camera frame
-    double z = p_cam.at<double>(2,0);
-    if (z>0)
-    {
-      positive_z_3D_points.push_back(cv::Point3d(p_world));       // 3d model in the world frame with positive z wrt the camera frame
-
-      cv::Mat p_proj = intrinsic * p_cam;                    // projected model with positive z into the image plane
-      double z_proj = p_proj.at<double>(2,0);
-      
-      cv::Point2d point_2D_px; 
-      point_2D_px.x = (p_proj.at<double>(0,0))/z_proj;          
-      point_2D_px.y = (p_proj.at<double>(1,0))/z_proj;          
-
-      positive_z_2D_points_projected.push_back(point_2D_px);       // projected points
-    }  
-  }
-  // this function take only the 3D points (with positive z) wich projection is inside the image plane
-  frame_->filterPointsWithinFrame(positive_z_3D_points, positive_z_2D_points_projected, visible_3D_points, visible_2D_points);
+  }   
 }
-
-
 
 
 } //namespace ccny_rgbd
