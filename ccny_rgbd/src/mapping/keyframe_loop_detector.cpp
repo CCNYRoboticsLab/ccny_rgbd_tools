@@ -69,8 +69,8 @@ bool KeyframeLoopDetector::pairwiseAlignGICP(
   double gicp_epsilon_ = 0.004;
   double vgf_res_ = 0.02;
 
-  keyframe_a.constructDataCloud();
-  keyframe_b.constructDataCloud();
+  keyframe_a.constructDensePointCloud();
+  keyframe_b.constructDensePointCloud();
 
   pcl::VoxelGrid<PointT> vgf; //TODO make member
   vgf.setLeafSize (vgf_res_, vgf_res_, vgf_res_);
@@ -82,8 +82,8 @@ bool KeyframeLoopDetector::pairwiseAlignGICP(
   PointCloudT::Ptr cloud_in_b = 
     boost::shared_ptr<PointCloudT>(new PointCloudT());
 
-  *cloud_in_a = keyframe_a.data;
-  *cloud_in_b = keyframe_b.data;
+  *cloud_in_a = keyframe_a.cloud;
+  *cloud_in_b = keyframe_b.cloud;
 
   PointCloudT cloud_a;
   PointCloudT cloud_b;

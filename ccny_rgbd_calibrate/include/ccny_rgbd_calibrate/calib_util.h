@@ -17,6 +17,12 @@ enum DepthFitMode {
   DEPTH_FIT_QUADRATIC_ZERO
 };
 
+cv::Mat m4(const cv::Mat& m3);
+
+cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
+
+cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);
+
 /* reprojects a depth image to another depth image,
  * registered in the rgb camera's frame. Both images 
  * need to be rectified first. ir2rgb is a matrix such that 

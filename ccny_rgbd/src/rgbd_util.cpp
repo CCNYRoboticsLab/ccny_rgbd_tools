@@ -18,7 +18,7 @@ void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist
 
 tf::Transform tfFromEigen(Eigen::Matrix4f trans)
 {
-  MyMatrix btm;
+  tf::Matrix3x3 btm;
   btm.setValue(trans(0,0),trans(0,1),trans(0,2),
             trans(1,0),trans(1,1),trans(1,2),
             trans(2,0),trans(2,1),trans(2,2));
@@ -49,15 +49,16 @@ Eigen::Matrix4f eigenFromTf(const tf::Transform& tf)
    return out_mat;
 }
 
-void getXYZRPY(const tf::Transform& t,
-                     double& x,    double& y,     double& z,
-                     double& roll, double& pitch, double& yaw)
+void getXYZRPY(
+  const tf::Transform& t,
+  double& x,    double& y,     double& z,
+  double& roll, double& pitch, double& yaw)
 {
   x = t.getOrigin().getX();
   y = t.getOrigin().getY();
   z = t.getOrigin().getZ();
 
-  MyMatrix m(t.getRotation());
+  tf::Matrix3x3  m(t.getRotation());
   m.getRPY(roll, pitch, yaw);
 }
 
@@ -76,72 +77,28 @@ bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
   return false;
 }
 
-void tfToCV(
-  const tf::Transform& transform,
-  cv::Mat& rotation,
-  cv::Mat& translation)
-{
-  // extract translation
-  tf::Vector3 translation_tf = transform.getOrigin();
-  translation = cv::Mat(3, 1, CV_64F);
-  translation.at<double>(0,0) = translation_tf.getX();
-  translation.at<double>(1,0) = translation_tf.getY();
-  translation.at<double>(2,0) = translation_tf.getZ();
-
-  // extract rotation
-  tf::Matrix3x3 rotation_tf(transform.getRotation());
-  rotation = cv::Mat(3, 3, CV_64F);
-  for(int i = 0; i < 3; ++i)
-  for(int j = 0; j < 3; ++j)     
-    rotation.at<double>(j,i) = rotation_tf[j][i];
-}
-
-cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec)
-{
-  cv::Mat rmat;
-  cv::Rodrigues(rvec, rmat);
-  return matrixFromRT(rmat, tvec);
-}
-
-cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec)
-{   
-  cv::Mat E = cv::Mat::zeros(3, 4, CV_64FC1);
-  
-  E.at<double>(0,0) = rmat.at<double>(0,0);
-  E.at<double>(0,1) = rmat.at<double>(0,1);
-  E.at<double>(0,2) = rmat.at<double>(0,2);
-  E.at<double>(1,0) = rmat.at<double>(1,0);
-  E.at<double>(1,1) = rmat.at<double>(1,1);
-  E.at<double>(1,2) = rmat.at<double>(1,2);
-  E.at<double>(2,0) = rmat.at<double>(2,0);
-  E.at<double>(2,1) = rmat.at<double>(2,1);
-  E.at<double>(2,2) = rmat.at<double>(2,2);
-
-  E.at<double>(0,3) = tvec.at<double>(0,0);
-  E.at<double>(1,3) = tvec.at<double>(1,0);
-  E.at<double>(2,3) = tvec.at<double>(2,0);
-
-  return E;
-}
-
-cv::Mat m4(const cv::Mat& m3)
-{
-  cv::Mat m4 = cv::Mat::zeros(4, 4, CV_64FC1);
-
-  for (int i = 0; i < 4; ++i)
-  for (int j = 0; j < 3; ++j) 
-    m4.at<double>(j,i) = m3.at<double>(j,i);
-
-  m4.at<double>(3,3) = 1.0;
-  return m4;
-}
-
 double getMsDuration(const ros::WallTime& start)
 {
   return (ros::WallTime::now() - start).toSec() * 1000.0;
 }
 
-void removeInvalidFeatures(
+void removeInvalidMeans(
+  const Vector3fVector& means,
+  const BoolVector& valid,
+  Vector3fVector& means_f)
+{
+  unsigned int size = valid.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    if (valid[i])
+    {
+      const Vector3f& mean = means[i];
+      means_f.push_back(mean);
+    }
+  }
+}
+
+void removeInvalidDistributions(
   const Vector3fVector& means,
   const Matrix3fVector& covariances,
   const BoolVector& valid,
@@ -159,42 +116,6 @@ void removeInvalidFeatures(
       means_f.push_back(mean);
       covariances_f.push_back(cov);
     }
-  }
-}
-
-void cvMatToEigenMatrix3f(
-  const cv::Mat mat_cv, 
-  Matrix3f& mat_eigen)
-{
-  for (int j = 0; j < 3; ++j)
-  for (int i = 0; i < 3; ++i)
-    mat_eigen(j, i) = mat_cv.at<double>(j, i);
-}
-
-void cvMatToEigenVector3f(
-  const cv::Mat mat_cv, 
-  Vector3f& mat_eigen)
-{
-  for (int j = 0; j < 3; ++j)
-    mat_eigen(j, 0) = mat_cv.at<double>(j, 0);
-}
-
-void transformDistributions(
-  MatVector& means,
-  MatVector& covariances,
-  const tf::Transform& transform)
-{
-  cv::Mat R, t;
-  tfToCV(transform, R, t);
-  cv::Mat Rt = R.t();
-  
-  unsigned int size = means.size(); 
-  for(unsigned int i = 0; i < size; ++i)
-  {
-    cv::Mat& m = means[i];
-    cv::Mat& c = covariances[i];
-    m = R * m + t;
-    c = R * c * Rt;
   }
 }
 
@@ -217,6 +138,110 @@ void tfToEigenRt(
    t(2, 0) = origin.z();
 }
 
+void tfToOpenCVRt(
+  const tf::Transform& transform,
+  cv::Mat& R,
+  cv::Mat& t)
+{
+  // extract translation
+  tf::Vector3 translation_tf = transform.getOrigin();
+  t = cv::Mat(3, 1, CV_64F);
+  t.at<double>(0,0) = translation_tf.getX();
+  t.at<double>(1,0) = translation_tf.getY();
+  t.at<double>(2,0) = translation_tf.getZ();
+
+  // extract rotation
+  tf::Matrix3x3 rotation_tf(transform.getRotation());
+  R = cv::Mat(3, 3, CV_64F);
+  for(int i = 0; i < 3; ++i)
+  for(int j = 0; j < 3; ++j)     
+    R.at<double>(j,i) = rotation_tf[j][i];
+}
+
+void openCVRtToTf(
+  const cv::Mat& R,
+  const cv::Mat& t,
+  tf::Transform& transform)
+{
+  tf::Vector3 translation_tf(
+    t.at<double>(0,0),
+    t.at<double>(1,0),
+    t.at<double>(2,0));
+
+  tf::Matrix3x3 rotation_tf;
+  for(int i = 0; i < 3; ++i)
+  for(int j = 0; j < 3; ++j)     
+    rotation_tf[j][i] = R.at<double>(j,i);
+
+  transform.setOrigin(translation_tf);
+  transform.setBasis(rotation_tf);
+}
+
+void convertCameraInfoToMats(
+  const CameraInfoMsg::ConstPtr camera_info_msg,
+  cv::Mat& intr,
+  cv::Mat& dist)
+{
+  // set intrinsic matrix from K vector
+  intr = cv::Mat(3, 3, CV_64FC1);
+  for (int idx = 0; idx < 9; ++idx)
+  {
+    int i = idx % 3;
+    int j = idx / 3;
+    intr.at<double>(j, i) = camera_info_msg->K[idx];
+  }
+  
+  // set distortion matrix from D vector
+  int d_size = camera_info_msg->D.size();
+  dist = cv::Mat(1, d_size, CV_64FC1);
+  for (int idx = 0; idx < d_size; ++idx)
+  {
+    dist.at<double>(0, idx) = camera_info_msg->D[idx];   
+  }
+}
+
+void convertMatToCameraInfo(
+  const cv::Mat& intr,
+  CameraInfoMsg& camera_info_msg)
+{
+  // set D matrix to 0
+  camera_info_msg.D.resize(5);
+  std::fill(camera_info_msg.D.begin(), camera_info_msg.D.end(), 0.0);
+  
+  // set K matrix to optimal new camera matrix
+  for (int i = 0; i < 3; ++i)
+  for (int j = 0; j < 3; ++j)
+    camera_info_msg.K[j*3 + i] = intr.at<double>(j,i);
+  
+  // set R matrix to identity
+  std::fill(camera_info_msg.R.begin(), camera_info_msg.R.end(), 0.0);  
+  camera_info_msg.R[0*3 + 0] = 1.0;
+  camera_info_msg.R[1*3 + 1] = 1.0;
+  camera_info_msg.R[2*3 + 2] = 1.0;
+    
+  //set P matrix to K
+  std::fill(camera_info_msg.P.begin(), camera_info_msg.P.end(), 0.0);  
+  for (int i = 0; i < 3; ++i)
+  for (int j = 0; j < 3; ++j)
+    camera_info_msg.P[j*4 + i] = intr.at<double>(j,i);
+}
+
+void transformMeans(
+  Vector3fVector& means,
+  const tf::Transform& transform)
+{
+  Matrix3f R;
+  Vector3f t;
+  tfToEigenRt(transform, R, t);
+  
+  unsigned int size = means.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    Vector3f& m = means[i];
+    m = R * m + t;
+  }  
+}
+
 void transformDistributions(
   Vector3fVector& means,
   Matrix3fVector& covariances,
@@ -237,24 +262,7 @@ void transformDistributions(
   }
 }
 
-void getPointCloudFromDistributions(
-  const MatVector& means,
-  PointCloudFeature& cloud)
-{
-  unsigned int size = means.size(); 
-  cloud.points.resize(size);
-  for(unsigned int i = 0; i < size; ++i)
-  {
-    const cv::Mat& m = means[i];
-    PointFeature& p = cloud.points[i];
-
-    p.x = m.at<double>(0,0);
-    p.y = m.at<double>(1,0);
-    p.z = m.at<double>(2,0);
-  }
-}
-
-void getPointCloudFromDistributions(
+void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud)
 {
@@ -269,6 +277,68 @@ void getPointCloudFromDistributions(
     p.y = m(1,0);
     p.z = m(2,0);
   }
+  
+  cloud.height = 1;
+  cloud.width = size;
+  cloud.is_dense = true;
 }
+
+void projectCloudToImage(const PointCloudT& cloud,
+                         const Matrix3f& rmat,
+                         const Vector3f& tvec,
+                         const Matrix3f& intrinsic,
+                         uint width,
+                         uint height,
+                         cv::Mat& rgb_img,
+                         cv::Mat& depth_img)
+{
+  
+  rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
+  depth_img = cv::Mat::zeros(height, width, CV_16UC1);
+
+  for (uint i=0; i<cloud.points.size(); ++i)
+  {
+    // convert from pcl PointT to Eigen Vector3f
+    PointT point = cloud.points[i];
+    Vector3f p_world;
+    p_world(0,0) = point.x;
+    p_world(1,0) = point.y;
+    p_world(2,0) = point.z;
+    
+    // transforms into the camera frame  
+    Vector3f p_cam = rmat * p_world + tvec; 
+    double depth = p_cam(2,0) * 1000.0;       //depth in millimiter
+    
+    if (depth <= 0) continue;
+
+    //projection into the imiage plane   
+    Vector3f p_proj = intrinsic * p_cam;                    
+    double z_proj = p_proj(2,0);
+
+    int u = (p_proj(0,0))/z_proj;
+    int v = (p_proj(1,0))/z_proj;
+    
+    //takes only the visible points  
+    if ((u<width) && (u>=0) && (v<height) && (v>=0)) 
+    {
+      cv::Vec3b color_rgb;
+      color_rgb[0] = point.b;  
+      color_rgb[1] = point.g;
+      color_rgb[2] = point.r;
+          
+      if (depth_img.at<uint16_t>(v,u) == 0)
+      {
+        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;           
+        depth_img.at<uint16_t>(v,u) = depth; 
+      }
+      else if  (depth > 0 && depth < depth_img.at<uint16_t>(v,u))
+      {
+        depth_img.at<uint16_t>(v,u) = depth;
+        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+      }
+    }
+  }   
+}
+
 
 } //namespace ccny_rgbd

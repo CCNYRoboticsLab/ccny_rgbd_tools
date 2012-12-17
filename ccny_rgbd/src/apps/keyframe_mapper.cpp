@@ -25,6 +25,14 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
   recolor_service_ = nh_.advertiseService(
     "recolor", &KeyframeMapper::recolorSrvCallback, this);
+  save_kf_service_ = nh_.advertiseService(
+    "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
+  save_kf_ff_service_ = nh_.advertiseService(
+    "save_keyframes_ff", &KeyframeMapper::saveKeyframesFFSrvCallback, this);
+ load_kf_service_ = nh_.advertiseService(
+    "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
+  save_full_service_ = nh_.advertiseService(
+    "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
 
   // **** subscribers
 
@@ -102,9 +110,9 @@ bool KeyframeMapper::recolorSrvCallback(
     int g = rand() % 255;
     int b = rand() % 255;
 
-    for (unsigned int pt_idx = 0; pt_idx < keyframe.data.points.size(); ++pt_idx)
+    for (unsigned int pt_idx = 0; pt_idx < keyframe.cloud.points.size(); ++pt_idx)
     {
-      PointT& p = keyframe.data.points[pt_idx];
+      PointT& p = keyframe.cloud.points[pt_idx];
       
       p.r = r;
       p.g = g;
@@ -141,14 +149,10 @@ void KeyframeMapper::publishKeyframeData(int i)
 {
   RGBDKeyframe& keyframe = keyframes_[i];
 
-  // **** publish PointCloud data
-
-  //keyframe.constructDataCloud();
-
-  PointCloudT keyframe_data_ff; // data transformed to the fixed frame
-  
+  // data transformed to the fixed frame
+  PointCloudT keyframe_data_ff; 
   pcl::transformPointCloud(
-    keyframe.data, keyframe_data_ff, eigenFromTf(keyframe.pose));
+    keyframe.cloud, keyframe_data_ff, eigenFromTf(keyframe.pose));
 
   keyframe_data_ff.header.frame_id = fixed_frame_;
 
@@ -253,6 +257,75 @@ void KeyframeMapper::publishKeyframePose(int i)
   marker_text.scale.z = 0.05; // shaft radius
 
   poses_pub_.publish(marker_text);
+}
+
+bool KeyframeMapper::saveKeyframesSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
+{
+  ROS_INFO("Saving keyframes...");
+  std::string path = request.filename;
+  return saveKeyframes(keyframes_, path);
+}
+
+bool KeyframeMapper::saveKeyframesFFSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
+{
+  ROS_INFO("Saving keyframes (in fixed frame)...");
+  std::string path = request.filename;
+  return saveKeyframes(keyframes_, path, true);
+}
+
+bool KeyframeMapper::loadKeyframesSrvCallback(
+  Load::Request& request,
+  Load::Response& response)
+{
+  ROS_INFO("Loading keyframes...");
+  std::string path = request.filename;
+  return loadKeyframes(keyframes_, path);
+}
+
+bool KeyframeMapper::saveFullSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
+{
+  ROS_INFO("Saving full map...");
+  std::string path = request.filename;
+  return saveFullMap(path);
+}
+
+bool KeyframeMapper::saveFullMap(const std::string& path)
+{
+  double vgf_res = 0.01;
+
+  PointCloudT::Ptr full_map(new PointCloudT());
+  full_map->header.frame_id = fixed_frame_;
+
+  // aggregate all frames into single cloud
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+
+    PointCloudT cloud_tf;
+    pcl::transformPointCloud(keyframe.cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    cloud_tf.header.frame_id = fixed_frame_;
+
+    *full_map += cloud_tf;
+  }
+
+  // filter cloud
+  PointCloudT full_map_f;
+  pcl::VoxelGrid<PointT> vgf;
+  vgf.setInputCloud(full_map);
+  vgf.setLeafSize(vgf_res, vgf_res, vgf_res);
+  vgf.filter(full_map_f);
+
+  // write out
+  pcl::PCDWriter writer;
+  int result_pcd = writer.writeBinary<PointT>(path + ".pcd", full_map_f);  
+
+  return result_pcd;
 }
 
 } // namespace ccny_rgbd

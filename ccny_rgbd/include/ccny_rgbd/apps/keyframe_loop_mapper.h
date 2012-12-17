@@ -1,6 +1,8 @@
 #ifndef CCNY_RGBD_KEYFRAME_LOOP_MAPPER_H
 #define CCNY_RGBD_KEYFRAME_LOOP_MAPPER_H
 
+#include <tf/transform_listener.h>
+
 #include "ccny_rgbd/apps/keyframe_mapper.h"
 #include "ccny_rgbd/mapping/keyframe_loop_detector.h"
 #include "ccny_rgbd/mapping/keyframe_loop_solver.h"

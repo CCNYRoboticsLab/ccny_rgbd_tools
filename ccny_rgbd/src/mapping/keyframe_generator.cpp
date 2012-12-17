@@ -69,7 +69,7 @@ void KeyframeGenerator::addKeyframe(
   //ROS_INFO("Adding frame");
   RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
-  keyframe.constructDataCloud();
+  keyframe.constructDensePointCloud();
 
   if (manual_add_)
   {

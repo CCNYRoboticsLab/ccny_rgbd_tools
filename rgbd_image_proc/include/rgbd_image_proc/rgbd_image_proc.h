@@ -123,16 +123,7 @@ class RGBDImageProc
       const CameraInfoMsg::ConstPtr& depth_info_msg);
     
     bool loadCalibration();
-    
-    void convertCameraInfoToMats(
-      const CameraInfoMsg::ConstPtr camera_info_msg,
-      cv::Mat& intr,
-      cv::Mat& dist);
-
-    void convertMatToCameraInfo(
-      const cv::Mat& intr,
-      CameraInfoMsg& camera_info);
-    
+        
     void reconfigCallback(ProcConfig& config, uint32_t level);
 };
 

@@ -72,9 +72,9 @@ void FeatureDetector::findFeatures(RGBDFrame& frame)
 
   if (publish_features_)
   {
-    // TODO: no reason for this to be a class method
-    frame.constructFeaturesCloud();
-    features_publisher_.publish(frame.kp_cloud);
+    PointCloudFeature cloud;
+    frame.constructFeaturePointCloud(cloud);   
+    features_publisher_.publish(cloud);
   }
 
   if (publish_covariances_)
