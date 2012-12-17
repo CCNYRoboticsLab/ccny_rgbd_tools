@@ -1,0 +1,61 @@
+<!-- RGB-D Monocual Visual Odometry -->
+
+<launch>
+  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/PCDs" />
+  <arg name="PCD_NAME" default="office.pcd" /> # PCD file name (with extension)
+  <arg name="FULL_PCD_NAME" default="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
+  
+  # ORB, SURF, GTF, KLT
+  <arg name="detector_type" default="GFT"/> 
+  
+  <node pkg="ccny_rgbd" type="mono_vo_node" name="mono_vo_node" 
+    output="screen">
+
+    # PCD file location
+    <param name="apps/mono_vo/PCD_filename" value="$(arg FULL_PCD_NAME)"/> 
+    <param name="apps/mono_vo/publish_cloud_model" value="true"/> 
+
+    # Topics:
+    <param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" />
+    <param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_rect_color"/>
+    
+    # Frames
+    <param name="fixed_frame" value="/odom"/>
+    <param name="base_frame"  value="/camera_link"/>
+       
+    #### RANSAC params for initial pose estimation ######################
+    <param name="apps/mono_vo/min_inliers"          value="3"/>
+    <param name="apps/mono_vo/max_iterations"       value="100"/>
+    <param name="apps/mono_vo/distance_threshold"   value="25"/> # Squared distance
+
+    <param name="apps/mono_vo/max_PnP_iterations"   value="50"/>
+    <param name="apps/mono_vo/number_of_random_trees"   value="5"/>
+    <param name="apps/mono_vo/assume_initial_position"   value="true"/>
+    <param name="apps/mono_vo/visualize_correspondences"   value="true"/>
+    
+    #### features #####################################
+
+    <param name="feature/detector_type"       value="$(arg detector_type)"/> #  ORB, SURF, or GFT (Good features to track)
+    <param name="feature/compute_descriptors" value="false"/>
+    <param name="feature/smooth"              value="0"/>
+    <param name="feature/show_keypoints"      value="false"/>
+
+    #### features: GFT ################################
+
+    <param name="feature/GFT/n_features"   value = "150"/>
+    <param name="feature/GFT/min_distance" value = "0.0"/>
+    <param name="feature/GFT/quality_level"   value = "0.01"/>
+    <param name="feature/GFT/grid_cells"   value = "1"/>
+
+    #### features: SURF ###############################
+  
+    <param name="feature/SURF/hessian_threshold" value = "600"/>
+    <param name="feature/SURF/upright"           value = "false"/>
+
+    #### features: ORB ###############################
+  
+    <param name="feature/ORB/n_features"     value = "300"/>
+    <param name="feature/ORB/edge_threshold" value = "31"/>
+  </node>
+
+</launch>
