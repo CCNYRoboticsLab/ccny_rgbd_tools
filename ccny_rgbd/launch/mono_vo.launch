@@ -17,7 +17,8 @@
 
     # Topics:
     <param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" />
-    <param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_rect_color"/>
+    #param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_rect_color"
+    <param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_raw"/>
     
     # Frames
     <param name="fixed_frame" value="/odom"/>

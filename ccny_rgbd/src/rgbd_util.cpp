@@ -38,14 +38,28 @@ void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist
   getTfDifference(motion, dist, angle);
 }
 
-tf::Transform tfFromEigen(Eigen::Matrix4f trans)
+tf::Transform tfFromEigen(Eigen::Matrix4f E)
 {
   tf::Matrix3x3 btm;
-  btm.setValue(trans(0,0),trans(0,1),trans(0,2),
-            trans(1,0),trans(1,1),trans(1,2),
-            trans(2,0),trans(2,1),trans(2,2));
+  btm.setValue(E(0,0),E(0,1),E(0,2),
+            E(1,0),E(1,1),E(1,2),
+            E(2,0),E(2,1),E(2,2));
   tf::Transform ret;
   ret.setOrigin(tf::Vector3(trans(0,3),trans(1,3),trans(2,3)));
+  ret.setBasis(btm);
+  return ret;
+}
+
+tf::Transform tfFromEigenRt(
+  const Matrix3f R,
+  const Vector3f t)
+{
+  tf::Matrix3x3 btm;
+  btm.setValue(R(0,0),R(0,1),R(0,2),
+            R(1,0),R(1,1),R(1,2),
+            R(2,0),R(2,1),R(2,2));
+  tf::Transform ret;
+  ret.setOrigin(tf::Vector3(t(0,0),t(1,0),t(2,0)));
   ret.setBasis(btm);
   return ret;
 }
@@ -141,8 +155,8 @@ void removeInvalidDistributions(
 }
 
 void tfToEigenRt(
-  const tf::Transform& tf, 
-  Matrix3f& R, 
+  const tf::Transform& tf,
+  Matrix3f& R,
   Vector3f& t)
 {
    double mv[12];
@@ -465,23 +479,24 @@ void depthImageFloatTo16bit(
   depth_image_in.convertTo(depth_image_out, CV_16UC1, 1000.0);
 }
 
-void projectCloudToImage(const PointCloudT& cloud,
+void projectCloudToImage(const PointCloudT::Ptr& cloud,
                          const Matrix3f& rmat,
                          const Vector3f& tvec,
                          const Matrix3f& intrinsic,
-                         uint width,
-                         uint height,
+                         int width,
+                         int height,
                          cv::Mat& rgb_img,
-                         cv::Mat& depth_img)
+                         cv::Mat& depth_img
+                         )
 {
   
   rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
 
-  for (uint i=0; i<cloud.points.size(); ++i)
+  for (uint i=0; i<cloud->points.size(); ++i)
   {
     // convert from pcl PointT to Eigen Vector3f
-    PointT point = cloud.points[i];
+    PointT point = cloud->points[i];
     Vector3f p_world;
     p_world(0,0) = point.x;
     p_world(1,0) = point.y;
@@ -529,7 +544,8 @@ void tfFromImagePair(
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
   std::string feature_detection_alg,
-  std::string feature_descriptor_alg
+  std::string feature_descriptor_alg,
+  bool draw_matches
   )
 {
   cv::Ptr<cv::FeatureDetector> feature_detector;
@@ -660,7 +676,6 @@ void tfFromImagePair(
   // TODO: parametrize:
   float max_distance = 0.25;
   bool use_radius_match = true;
-  bool preview_matches = true;
 
   matcher.radiusMatch(descriptors_ref, descriptors_virt, matches_radius, max_distance); // Match search within radius
 
@@ -677,7 +692,7 @@ void tfFromImagePair(
 //      std::cout << "\tPoint at Train: " << keypointsRR[0][matches_radius[i][m].trainIdx].pt<< std::endl;
     }
 
-    if(preview_matches)
+    if(draw_matches)
     {
       cv::Mat reference_img_copy = reference_img.clone();
       cv::Mat virtual_img_copy = virtual_img.clone();

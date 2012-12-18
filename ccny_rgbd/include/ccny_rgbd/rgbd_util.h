@@ -72,7 +72,13 @@ bool tfGreaterThan(const tf::Transform& a, double dist, double angle);
  * @param trans Eigen transform
  * @return tf version of the eigen transform
  */
-tf::Transform tfFromEigen(Eigen::Matrix4f trans);
+tf::Transform tfFromEigen(Eigen::Matrix4f E);
+
+/* composes a tf::Transform from an Eigen 3x3 rotation matrix and a 3x1 translation vector
+ */
+tf::Transform tfFromEigenRt(
+  const Matrix3f R,
+  const Vector3f t);
 
 /** @brief Converts an tf::Transform transform to an Eigen transform
  * @param tf the tf transform
@@ -296,12 +302,12 @@ void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat
  * @param rgb_img the output virtual RGB-image
  * @param depth_img the output virtual depth-image
  */
-void projectCloudToImage(const PointCloudT& cloud,
+void projectCloudToImage(const PointCloudT::Ptr& cloud,
                          const Matrix3f& rmat,
                          const Vector3f& tvec,
                          const Matrix3f& intrinsic,
-                         uint width,
-                         uint height,
+                         int width,
+                         int height,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img);
 
@@ -314,7 +320,8 @@ void tfFromImagePair(
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
   std::string feature_detection_alg = "GFT",
-  std::string feature_descriptor_alg = "ORB"
+  std::string feature_descriptor_alg = "ORB",
+  bool draw_matches = false
 );
 
 } // namespace ccny_rgbd

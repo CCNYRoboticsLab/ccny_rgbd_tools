@@ -166,20 +166,38 @@ target_link_libraries(rgbd_image_proc_node    rgbd_image_proc_app)
 target_link_libraries(rgbd_image_proc_nodelet rgbd_image_proc_app)
 
 ################################################################
+# Build Monocular visual odometry application
+################################################################
+
+rosbuild_add_executable(mono_vo_node 
+  src/node/mono_vo_node.cpp
+  src/apps/mono_vo.cpp)
+
+target_link_libraries (mono_vo_node 
+  ccny_rgbd_features
+  ccny_rgbd_mapping
+  ccny_rgbd_registration
+  ccny_rgbd_util
+  ${OPENCV_LIBRARIES}
+  boost_signals 
+  boost_system
+)
+
+################################################################
 # test projection function
 ################################################################
 
-rosbuild_add_executable(test_projection
-  src/test_projection.cpp)
+#rosbuild_add_executable(test_projection
+#  src/test_projection.cpp)
 
-target_link_libraries (test_projection
-  ccny_rgbd_structures
-  ccny_rgbd_util
-  boost_signals
-  boost_system
-  boost_filesystem
-  ${OPENCV_LIBRARIES}
-)
+#target_link_libraries (test_projection
+#  ccny_rgbd_structures
+#  ccny_rgbd_util
+#  boost_signals
+#  boost_system
+#  boost_filesystem
+#  ${OPENCV_LIBRARIES}
+#)
 
 #######################################################
 #supress pcl-1.6 pragma warnings
@@ -194,6 +212,6 @@ rosbuild_add_compile_flags(rgbd_image_proc_node '-Wno-unknown-pragmas')
 rosbuild_add_compile_flags(rgbd_image_proc_nodelet '-Wno-unknown-pragmas')
 rosbuild_add_compile_flags(visual_odometry_node '-Wno-unknown-pragmas')
 rosbuild_add_compile_flags(feature_viewer_node  '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(mono_vo_node  '-Wno-unknown-pragmas')
 # Temp stuff:
-rosbuild_add_compile_flags(test_projection  '-Wno-unknown-pragmas')
-
+#rosbuild_add_compile_flags(test_projection  '-Wno-unknown-pragmas')
