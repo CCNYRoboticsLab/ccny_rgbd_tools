@@ -40,6 +40,8 @@ typedef image_transport::SubscriberFilter ImageSubFilter;
 typedef message_filters::Subscriber<CameraInfoMsg> CameraInfoSubFilter;
 typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg> SyncPolicy;
 typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
+typedef message_filters::sync_policies::ApproximateTime<ImageMsg, CameraInfoMsg> SyncPolicyMonoVO;
+typedef message_filters::Synchronizer<SyncPolicyMonoVO> SynchronizerMonoVO;
 
 } // namespace ccny_rgbd
 

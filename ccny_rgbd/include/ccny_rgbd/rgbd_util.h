@@ -33,7 +33,13 @@ bool tfGreaterThan(const tf::Transform& a, double dist, double angle);
 
 /* converts and Eigen transform to a tf::Transform
  */
-tf::Transform tfFromEigen(Eigen::Matrix4f trans);
+tf::Transform tfFromEigen(Eigen::Matrix4f E);
+
+/* composes a tf::Transform from an Eigen 3x3 rotation matrix and a 3x1 translation vector
+ */
+tf::Transform tfFromEigenRt(
+  const Matrix3f R,
+  const Vector3f t);
 
 /* converts and tf::Transform transform to an Eigen transform
  */
@@ -132,12 +138,12 @@ void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat
 
 /* generates an RGB and depth images from the projection of a point cloud
  */
-void projectCloudToImage(const PointCloudT& cloud,
+void projectCloudToImage(const PointCloudT::Ptr& cloud,
                          const Matrix3f& rmat,
                          const Vector3f& tvec,
                          const Matrix3f& intrinsic,
-                         uint width,
-                         uint height,
+                         int width,
+                         int height,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img);
 
@@ -150,7 +156,8 @@ void tfFromImagePair(
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
   std::string feature_detection_alg = "GFT",
-  std::string feature_descriptor_alg = "ORB"
+  std::string feature_descriptor_alg = "ORB",
+  bool draw_matches = false
 );
 
 

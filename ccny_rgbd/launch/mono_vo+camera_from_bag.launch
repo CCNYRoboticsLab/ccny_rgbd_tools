@@ -2,7 +2,7 @@
 
 <launch>
   <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
-  <arg name="BAG_NAME" value="apt_01_qvga" /> # Bag name only (Without extension)
+  <arg name="BAG_NAME" value="ccny_rooms_03" /> # Bag name only (Without extension)
   <arg name="PATH_TO_PCD" value="$(env HOME)/ros/PCDs" />
   <arg name="PCD_NAME" value="apt1.pcd" /> # PCD file name (with extension)
   <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
