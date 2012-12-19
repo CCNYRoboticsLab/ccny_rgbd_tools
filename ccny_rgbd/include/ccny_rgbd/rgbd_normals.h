@@ -16,6 +16,11 @@ void g();
 void f(const RGBDFrame& frame);
 
 void analyzeKeyframes();
+
+bool analyzeCloud(
+  const PointCloudT::Ptr& cloud,
+  double& best_angle);
+
 void analyzeKeyframe(RGBDKeyframe& keyframe);
 
 void buildPointCloud(

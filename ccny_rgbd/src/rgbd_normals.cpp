@@ -33,17 +33,115 @@ namespace ccny_rgbd {
 void analyzeKeyframes()
 {
   KeyframeVector keyframes;
-  loadKeyframes(keyframes, "/home/idryanov/ros/images/ccny_kf_seq_loop");
+  loadKeyframes(keyframes, "/home/idyanov/ros/images/ccny_2rooms_seq_loop");
 
-  for (unsigned int i = 0; i < keyframes.size(); ++i)
+  for (unsigned int i = 0; i < keyframes.size(); i = i+10)
   {
+    PointCloudT::Ptr agr(new PointCloudT);
+    
+    for (unsigned int j = i; j < i+10; ++j)
+    {
+      if (j >= keyframes.size()) continue;
+      
+      PointCloudT temp;
+      pcl::transformPointCloud(keyframes[j].cloud, temp, eigenFromTf(keyframes[j].pose));
+      *agr += temp;
+    }
+    
+    double best_angle;
+    
     printf("analyzing keyframe %d...\n", i);
-    analyzeKeyframe(keyframes[i]);
+    analyzeCloud(agr, best_angle);
     printf("analyzing keyframe %d done.\n", i);
+    cv::waitKey(100);
+    
+    tf::Quaternion q;
+    q.setRPY(0, 0, best_angle * M_PI / 180);
+    tf::Transform tf;
+    tf.setIdentity();
+    tf.setRotation(q);
+    
+    for (unsigned int j = i; j < i+10; ++j)
+    {
+      if (j >= keyframes.size()) continue;
+
+      PointCloudT temp;
+      pcl::transformPointCloud(keyframes[j].cloud, temp, eigenFromTf(keyframes[j].pose));    
+      pcl::transformPointCloud(temp, keyframes[j].cloud, eigenFromTf(tf));
+    }
   }
 
-  saveKeyframes(keyframes, "/home/idryanov/ros/images/ccny_kf_seq_loop_hist");
+  saveKeyframes(keyframes, "/home/idyanov/ros/images/ccny_2rooms_seq_loop_hist");
 
+}
+
+bool analyzeCloud(
+  const PointCloudT::Ptr& cloud,
+  double& best_angle)
+{
+  // params
+  double vgf_res = 0.01;
+  double degrees_per_bin = 0.25;
+
+  // filter cloud
+  printf("Filtering cloud\n");
+  pcl::VoxelGrid<PointT> vgf;
+  PointCloudT::Ptr cloud_f;
+  cloud_f.reset(new PointCloudT());
+  vgf.setInputCloud(cloud);
+  vgf.setLeafSize(vgf_res, vgf_res, vgf_res);
+  vgf.filter(*cloud_f);
+  
+  // Create an empty kdtree representation, and pass it to the normal estimation object.
+  // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+  printf("Creating kd-tree\n");
+  pcl::search::KdTree<PointT>::Ptr mls_tree;
+  mls_tree.reset(new pcl::search::KdTree<PointT>());
+
+  // smooth using mls
+  printf("MLS\n");
+  pcl::MovingLeastSquares<PointT, pcl::PointXYZRGBNormal> mls;
+  mls.setInputCloud (cloud_f);
+  mls.setPolynomialFit (true);
+  mls.setSearchMethod (mls_tree);
+  mls.setSearchRadius (0.05);
+  mls.reconstruct(*cloud_f); 
+
+  // Compute the features
+  printf("Estimating normals\n");
+
+  pcl::search::KdTree<PointT>::Ptr tree;
+  tree.reset(new pcl::search::KdTree<PointT>());
+
+  pcl::NormalEstimation<PointT, pcl::PointXYZRGBNormal> ne;
+  ne.setRadiusSearch(0.10);
+  ne.setInputCloud(cloud_f);
+  ne.setSearchMethod(tree);
+  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_normals;
+  cloud_normals.reset(new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+  ne.compute (*cloud_normals);
+
+  // build histogram
+  printf("building histogram\n");
+  cv::Mat histogram;
+  buildPhiHistogram(*cloud_normals, histogram, degrees_per_bin);
+
+  // show histogram
+  cv::Mat hist_img;
+  createImageFromHistogram(histogram, hist_img);
+  cv::imshow("Histogram Phi", hist_img);
+
+  // find alignement
+  cv::Mat hist_exp;
+  buildExpectedPhiHistorgtam(hist_exp, degrees_per_bin, 2.0);
+  cv::Mat hist_exp_img;
+  createImageFromHistogram(hist_exp, hist_exp_img);
+  cv::imshow("hist_exp_img", hist_exp_img);
+  alignHistogram(histogram, hist_exp, degrees_per_bin, best_angle);
+
+  if (best_angle > 45) best_angle-=90.0;
+   
+  return true;
 }
 
 void analyzeKeyframe(RGBDKeyframe& keyframe)
