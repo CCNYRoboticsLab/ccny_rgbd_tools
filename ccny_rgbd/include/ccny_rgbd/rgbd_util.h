@@ -147,6 +147,21 @@ void projectCloudToImage(const PointCloudT::Ptr& cloud,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img);
 
+/*Fills the holes due to the sparse model in the projected image
+ * N.B. mask size has to be a odd number 
+ */
+void holeFilling(const cv::Mat& rgb_img,
+                 const cv::Mat& depth_img,
+                 uint mask_size,
+                 cv::Mat& filled_rgb_img,
+                 cv::Mat& filled_depth_img);
+
+void holeFilling2(const cv::Mat& rgb_img,
+                 const cv::Mat& depth_img,
+                 uint mask_size,
+                 cv::Mat& filled_rgb_img,
+                 cv::Mat& filled_depth_img);
+
 /* Finds the PnP transformation of the reference image based on the virtual images
  */
 void tfFromImagePair(

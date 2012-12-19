@@ -382,6 +382,115 @@ void projectCloudToImage(const PointCloudT::Ptr& cloud,
   }   
 }
 
+void holeFilling(const cv::Mat& rgb_img,
+                 const cv::Mat& depth_img,
+                 uint mask_size,
+                 cv::Mat& filled_rgb_img,
+                 cv::Mat& filled_depth_img)
+
+{
+  uint w = (mask_size-1)/2;
+
+  filled_rgb_img   = cv::Mat::zeros(rgb_img.rows, rgb_img.cols, CV_8UC3);
+  filled_depth_img = cv::Mat::zeros(depth_img.rows, depth_img.cols, CV_16UC1);
+  
+  for (uint u=0; u < depth_img.cols; ++u)
+    for (uint v=0; v < depth_img.rows; ++v)
+    {
+      if (depth_img.at<uint16_t>(v,u) == 0)
+      {
+        double count = 0;
+        double depth_sum = 0;
+        double rgb_sum_b = 0; 
+        double rgb_sum_g = 0;
+        double rgb_sum_r = 0;
+
+        for (uint uu = u - w; uu <= u+w; ++uu)
+        for (uint vv = v - w; vv <= v+w; ++vv)
+        {
+          if (uu < 0 || uu >= depth_img.cols || vv < 0 || vv >= depth_img.rows ) continue;
+
+          uint16_t neighbor_depth  = depth_img.at<uint16_t>(vv, uu);
+          cv::Vec3b neighbor_color = rgb_img.at<cv::Vec3b>(vv, uu);
+
+          if (neighbor_depth != 0)
+          {
+            double neighbor_color_b = (double)neighbor_color[0];
+            double neighbor_color_g = (double)neighbor_color[1];
+            double neighbor_color_r = (double)neighbor_color[2];
+
+            depth_sum = depth_sum + neighbor_depth;
+            rgb_sum_b = rgb_sum_b + neighbor_color_b;
+            rgb_sum_g = rgb_sum_g + neighbor_color_g;
+            rgb_sum_r = rgb_sum_r + neighbor_color_r;
+            ++count;
+          }
+        }
+        if (count != 0)
+        { 
+          filled_depth_img.at<uint16_t>(v,u) = depth_sum/count;
+          cv::Vec3b color_rgb;
+          color_rgb[0] = (uint8_t)(rgb_sum_b/count);  
+          color_rgb[1] = (uint8_t)(rgb_sum_g/count);
+          color_rgb[2] = (uint8_t)(rgb_sum_r/count);
+          filled_rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+        }
+      }
+      else 
+      {
+        filled_depth_img.at<uint16_t>(v,u) = depth_img.at<uint16_t>(v,u);
+        filled_rgb_img.at<cv::Vec3b>(v,u)  = rgb_img.at<cv::Vec3b>(v,u); 
+      }
+    }
+   
+}
+
+void holeFilling2(const cv::Mat& rgb_img,
+                 const cv::Mat& depth_img,
+                 uint mask_size,
+                 cv::Mat& filled_rgb_img,
+                 cv::Mat& filled_depth_img)
+
+{
+  uint w = (mask_size-1)/2;
+
+  filled_rgb_img   = cv::Mat::zeros(rgb_img.rows, rgb_img.cols, CV_8UC3);
+  filled_depth_img = cv::Mat::zeros(depth_img.rows, depth_img.cols, CV_16UC1);
+  
+  for (uint u=0; u < depth_img.cols; ++u)
+    for (uint v=0; v < depth_img.rows; ++v)
+    {
+      if (depth_img.at<uint16_t>(v,u) == 0)
+      {
+        
+        double min_depth = 0;
+        for (uint uu = u - w; uu <= u+w; ++uu)
+        for (uint vv = v - w; vv <= v+w; ++vv)
+        {
+          if (uu < 0 || uu >= depth_img.cols || vv < 0 || vv >= depth_img.rows ) continue;
+          
+          uint16_t neighbor_depth  = depth_img.at<uint16_t>(vv, uu);
+          cv::Vec3b neighbor_color = rgb_img.at<cv::Vec3b>(vv, uu);
+
+          if (neighbor_depth != 0 )
+          {
+            if (min_depth == 0 || neighbor_depth < min_depth )
+            {
+              min_depth = neighbor_depth;   
+              filled_depth_img.at<uint16_t>(v,u) =  min_depth;  
+              filled_rgb_img.at<cv::Vec3b>(v,u)  =  rgb_img.at<cv::Vec3b>(vv,uu);       
+            }
+          }
+        }
+      }  
+      else 
+      {
+        filled_depth_img.at<uint16_t>(v,u) = depth_img.at<uint16_t>(v,u);
+        filled_rgb_img.at<cv::Vec3b>(v,u)  = rgb_img.at<cv::Vec3b>(v,u); 
+      }
+    }
+}
+
 void tfFromImagePair(
   const cv::Mat& current_img,
   const cv::Mat& next_img,
