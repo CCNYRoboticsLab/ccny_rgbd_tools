@@ -660,8 +660,8 @@ void tfFromImagePair(
 {
   // Mask next image with depth img as mask (takes care of wholes where information is missing)
 
-  cv::Mat next_img_mask = cv::Mat::zeros(next_depth_img.rows, next_depth_img.cols, next_depth_img.type()); // Black image
-  cv::bitwise_and(next_depth_img, next_depth_img, next_img_mask, next_depth_img); // Apply mask
+  cv::Mat next_img_mask;
+  next_depth_img.convertTo(next_img_mask, CV_8U);
   cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
   cv::imshow("Mask", next_img_mask);
   cv::waitKey(0);
