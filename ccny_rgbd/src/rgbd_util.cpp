@@ -509,7 +509,6 @@ void tfFromImagePair(
   next_depth_img.convertTo(next_img_mask, CV_8U);
   cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
   cv::imshow("Mask", next_img_mask);
-  cv::waitKey(0);
 
   cv::Ptr<cv::FeatureDetector> feature_detector;
 
@@ -622,6 +621,8 @@ void tfFromImagePair(
   }
 
   cv::Mat descriptors_current, descriptors_next;
+  std::vector<cv::Mat> dbDescriptors_train;
+
   descriptor_extractor->compute(current_img, keypoints_current, descriptors_current);
   descriptor_extractor->compute(next_img, keypoints_next, descriptors_next);
 
@@ -630,31 +631,31 @@ void tfFromImagePair(
 
 
   // Construction of the matcher
-  cv::BFMatcher matcher(norm_type, true);
+  cv::BFMatcher matcher_brute_force(norm_type, true);
+  // FLANN based matcher
+  //      cv::flann::KDTreeIndexParams indexParams(number_of_random_trees_);
+  cv::FlannBasedMatcher matcher_flann;
 
   // Match the two image descriptors
   std::vector<std::vector<cv::DMatch> > matches_radius;
   std::vector<std::vector<cv::DMatch> > matches_knn;
-  std::vector<cv::DMatch> matches_bf;
 
   // TODO: parametrize:
   float max_distance = 0.25;
   bool use_radius_match = true;
 
-  matcher.radiusMatch(descriptors_current, descriptors_next, matches_radius, max_distance); // Match search within radius
+  matcher_brute_force.radiusMatch(descriptors_current, descriptors_next, matches_radius, max_distance); // Match search within radius
+//  matcher.radiusMatch(descriptors_current, descriptors_next, matches_radius, max_distance); // Match search within radius
 
-  std::cout << "Matches: " << matches_radius.size() << " where " <<  std::endl;
-  for(uint i=0; i< matches_radius.size(); i++)
-  {
-    int number_of_matches = matches_radius[i].size();
-    ROS_INFO("=== Match[%d] = %d", i, number_of_matches);
-    for(int m=0; m<number_of_matches; m++)
-    {
-//      ROS_INFO( "Match[%d][%d]: imgIdx = %d, queryIdx = %d, trainIdx = %d, distance = %f",
-//                i, m, matches_radius[i][m].imgIdx, matches_radius[i][m].queryIdx, matches_radius[i][m].trainIdx, matches_radius[i][m].distance);
+  std::cout << "Radius Matches: " << matches_radius.size() <<  std::endl;
+//    int number_of_matches = matches_radius.size();
+//    for(int m=0; m<number_of_matches; m++)
+//    {
+//      ROS_INFO( "Match[%d]: imgIdx = %d, queryIdx = %d, trainIdx = %d, distance = %f",
+//                m, matches_radius[m].imgIdx, matches_radius[i][m].queryIdx, matches_radius[i][m].trainIdx, matches_radius[i][m].distance);
 //      std::cout << "\tPoint at Query: " << keypointsLL[0][matches_radius[i][m].queryIdx].pt<< std::endl;
 //      std::cout << "\tPoint at Train: " << keypointsRR[0][matches_radius[i][m].trainIdx].pt<< std::endl;
-    }
+//    }
 
     if(draw_matches)
     {
@@ -667,11 +668,66 @@ void tfFromImagePair(
                       matches_radius, // the matches
                       matches_result_img // the image produced
                      ); // color of the lines
-      cv::namedWindow("Matches", CV_WINDOW_KEEPRATIO);
-      cv::imshow("Matches", matches_result_img);
-      cv::waitKey(0);
+      cv::namedWindow("Matches radius", CV_WINDOW_KEEPRATIO);
+      cv::imshow("Matches radius", matches_result_img);
     }
-  }
+
+
+    matcher_brute_force.knnMatch(descriptors_current, descriptors_next, matches_knn, 1); // Match search within radius
+
+    std::cout << "Knn Matches: " << matches_knn.size() << std::endl;
+  //    int number_of_matches = matches_radius.size();
+  //    for(int m=0; m<number_of_matches; m++)
+  //    {
+  //      ROS_INFO( "Match[%d]: imgIdx = %d, queryIdx = %d, trainIdx = %d, distance = %f",
+  //                m, matches_radius[m].imgIdx, matches_radius[i][m].queryIdx, matches_radius[i][m].trainIdx, matches_radius[i][m].distance);
+  //      std::cout << "\tPoint at Query: " << keypointsLL[0][matches_radius[i][m].queryIdx].pt<< std::endl;
+  //      std::cout << "\tPoint at Train: " << keypointsRR[0][matches_radius[i][m].trainIdx].pt<< std::endl;
+  //    }
+
+      if(draw_matches)
+      {
+        cv::Mat current_img_copy = current_img.clone();
+        cv::Mat next_img_copy = next_img.clone();
+
+        cv::Mat matches_result_img;
+        cv::drawMatches(current_img_copy, keypoints_current, // 1st image and its keypoints
+                        next_img_copy, keypoints_next, // 2nd image and its keypoints
+                        matches_knn, // the matches
+                        matches_result_img // the image produced
+                       ); // color of the lines
+        cv::namedWindow("Matches knn", CV_WINDOW_KEEPRATIO);
+        cv::imshow("Matches knn", matches_result_img);
+      }
+
+      // FIXME: Flann not working, crashing! I must be doing something wrong and blindly!
+      /*
+      ROS_WARN("AFTER KNN");
+
+      //train with descriptors from your db
+      dbDescriptors_train.push_back(descriptors_current);
+      matcher_flann.add(dbDescriptors_train);
+      matcher_flann.train();
+      std::vector<cv::DMatch> matches_flann;
+      matcher_flann.match(descriptors_next, matches_flann); // Match search within radius
+      ROS_WARN("HMMM");
+      if(draw_matches)
+      {
+        cv::Mat current_img_copy = current_img.clone();
+        cv::Mat next_img_copy = next_img.clone();
+
+        cv::Mat matches_result_img;
+        cv::drawMatches(current_img_copy, keypoints_current, // 1st image and its keypoints
+                        next_img_copy, keypoints_next, // 2nd image and its keypoints
+                        matches_flann, // the matches
+                        matches_result_img // the image produced
+                       ); // color of the lines
+        cv::namedWindow("Matches FLANN", CV_WINDOW_KEEPRATIO);
+        cv::imshow("Matches FLANN", matches_result_img);
+      }
+      */
+      if(draw_matches)
+        cv::waitKey(0);
 
 
   // -----------------------------------------------------------------------------

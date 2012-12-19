@@ -113,7 +113,7 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
     cv::imshow("Current", current_keyframe.rgb_img);
     cv::namedWindow("Next", CV_WINDOW_KEEPRATIO);
     cv::imshow("Next", next_keyframe.rgb_img);
-    cv::waitKey(0);
+    cv::waitKey(1);
   }
 
   Matrix3f intrinsic;
@@ -126,8 +126,8 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
     next_keyframe.depth_img,
     intrinsic,
     transform,
-    "GFT",
     "ORB",
+    "BRIEF",
     10,
     true
     );
