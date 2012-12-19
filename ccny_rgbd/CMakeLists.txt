@@ -181,7 +181,7 @@ rosbuild_add_executable(mono_vo_node
   src/apps/mono_vo.cpp)
 
 target_link_libraries (mono_vo_node 
-  ccny_rgbd_features
+  ccny_rgbd_structures
   ccny_rgbd_mapping
   ccny_rgbd_registration
   ccny_rgbd_util

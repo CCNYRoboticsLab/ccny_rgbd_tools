@@ -23,9 +23,11 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <cv_bridge/cv_bridge.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/structures/rgbd_keyframe.h"
 
 namespace ccny_rgbd
 {
@@ -143,15 +145,24 @@ class MonocularVisualOdometry
     PointCloudT::Ptr model_ptr_;
     ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
 
+    image_transport::Publisher virtual_img_pub_;
+
     bool publish_cloud_model_; ///< to indicate whether the model pointcloud will be published
+    bool publish_virtual_img_; ///< to indicate whether the virtual image will be published
 
-
-    // Camera parameters
     // Topic names:
     std::string topic_cam_info_;
     std::string topic_image_;
+    std::string topic_virtual_image_;
+
+    std::string path_to_keyframes_;
+    int initial_keyframe_number_;
+
 
     // **** private functions
+    void testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number);
+    std::string formKeyframeName(int keyframe_number, int num_of_chars);
+
     void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
     void initParams();
     void publishTransformF2B(const std_msgs::Header& header);
