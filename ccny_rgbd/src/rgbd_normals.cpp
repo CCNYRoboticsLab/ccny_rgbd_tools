@@ -1,10 +1,6 @@
 #include "ccny_rgbd/rgbd_normals.h"
-#include "ccny_rgbd/structures/rgbd_keyframe.h"
 
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/features/normal_3d.h>
-
+#include <pcl/surface/mls.h>
 /* 
 
 -------------------------------------------------------------
@@ -28,12 +24,111 @@ global alignement idea:
 
 int main(int argc, char** argv)
 {
-  ccny_rgbd::g();
+  ccny_rgbd::analyzeKeyframes();
   return 0;
 }
 
 namespace ccny_rgbd {
 
+void analyzeKeyframes()
+{
+  KeyframeVector keyframes;
+  loadKeyframes(keyframes, "/home/idryanov/ros/images/ccny_kf_seq_loop");
+
+  for (unsigned int i = 0; i < keyframes.size(); ++i)
+  {
+    printf("analyzing keyframe %d...\n", i);
+    analyzeKeyframe(keyframes[i]);
+    printf("analyzing keyframe %d done.\n", i);
+  }
+
+  saveKeyframes(keyframes, "/home/idryanov/ros/images/ccny_kf_seq_loop_hist");
+
+}
+
+void analyzeKeyframe(RGBDKeyframe& keyframe)
+{
+  // params
+  double vgf_res = 0.01;
+  double degrees_per_bin = 0.25;
+
+  // rotate point cloud into global frame
+  PointCloudT::Ptr cloud_tf;
+  cloud_tf.reset(new PointCloudT());
+  pcl::transformPointCloud(keyframe.cloud, *cloud_tf, eigenFromTf(keyframe.pose));
+
+  // filter cloud
+  printf("Filtering cloud\n");
+  pcl::VoxelGrid<PointT> vgf;
+  PointCloudT::Ptr cloud_f;
+  cloud_f.reset(new PointCloudT());
+  vgf.setInputCloud(cloud_tf);
+  vgf.setLeafSize(vgf_res, vgf_res, vgf_res);
+  vgf.filter(*cloud_f);
+
+  printf("Cloud has %d points\n", (int)cloud_f->points.size());
+
+  // Create an empty kdtree representation, and pass it to the normal estimation object.
+  // Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+  printf("Creating kd-tree\n");
+  pcl::search::KdTree<PointT>::Ptr mls_tree;
+  mls_tree.reset(new pcl::search::KdTree<PointT>());
+
+  // smooth using mls
+  printf("MLS\n");
+  pcl::MovingLeastSquares<PointT, pcl::PointXYZRGBNormal> mls;
+  mls.setInputCloud (cloud_f);
+  mls.setPolynomialFit (true);
+  mls.setSearchMethod (mls_tree);
+  mls.setSearchRadius (0.05);
+  mls.reconstruct(*cloud_f); 
+
+  // Compute the features
+  printf("Estimating normals\n");
+
+  pcl::search::KdTree<PointT>::Ptr tree;
+  tree.reset(new pcl::search::KdTree<PointT>());
+
+  pcl::NormalEstimation<PointT, pcl::PointXYZRGBNormal> ne;
+  ne.setRadiusSearch(0.10);
+  ne.setInputCloud(cloud_f);
+  ne.setSearchMethod(tree);
+  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_normals;
+  cloud_normals.reset(new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+  ne.compute (*cloud_normals);
+
+  // build histogram
+  printf("building histogram\n");
+  cv::Mat histogram;
+  buildPhiHistogram(*cloud_normals, histogram, degrees_per_bin);
+
+  // show histogram
+  cv::Mat hist_img;
+  createImageFromHistogram(histogram, hist_img);
+  cv::imshow("Histogram Phi", hist_img);
+  cv::imshow("RGB", keyframe.rgb_img);
+
+  // find alignement
+  cv::Mat hist_exp;
+  buildExpectedPhiHistorgtam(hist_exp, degrees_per_bin, 2.0);
+  cv::Mat hist_exp_img;
+  createImageFromHistogram(hist_exp, hist_exp_img);
+  cv::imshow("hist_exp_img", hist_exp_img);
+  double best_angle;
+  alignHistogram(histogram, hist_exp, degrees_per_bin, best_angle);
+
+  if (best_angle > 45) best_angle-=90.0;
+  tf::Quaternion q;
+  q.setRPY(0, 0, best_angle * M_PI / 180);
+  tf::Transform tf;
+  tf.setIdentity();
+  tf.setRotation(q);
+  
+  pcl::transformPointCloud(*cloud_f, *cloud_f, eigenFromTf(tf));
+  keyframe.cloud = *cloud_f;
+
+  cv::waitKey(0);
+}
 
 void buildGlobalMap(
   const KeyframeVector& keyframes,
@@ -77,6 +172,42 @@ void filterCloudByHeight(
     if (p.z >= min_z && p.z < max_z)
       cloud_out.push_back(p); 
   }
+}
+
+bool alignHistogram(
+  const cv::Mat& hist,
+  const cv::Mat& hist_exp,
+  double hist_resolution,
+  double& best_angle)
+{
+  // check diff
+  int best_i = 0;
+  double best_diff = 9999999999;
+
+  for (int i = 0; i < 90.0 / hist_resolution; ++i)
+  {
+    cv::Mat hist_shifted;
+    shiftHistogram(hist, hist_shifted, i);
+
+    double diff = cv::compareHist(hist_shifted, hist_exp, CV_COMP_BHATTACHARYYA);
+    if (std::abs(diff) < best_diff)
+    {
+      best_diff = std::abs(diff);
+      best_i = i;
+    }
+  }
+
+  best_angle = best_i * hist_resolution;
+
+  printf("BEST ANGLE: %f\n", best_angle);
+
+  cv::Mat hist_best;
+  shiftHistogram(hist, hist_best, best_i);
+  cv::Mat hist_best_img;
+  createImageFromHistogram(hist_best, hist_best_img);
+  cv::imshow("hist_best_img", hist_best_img);
+
+  return true;
 }
 
 void g()
