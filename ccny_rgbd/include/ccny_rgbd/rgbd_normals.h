@@ -6,14 +6,9 @@
 #include <pcl/features/normal_3d.h>
 
 #include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
+#include "ccny_rgbd/rgbd_map_util.h"
 
 namespace ccny_rgbd {
-
-void g();
-
-void f(const RGBDFrame& frame);
 
 void analyzeKeyframes();
 
@@ -22,55 +17,6 @@ bool analyzeCloud(
   double& best_angle);
 
 void analyzeKeyframe(RGBDKeyframe& keyframe);
-
-void buildPointCloud(
-  const cv::Mat& depth_img_rect_reg,
-  const cv::Mat& rgb_img_rect,
-  const cv::Mat& intr_rect_rgb,
-  PointCloudT& cloud);
-
-bool alignHistogram(
-  const cv::Mat& hist,
-  const cv::Mat& hist_exp,
-  double hist_resolution,
-  double& best_angle);
-
-void create2DProjectionImage(
-  const PointCloudT& cloud,
-  cv::Mat& img,
-  double min_z = -std::numeric_limits<double>::infinity(),
-  double max_z = std::numeric_limits<double>::infinity());
-
-void filterCloudByHeight(
-  const pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_in,
-  pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_out,
-  double min_z,
-  double max_z);
-
-void normalizeHistogram(cv::Mat& histogram);
-
-void create8bitHistogram(
-  const cv::Mat& histogram,
-  cv::Mat& histogram_norm);
-
-void createImageFromHistogram(
-  const cv::Mat& histogram,
-  cv::Mat& image);
-
-void shiftHistogram(
-  const cv::Mat& hist_in,
-  cv::Mat& hist_out,
-  int bins);
-
-void buildExpectedPhiHistorgtam(
-  cv::Mat& histogram,
-  double degrees_per_bin,
-  double stdev);
-
-void buildPhiHistogram(
-  const pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud,
-  cv::Mat& histogram,
-  double degrees_per_bin);
 
 } // namespace ccny_rgbd
 

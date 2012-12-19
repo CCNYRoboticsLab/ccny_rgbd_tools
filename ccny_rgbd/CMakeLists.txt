@@ -173,6 +173,22 @@ target_link_libraries (avg_logger_node
 )
 
 ################################################################
+# map utils library
+################################################################
+
+rosbuild_add_library(ccny_rgbd_map_util
+  src/rgbd_map_util.cpp)
+  
+target_link_libraries(ccny_rgbd_map_util
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
+
+################################################################
 # normals test app
 ################################################################
 
@@ -182,6 +198,7 @@ rosbuild_add_executable(normals
 target_link_libraries (normals
   ccny_rgbd_structures 
   ccny_rgbd_util
+  ccny_rgbd_map_util
   boost_signals 
   boost_system
   boost_filesystem
@@ -204,6 +221,23 @@ rosbuild_add_executable(mls
   ${OPENCV_LIBRARIES}
   )
 
+################################################################
+# global yaw rotation test app
+################################################################
+
+rosbuild_add_executable(global_yaw_histogram_align
+  src/global_yaw_histogram_align.cpp)
+
+  target_link_libraries (global_yaw_histogram_align
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  ccny_rgbd_map_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+  )
+  
 ################################################################
 # ransac test app
 ################################################################
