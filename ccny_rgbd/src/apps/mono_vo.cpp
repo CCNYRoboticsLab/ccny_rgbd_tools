@@ -1,5 +1,4 @@
 #include "ccny_rgbd/apps/mono_vo.h"
-#include <opencv2/opencv.hpp>
 
 namespace ccny_rgbd {
 
@@ -11,15 +10,32 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
 {
   ROS_INFO("Starting Monocular Visual Odometry from a 3D Dense Model");
   // **** init parameters
-
   initParams();
 
+  testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
+
+  /*
   // **** init variables
+
+
   f2b_.setIdentity();
 
   // **** publishers
-  pub_model_ = nh_private.advertise<PointCloudFeature>(
-   "sparse_model", 1);
+  if(publish_cloud_model_)
+  {
+    pub_model_ = nh_private.advertise<PointCloudFeature>(
+        "model_3D", 1);
+  }
+
+  image_transport::ImageTransport it(nh_private_);
+  if(publish_virtual_img_)
+  {
+    // %Tag(PUB)%
+    publish_virtual_img_ = it.advertise(topic_virtual_image_, 1); // Publish raw image
+    //        omni_img_pub_ = nh_private_.advertise<sensor_msgs::Image> (opencv_omni_topic_name_, 1);
+    ROS_INFO("Publishing %s images via \"image_transport\"", topic_virtual_image_.c_str());
+    // %EndTag(PUB)%
+  }
   odom_publisher_ = nh_.advertise<OdomMsg>(
     "odom", 5);
 
@@ -36,15 +52,85 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   if(readPointCloudFromPCDFile()==false)
     ROS_FATAL("The sky needs its point cloud to operate!");
 
+
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
   int queue_size = 5;
   sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
   sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
+
+  */
 }
 
 MonocularVisualOdometry::~MonocularVisualOdometry()
 {
   ROS_INFO("Destroying Monocular Visual Odometry");
+}
+
+std::string MonocularVisualOdometry::formKeyframeName(int keyframe_number, int num_of_chars)
+{
+  std::stringstream ss;
+  ss << keyframe_number;
+  std::string keyframe_number_as_str = ss.str();
+  while(keyframe_number_as_str.size() < (uint) num_of_chars)
+    keyframe_number_as_str = "0" + keyframe_number_as_str;
+
+  return keyframe_number_as_str;
+}
+
+void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number)
+{
+  std::string current_keyframe_path = keyframe_path + formKeyframeName(keyframe_number, 4);
+  std::string next_keyframe_path = keyframe_path + formKeyframeName(keyframe_number+1, 4);
+  std::cout << "Current Frame: " << current_keyframe_path << std::endl;
+  std::cout << "Next Frame: " << next_keyframe_path << std::endl;
+
+  bool current_success = false;
+  bool next_success = false;
+
+  RGBDKeyframe current_keyframe, next_keyframe;
+  current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+
+  if(current_success)
+  {
+    if(loadKeyframe(next_keyframe, next_keyframe_path))
+    {
+      next_success = true;
+    }
+    else
+    {
+      int next_keyframe_number = 0; // Wraps around to the first frame
+      while(next_success == false)
+      {
+        next_success = loadKeyframe(next_keyframe, keyframe_path + formKeyframeName(next_keyframe_number, 4));
+        next_keyframe_number++;
+      }
+    }
+  }
+
+  if(current_success && next_success)
+  {
+    cv::namedWindow("Current", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Current", current_keyframe.rgb_img);
+    cv::namedWindow("Next", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Next", next_keyframe.rgb_img);
+    cv::waitKey(0);
+  }
+
+  Matrix3f intrinsic;
+  openCVRToEigenR(current_keyframe.model.intrinsicMatrix(),intrinsic);
+  tf::Transform transform;
+
+  tfFromImagePair(
+    current_keyframe.rgb_img,
+    next_keyframe.rgb_img,
+    next_keyframe.depth_img,
+    intrinsic,
+    transform,
+    "GFT",
+    "ORB",
+    10,
+    true
+    );
 }
 
 void MonocularVisualOdometry::initParams()
@@ -55,6 +141,12 @@ void MonocularVisualOdometry::initParams()
   if(!nh_private_.getParam("apps/mono_vo/PCD_filename", pcd_filename_))
     pcd_filename_ = "cloud.pcd";
 
+  if (!nh_private_.getParam ("apps/mono_vo/path_to_keyframes", path_to_keyframes_))
+    path_to_keyframes_ = "~/ros/Keyframes";
+  if (!nh_private_.getParam ("apps/mono_vo/initial_keyframe_number", initial_keyframe_number_))
+    initial_keyframe_number_ = 0;
+
+  /*
   // **** frames
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
@@ -64,10 +156,15 @@ void MonocularVisualOdometry::initParams()
     detector_type_ = "GFT";
   if (!nh_private_.getParam ("apps/mono_vo/publish_cloud_model", publish_cloud_model_))
     publish_cloud_model_ = false;
+  if (!nh_private_.getParam ("apps/mono_vo/publish_virtual_img", publish_virtual_img_))
+    publish_virtual_img_ = false;
   if (!nh_private_.getParam ("apps/mono_vo/topic_cam_info", topic_cam_info_))
     topic_cam_info_ = "/camera/rgb/camera_info";
   if (!nh_private_.getParam ("apps/mono_vo/topic_image", topic_image_))
     topic_image_ = "/camera/rgb/image_rect_color";
+  if (!nh_private_.getParam ("apps/mono_vo/topic_virtual_image", topic_virtual_image_))
+    topic_virtual_image_ = "/camera/rgb/virtual";
+ */
 
   /*
   if (!nh_private_.getParam ("apps/mono_vo/min_inliers", min_inliers_))
@@ -305,6 +402,7 @@ bool MonocularVisualOdometry::getCorrespondences(
   return true;
 }
 
+
 void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
   ros::WallTime start = ros::WallTime::now();
@@ -383,6 +481,21 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     pub_model_.publish(*model_ptr_);
   }
 
+  if(publish_virtual_img_)
+  {
+    sensor_msgs::ImagePtr ros_virtual_img_ptr;
+    cv_bridge::CvImage cv_virtual_img;
+    cv_virtual_img.header.frame_id = "virtual_img_frame"; // Same timestamp and tf frame as input image
+    cv_virtual_img.header.stamp = ros::Time::now(); // Same timestamp and tf frame as input image
+    //                  cv_img_frame.encoding = sensor_msgs::image_encodings::TYPE_32FC1; // Or whatever
+    if (rgb_img.type() == CV_8UC3)
+      cv_virtual_img.encoding = sensor_msgs::image_encodings::TYPE_8UC3; // Or whatever
+    else if (rgb_img.type() == CV_8UC1)
+      cv_virtual_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+    cv_virtual_img.image = rgb_img; // Your cv::Mat
+    ros_virtual_img_ptr = cv_virtual_img.toImageMsg();
+    virtual_img_pub_.publish(ros_virtual_img_ptr);
+  }
 //  mutex_lock_.unlock();
 }
 

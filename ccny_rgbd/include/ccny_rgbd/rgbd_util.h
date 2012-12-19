@@ -336,6 +336,7 @@ void tfFromImagePair(
   tf::Transform& transform,
   std::string feature_detection_alg = "GFT",
   std::string feature_descriptor_alg = "ORB",
+  int number_of_iterations = 10,
   bool draw_matches = false
 );
 

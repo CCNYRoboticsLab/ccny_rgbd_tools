@@ -647,16 +647,25 @@ void holeFilling2(const cv::Mat& rgb_img,
 }
 
 void tfFromImagePair(
-  const cv::Mat& reference_img,
-  const cv::Mat& virtual_img,
-  const cv::Mat& virtual_depth_img,
+  const cv::Mat& current_img,
+  const cv::Mat& next_img,
+  const cv::Mat& next_depth_img,
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
   std::string feature_detection_alg,
   std::string feature_descriptor_alg,
+  int number_of_iterations,
   bool draw_matches
   )
 {
+  // Mask next image with depth img as mask (takes care of wholes where information is missing)
+
+  cv::Mat next_img_mask = cv::Mat::zeros(next_depth_img.rows, next_depth_img.cols, next_depth_img.type()); // Black image
+  cv::bitwise_and(next_depth_img, next_depth_img, next_img_mask, next_depth_img); // Apply mask
+  cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
+  cv::imshow("Mask", next_img_mask);
+  cv::waitKey(0);
+
   cv::Ptr<cv::FeatureDetector> feature_detector;
 
   // TODO: it should be done outside to allow for parameterization (and pass just the pointer to the detector)
@@ -728,12 +737,12 @@ void tfFromImagePair(
   }
 
   // vector of keypoints
-  std::vector<cv::KeyPoint> keypoints_ref;
-  std::vector<cv::KeyPoint> keypoints_virt;
-  feature_detector->detect(reference_img, keypoints_ref);
-  feature_detector->detect(virtual_img, keypoints_virt);
-  std::cout << "Number of feature points (Reference): " << keypoints_ref.size() << std::endl;
-  std::cout << "Number of feature points (Virtual): " << keypoints_virt.size() << std::endl;
+  std::vector<cv::KeyPoint> keypoints_current;
+  std::vector<cv::KeyPoint> keypoints_next;
+  feature_detector->detect(current_img, keypoints_current);
+  feature_detector->detect(next_img, keypoints_next,next_img_mask);
+  std::cout << "Number of feature points (Reference): " << keypoints_current.size() << std::endl;
+  std::cout << "Number of feature points (Virtual): " << keypoints_next.size() << std::endl;
 
 
   cv::Ptr<cv::DescriptorExtractor> descriptor_extractor;
@@ -762,16 +771,17 @@ void tfFromImagePair(
   }
   else // use ORB
   {
+    feature_descriptor_alg = "ORB";
     norm_type = cv::NORM_HAMMING;
     descriptor_extractor = new cv::OrbDescriptorExtractor();
   }
 
-  cv::Mat descriptors_ref, descriptors_virt;
-  descriptor_extractor->compute(reference_img, keypoints_ref, descriptors_ref);
-  descriptor_extractor->compute(virtual_img, keypoints_virt, descriptors_virt);
+  cv::Mat descriptors_current, descriptors_next;
+  descriptor_extractor->compute(current_img, keypoints_current, descriptors_current);
+  descriptor_extractor->compute(next_img, keypoints_next, descriptors_next);
 
-  std::cout << "Reference image's descriptor matrix size: " << descriptors_ref.rows << " by " << descriptors_ref.cols << std::endl;
-  std::cout << "Virtual image's descriptor matrix size: " << descriptors_virt.rows << " by " << descriptors_virt.cols << std::endl;
+  std::cout << "Current image's descriptor matrix size: " << descriptors_current.rows << " by " << descriptors_current.cols << std::endl;
+  std::cout << "Next image's descriptor matrix size: " << descriptors_next.rows << " by " << descriptors_next.cols << std::endl;
 
 
   // Construction of the matcher
@@ -786,7 +796,7 @@ void tfFromImagePair(
   float max_distance = 0.25;
   bool use_radius_match = true;
 
-  matcher.radiusMatch(descriptors_ref, descriptors_virt, matches_radius, max_distance); // Match search within radius
+  matcher.radiusMatch(descriptors_current, descriptors_next, matches_radius, max_distance); // Match search within radius
 
   std::cout << "Matches: " << matches_radius.size() << " where " <<  std::endl;
   for(uint i=0; i< matches_radius.size(); i++)
@@ -803,12 +813,12 @@ void tfFromImagePair(
 
     if(draw_matches)
     {
-      cv::Mat reference_img_copy = reference_img.clone();
-      cv::Mat virtual_img_copy = virtual_img.clone();
+      cv::Mat current_img_copy = current_img.clone();
+      cv::Mat next_img_copy = next_img.clone();
 
       cv::Mat matches_result_img;
-      cv::drawMatches(reference_img_copy, keypoints_ref, // 1st image and its keypoints
-                      virtual_img_copy, keypoints_virt, // 2nd image and its keypoints
+      cv::drawMatches(current_img_copy, keypoints_current, // 1st image and its keypoints
+                      next_img_copy, keypoints_next, // 2nd image and its keypoints
                       matches_radius, // the matches
                       matches_result_img // the image produced
                      ); // color of the lines
@@ -825,7 +835,7 @@ void tfFromImagePair(
   cv::Mat Q; // The 4x4 perspective transformation matrix
   cv4x4PerspectiveMatrixFromEigenIntrinsic(intrinsic_matrix, Q);
 
-  cv::reprojectImageTo3D(virtual_depth_img, cloud_reprojected, Q ,true, virtual_depth_img.type());
+  cv::reprojectImageTo3D(next_depth_img, cloud_reprojected, Q ,true, next_depth_img.type());
 
 
 }
