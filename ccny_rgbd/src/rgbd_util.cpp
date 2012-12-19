@@ -16,14 +16,28 @@ void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist
   getTfDifference(motion, dist, angle);
 }
 
-tf::Transform tfFromEigen(Eigen::Matrix4f trans)
+tf::Transform tfFromEigen(Eigen::Matrix4f E)
 {
   tf::Matrix3x3 btm;
-  btm.setValue(trans(0,0),trans(0,1),trans(0,2),
-            trans(1,0),trans(1,1),trans(1,2),
-            trans(2,0),trans(2,1),trans(2,2));
+  btm.setValue(E(0,0),E(0,1),E(0,2),
+            E(1,0),E(1,1),E(1,2),
+            E(2,0),E(2,1),E(2,2));
   tf::Transform ret;
-  ret.setOrigin(btVector3(trans(0,3),trans(1,3),trans(2,3)));
+  ret.setOrigin(btVector3(E(0,3),E(1,3),E(2,3)));
+  ret.setBasis(btm);
+  return ret;
+}
+
+tf::Transform tfFromEigenRt(
+  const Matrix3f R,
+  const Vector3f t)
+{
+  tf::Matrix3x3 btm;
+  btm.setValue(R(0,0),R(0,1),R(0,2),
+            R(1,0),R(1,1),R(1,2),
+            R(2,0),R(2,1),R(2,2));
+  tf::Transform ret;
+  ret.setOrigin(btVector3(t(0,0),t(1,0),t(2,0)));
   ret.setBasis(btm);
   return ret;
 }
@@ -120,8 +134,8 @@ void removeInvalidDistributions(
 }
 
 void tfToEigenRt(
-  const tf::Transform& tf, 
-  Matrix3f& R, 
+  const tf::Transform& tf,
+  Matrix3f& R,
   Vector3f& t)
 {
    double mv[12];
@@ -292,24 +306,42 @@ void pointCloudFromMeans(
   cloud.is_dense = true;
 }
 
+void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat& Q)
+{
+  Q = cv::Mat::zeros(4, 4, CV_32FC1);
 
-void projectCloudToImage(const PointCloudT& cloud,
+  Q.at<float_t> (0,0) = intrinsic(0,0);
+  Q.at<float_t> (1,0) = intrinsic(1,0);
+  Q.at<float_t> (2,0) = intrinsic(2,0);
+  Q.at<float_t> (0,1) = intrinsic(0,1);
+  Q.at<float_t> (1,1) = intrinsic(1,1);
+  Q.at<float_t> (2,1) = intrinsic(2,1);
+  Q.at<float_t> (0,2) = intrinsic(0,2);
+  Q.at<float_t> (1,2) = intrinsic(1,2);
+  Q.at<float_t> (2,2) = intrinsic(2,2);
+
+  Q.at<float_t> (3,3) = 1.0f;
+}
+
+
+void projectCloudToImage(const PointCloudT::Ptr& cloud,
                          const Matrix3f& rmat,
                          const Vector3f& tvec,
                          const Matrix3f& intrinsic,
-                         uint width,
-                         uint height,
+                         int width,
+                         int height,
                          cv::Mat& rgb_img,
-                         cv::Mat& depth_img)
+                         cv::Mat& depth_img
+                         )
 {
   
   rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
 
-  for (uint i=0; i<cloud.points.size(); ++i)
+  for (uint i=0; i<cloud->points.size(); ++i)
   {
     // convert from pcl PointT to Eigen Vector3f
-    PointT point = cloud.points[i];
+    PointT point = cloud->points[i];
     Vector3f p_world;
     p_world(0,0) = point.x;
     p_world(1,0) = point.y;
@@ -464,8 +496,182 @@ void tfFromImagePair(
   const cv::Mat& virtual_img,
   const cv::Mat& virtual_depth_img,
   const Matrix3f& intrinsic_matrix,
-  tf::Transform& transform)
+  tf::Transform& transform,
+  std::string feature_detection_alg,
+  std::string feature_descriptor_alg,
+  bool draw_matches
+  )
 {
+  cv::Ptr<cv::FeatureDetector> feature_detector;
+
+  // TODO: it should be done outside to allow for parameterization (and pass just the pointer to the detector)
+  if (feature_detection_alg == "ORB")
+  {
+    // ORB features
+    int nfeatures=5;
+    float scaleFactor=1.2f;
+    int nlevels=8;
+    int edgeThreshold=31;
+    int firstLevel=0;
+    int WTA_K=2;
+    int scoreType=cv::ORB::HARRIS_SCORE;
+    int patchSize=31;
+    feature_detector = new cv::ORB(nfeatures, scaleFactor, nlevels, edgeThreshold, firstLevel,
+                                   WTA_K, scoreType, patchSize); // Hessian threshold
+  }
+  else if (feature_detection_alg == "SURF")
+  {
+    // Construction of the SURF feature detector
+    double hessian_thresh = 32;
+    feature_detector = new cv::SURF(hessian_thresh); // Hessian threshold
+  }
+  else if (feature_detection_alg == "FAST")
+  {
+    int threshold=10;
+    bool nonmaxSuppression=true;
+    feature_detector = new cv::FastFeatureDetector(threshold, nonmaxSuppression);
+  }
+  else if (feature_detection_alg == "STAR")
+  {
+    int maxSize=45;
+    int responseThreshold=30;
+    int lineThresholdProjected=10;
+    int lineThresholdBinarized=8;
+    int suppressNonmaxSize=5;
+    feature_detector = new cv::StarFeatureDetector(maxSize, responseThreshold,
+                                                   lineThresholdProjected, lineThresholdBinarized, suppressNonmaxSize);
+  }
+  else if (feature_detection_alg == "MSER")
+  {
+    // TODO: check parameters
+    int delta = 3;
+    int min_area = 25;
+    int max_area = 100;
+    float max_variation = 40;
+    float min_diversity = 10;
+    int max_evolution = 4;
+    double area_threshold = 64;
+    double min_margin = 2;
+    int edge_blur_size = 6;
+    feature_detector = new cv::MSER(delta, min_area, max_area, max_variation, min_diversity,
+                                    max_evolution, area_threshold, min_margin, edge_blur_size);
+  }
+  else
+  {
+    feature_detection_alg == "GFT";
+    int n_features = 200;
+    int grid_cells = 1;
+    feature_detector = new cv::GoodFeaturesToTrackDetector(
+        n_features, // maximum number of corners to be returned
+        0.10,  // quality level
+        10); // minimum allowed distance between points
+    // point detection using FeatureDetector method
+
+    cv::GridAdaptedFeatureDetector * grid_detector; // FIXME: bring outside the "else" case
+    grid_detector = new cv::GridAdaptedFeatureDetector(
+        feature_detector, n_features, grid_cells, grid_cells);
+  }
+
+  // vector of keypoints
+  std::vector<cv::KeyPoint> keypoints_ref;
+  std::vector<cv::KeyPoint> keypoints_virt;
+  feature_detector->detect(reference_img, keypoints_ref);
+  feature_detector->detect(virtual_img, keypoints_virt);
+  std::cout << "Number of feature points (Reference): " << keypoints_ref.size() << std::endl;
+  std::cout << "Number of feature points (Virtual): " << keypoints_virt.size() << std::endl;
+
+
+  cv::Ptr<cv::DescriptorExtractor> descriptor_extractor;
+  int norm_type; ///< normal distance type for matching (in descriptor space)
+
+  // TODO: it should be done outside to allow for parameterization (and pass just the pointer to the detector)
+  if (feature_descriptor_alg == "SURF")
+  {
+    norm_type = cv::NORM_L2;
+    descriptor_extractor = new cv::SurfDescriptorExtractor();
+  }
+  else if (feature_descriptor_alg == "BRIEF")
+  {
+    norm_type = cv::NORM_HAMMING;
+    descriptor_extractor = new cv::BriefDescriptorExtractor();
+  }
+  else if (feature_descriptor_alg == "FREAK")
+  {
+    norm_type = cv::NORM_HAMMING;
+    //      norm_type = cv::NORM_L2;
+    bool orientationNormalized = true;
+    bool scaleNormalized = true;
+    float patternScale = 22.0f;
+    int nOctaves = 4;
+    descriptor_extractor = new cv::FREAK(orientationNormalized, scaleNormalized, patternScale, nOctaves);
+  }
+  else // use ORB
+  {
+    norm_type = cv::NORM_HAMMING;
+    descriptor_extractor = new cv::OrbDescriptorExtractor();
+  }
+
+  cv::Mat descriptors_ref, descriptors_virt;
+  descriptor_extractor->compute(reference_img, keypoints_ref, descriptors_ref);
+  descriptor_extractor->compute(virtual_img, keypoints_virt, descriptors_virt);
+
+  std::cout << "Reference image's descriptor matrix size: " << descriptors_ref.rows << " by " << descriptors_ref.cols << std::endl;
+  std::cout << "Virtual image's descriptor matrix size: " << descriptors_virt.rows << " by " << descriptors_virt.cols << std::endl;
+
+
+  // Construction of the matcher
+  cv::BFMatcher matcher(norm_type, true);
+
+  // Match the two image descriptors
+  std::vector<std::vector<cv::DMatch> > matches_radius;
+  std::vector<std::vector<cv::DMatch> > matches_knn;
+  std::vector<cv::DMatch> matches_bf;
+
+  // TODO: parametrize:
+  float max_distance = 0.25;
+  bool use_radius_match = true;
+
+  matcher.radiusMatch(descriptors_ref, descriptors_virt, matches_radius, max_distance); // Match search within radius
+
+  std::cout << "Matches: " << matches_radius.size() << " where " <<  std::endl;
+  for(uint i=0; i< matches_radius.size(); i++)
+  {
+    int number_of_matches = matches_radius[i].size();
+    ROS_INFO("=== Match[%d] = %d", i, number_of_matches);
+    for(int m=0; m<number_of_matches; m++)
+    {
+//      ROS_INFO( "Match[%d][%d]: imgIdx = %d, queryIdx = %d, trainIdx = %d, distance = %f",
+//                i, m, matches_radius[i][m].imgIdx, matches_radius[i][m].queryIdx, matches_radius[i][m].trainIdx, matches_radius[i][m].distance);
+//      std::cout << "\tPoint at Query: " << keypointsLL[0][matches_radius[i][m].queryIdx].pt<< std::endl;
+//      std::cout << "\tPoint at Train: " << keypointsRR[0][matches_radius[i][m].trainIdx].pt<< std::endl;
+    }
+
+    if(draw_matches)
+    {
+      cv::Mat reference_img_copy = reference_img.clone();
+      cv::Mat virtual_img_copy = virtual_img.clone();
+
+      cv::Mat matches_result_img;
+      cv::drawMatches(reference_img_copy, keypoints_ref, // 1st image and its keypoints
+                      virtual_img_copy, keypoints_virt, // 2nd image and its keypoints
+                      matches_radius, // the matches
+                      matches_result_img // the image produced
+                     ); // color of the lines
+      cv::namedWindow("Matches", CV_WINDOW_KEEPRATIO);
+      cv::imshow("Matches", matches_result_img);
+      cv::waitKey(0);
+    }
+  }
+
+
+  // -----------------------------------------------------------------------------
+  // ------- transformation computation with PnP ---------------------------------
+  cv::Mat cloud_reprojected;
+  cv::Mat Q; // The 4x4 perspective transformation matrix
+  cv4x4PerspectiveMatrixFromEigenIntrinsic(intrinsic_matrix, Q);
+
+  cv::reprojectImageTo3D(virtual_depth_img, cloud_reprojected, Q ,true, virtual_depth_img.type());
+
 
 }
 
