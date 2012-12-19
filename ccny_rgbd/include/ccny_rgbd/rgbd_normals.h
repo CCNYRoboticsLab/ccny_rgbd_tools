@@ -1,7 +1,12 @@
 #ifndef CCNY_RGBD_RGBD_NORMALS_H
 #define CCNY_RGBD_RGBD_NORMALS_H
 
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/features/normal_3d.h>
+
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
 namespace ccny_rgbd {
@@ -10,11 +15,20 @@ void g();
 
 void f(const RGBDFrame& frame);
 
+void analyzeKeyframes();
+void analyzeKeyframe(RGBDKeyframe& keyframe);
+
 void buildPointCloud(
   const cv::Mat& depth_img_rect_reg,
   const cv::Mat& rgb_img_rect,
   const cv::Mat& intr_rect_rgb,
   PointCloudT& cloud);
+
+bool alignHistogram(
+  const cv::Mat& hist,
+  const cv::Mat& hist_exp,
+  double hist_resolution,
+  double& best_angle);
 
 void create2DProjectionImage(
   const PointCloudT& cloud,
