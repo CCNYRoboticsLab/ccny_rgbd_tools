@@ -188,3 +188,34 @@ target_link_libraries (normals
   ${OPENCV_LIBRARIES}
 )
 
+################################################################
+# mls test app
+################################################################
+
+rosbuild_add_executable(mls
+  src/mls.cpp)
+
+  target_link_libraries (mls
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+  )
+
+################################################################
+# ransac test app
+################################################################
+
+rosbuild_add_executable(ransac
+  src/ransac.cpp)
+
+  target_link_libraries (ransac
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+  )
