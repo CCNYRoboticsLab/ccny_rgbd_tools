@@ -24,7 +24,7 @@ void getTfDifference(const tf::Transform& motion, double& dist, double& angle);
 /* given two tf::transforms, calculates the linear and angular 
  * distance between them
  */
-void getTfDifference(const tf::Transform& a, const tf::Transform b, double& dist, double& angle);
+void getTfDifference(const tf::Transform& a, const tf::Transform& b, double& dist, double& angle);
 
 /* given a tf::Transfom (possibly computed as a difference between two transforms)
  * checks if either its angular or linar component exedds a threshold
@@ -33,13 +33,19 @@ bool tfGreaterThan(const tf::Transform& a, double dist, double angle);
 
 /* converts and Eigen transform to a tf::Transform
  */
-tf::Transform tfFromEigen(Eigen::Matrix4f E);
+tf::Transform tfFromEigen(const Eigen::Matrix4f& E);
 
 /* composes a tf::Transform from an Eigen 3x3 rotation matrix and a 3x1 translation vector
  */
 tf::Transform tfFromEigenRt(
-  const Matrix3f R,
-  const Vector3f t);
+  const Matrix3f& R,
+  const Vector3f& t);
+
+/* composes a tf::Transform from an cv::Mat 3x3 rotation matrix and a 3x1 translation vector
+ */
+tf::Transform tfFromCVRt(
+  const cv::Mat& R,
+  const cv::Mat& t);
 
 /* converts and tf::Transform transform to an Eigen transform
  */
@@ -132,9 +138,9 @@ void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud);
 
-/* creates a 4x4 perspective transformation matrix (OpenCV) from a 3x3 intrinsic matrix (Eigen)
+/* converts an Eigen 3x3 matrix into an OpenCV 3x3 matrix
  */
-void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat& Q);
+void cv3x3FromEigen(const Matrix3f& emat, cv::Mat& Q);
 
 /* generates an RGB and depth images from the projection of a point cloud
  */
@@ -170,9 +176,12 @@ void tfFromImagePair(
   const cv::Mat& virtual_depth_img,
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
-  std::string feature_detection_alg = "GFT",
+  double max_descriptor_space_distance,
+  std::string feature_detection_alg = "ORB",
   std::string feature_descriptor_alg = "ORB",
   int number_of_iterations = 10,
+  float reprojection_error = 8.0,
+  int min_inliers_count = 100,
   bool draw_matches = false
 );
 

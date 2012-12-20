@@ -79,6 +79,8 @@ std::string MonocularVisualOdometry::formKeyframeName(int keyframe_number, int n
 
 void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number)
 {
+  tf::Transform transform_est; // Frame to frame
+
   std::string current_keyframe_path = keyframe_path + formKeyframeName(keyframe_number, 4);
   std::string next_keyframe_path = keyframe_path + formKeyframeName(keyframe_number+1, 4);
   std::cout << "Current Frame: " << current_keyframe_path << std::endl;
@@ -89,7 +91,6 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
 
   RGBDKeyframe current_keyframe, next_keyframe;
   current_success = loadKeyframe(current_keyframe, current_keyframe_path);
-
   if(current_success)
   {
     if(loadKeyframe(next_keyframe, next_keyframe_path))
@@ -109,28 +110,62 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
 
   if(current_success && next_success)
   {
+    cv::Mat cv_intrinsic = current_keyframe.model.intrinsicMatrix();
+    //std::cout << "CV Intrinsic matrix: " << cv_intrinsic <<std::endl;
+
+    Matrix3f intrinsic;
+    openCVRToEigenR(cv_intrinsic,intrinsic);
+    //std::cout << "Eigen Intrinsic matrix: " << intrinsic <<std::endl;
+
+
     cv::namedWindow("Current", CV_WINDOW_KEEPRATIO);
     cv::imshow("Current", current_keyframe.rgb_img);
     cv::namedWindow("Next", CV_WINDOW_KEEPRATIO);
     cv::imshow("Next", next_keyframe.rgb_img);
+
     cv::waitKey(1);
+
+    tfFromImagePair(
+      current_keyframe.rgb_img,
+      next_keyframe.rgb_img,
+      next_keyframe.depth_img,
+      intrinsic,
+      transform_est,
+      max_descriptor_space_distance_,
+      detector_type_,
+      descriptor_type_,
+      number_of_iterations_,
+      (float) reprojection_error_,
+      min_inliers_count_,
+      true
+      );
+    // Compare to ground truth
+    tf::Transform transform_gt = (current_keyframe.pose).inverse() * next_keyframe.pose;
+
+    // output
+    cv::Mat tvec_est, rmat_est;
+    tfToOpenCVRt(transform_est, rmat_est, tvec_est);
+    std::cout << "ESTIMATION:" << std::endl;
+    std::cout << "tvec:" << tvec_est << std::endl << "rmat:" << rmat_est << std::endl;
+
+    cv::Mat tvec_gt, rmat_gt;
+    tfToOpenCVRt(transform_gt, rmat_gt, tvec_gt);
+    std::cout << "GROUND TRUTH:" << std::endl;
+    std::cout << "tvec:" << tvec_gt << std::endl << "rmat:" << rmat_gt << std::endl;
+
+    // Error metric:
+    double dist, angle;
+    getTfDifference(transform_gt, transform_est, dist, angle);
+    std::cout << "ERROR:" << std::endl;
+    std::cout << "\t Distance difference: " << dist << " m" <<
+    std::endl << "\t Angle difference: " << RAD2DEG(angle) << " degrees" << std::endl;
+
+
+    cv::waitKey(0);
+
   }
 
-  Matrix3f intrinsic;
-  openCVRToEigenR(current_keyframe.model.intrinsicMatrix(),intrinsic);
-  tf::Transform transform;
 
-  tfFromImagePair(
-    current_keyframe.rgb_img,
-    next_keyframe.rgb_img,
-    next_keyframe.depth_img,
-    intrinsic,
-    transform,
-    "ORB",
-    "BRIEF",
-    10,
-    true
-    );
 }
 
 void MonocularVisualOdometry::initParams()
@@ -146,14 +181,25 @@ void MonocularVisualOdometry::initParams()
   if (!nh_private_.getParam ("apps/mono_vo/initial_keyframe_number", initial_keyframe_number_))
     initial_keyframe_number_ = 0;
 
-  /*
   // **** frames
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
     base_frame_ = "/camera_link";
-  if (!nh_private_.getParam ("feature/detector_type", detector_type_))
-    detector_type_ = "GFT";
+  if (!nh_private_.getParam ("apps/mono_vo/detector_type", detector_type_))
+    detector_type_ = "ORB";
+  if (!nh_private_.getParam ("apps/mono_vo/descriptor_type", descriptor_type_))
+    descriptor_type_ = "ORB";
+  if (!nh_private_.getParam ("apps/mono_vo/max_descriptor_space_distance", max_descriptor_space_distance_))
+    max_descriptor_space_distance_ = 0.25;
+  if (!nh_private_.getParam ("apps/mono_vo/min_inliers_count", min_inliers_count_))
+    min_inliers_count_ = 100;
+  if (!nh_private_.getParam ("apps/mono_vo/number_of_iterations", number_of_iterations_))
+    number_of_iterations_ = 100;
+  if (!nh_private_.getParam ("apps/mono_vo/reprojection_error", reprojection_error_))
+    reprojection_error_ = 8;
+
+  /*
   if (!nh_private_.getParam ("apps/mono_vo/publish_cloud_model", publish_cloud_model_))
     publish_cloud_model_ = false;
   if (!nh_private_.getParam ("apps/mono_vo/publish_virtual_img", publish_virtual_img_))
@@ -166,14 +212,7 @@ void MonocularVisualOdometry::initParams()
     topic_virtual_image_ = "/camera/rgb/virtual";
  */
 
-  /*
-  if (!nh_private_.getParam ("apps/mono_vo/min_inliers", min_inliers_))
-    min_inliers_ = 50;
-  if (!nh_private_.getParam ("apps/mono_vo/max_iterations", max_iterations_))
-    max_iterations_ = 1000;
-  if (!nh_private_.getParam ("apps/mono_vo/distance_threshold", distance_threshold_))
-    distance_threshold_ = 2;
-
+/*
   if (!nh_private_.getParam ("apps/mono_vo/max_PnP_iterations", max_PnP_iterations_))
     max_PnP_iterations_ = 10;
   if (!nh_private_.getParam ("apps/mono_vo/number_of_random_trees", number_of_random_trees_))
@@ -421,7 +460,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
     openCVRToEigenR(cam_model_.intrinsicMatrix(), intrinsic_matrix_);
     // TODO:
     // Estimate initial camera pose relative to the model
-    estimateFirstPose(intrinsic_matrix_, rmat_, tvec_, model_ptr_, min_inliers_, max_iterations_, distance_threshold_);
+    estimateFirstPose(intrinsic_matrix_, rmat_, tvec_, model_ptr_, min_inliers_count_, number_of_iterations_, max_descriptor_space_distance_);
 
     printf("Initialization successful at Frame %d\n", frame_count_);
   }
@@ -433,7 +472,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
     ros::WallTime start_PnP_reg = ros::WallTime::now();
     cv::Mat E_new;
-    estimateMotion(rmat_, tvec_, model_ptr_, max_PnP_iterations_);
+    estimateMotion(rmat_, tvec_, model_ptr_, number_of_iterations_);
     ros::WallTime end_PnP_reg = ros::WallTime::now();
 
     // Update extrinsic matrix
