@@ -18,7 +18,14 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   {
     pub_model_ = nh_private.advertise<PointCloudT>(
         "model_3D", 1);
+    pub_cloud_est_ = nh_private.advertise<PointCloudT>(
+        "cloud_est", 1);
+    pub_cloud_gt_ = nh_private.advertise<PointCloudT>(
+        "cloud_gt", 1);
   }
+
+  odom_publisher_ = nh_.advertise<OdomMsg>(
+    "odom", 5);
 
   testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
 
@@ -32,8 +39,7 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
     ROS_INFO("Publishing %s images via \"image_transport\"", topic_virtual_image_.c_str());
     // %EndTag(PUB)%
   }
-  odom_publisher_ = nh_.advertise<OdomMsg>(
-    "odom", 5);
+
 
   // **** subscribers
   image_transport::ImageTransport rgb_it(nh_);
@@ -164,19 +170,44 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
 
     cv::waitKey(0);
 
+    f2b_ = current_keyframe.pose; // Initialized to first keyframe's position // TODO: temporarily
+
     if(publish_cloud_model_)
     {
       PointCloudT cloud_current = current_keyframe.cloud;
-      cloud_current.header.frame_id = fixed_frame_;
-      pcl::PCDWriter writer;
-      int result_pcd_current;
-      std::string cloud_filename_current = current_keyframe_path + ".cloud.pcd";
+      PointCloudT cloud_next = next_keyframe.cloud;
+      cloud_current.header.frame_id = "current_frame";
+      cloud_next.header.frame_id = base_frame_;
+
+      std::string cloud_filename_current = current_keyframe_path + "_current.pcd";
+      std::string cloud_filename_next_est = current_keyframe_path + "_next_est.pcd";
+      std::string cloud_filename_next_gt = current_keyframe_path + "_next_gt.pcd";
       // derotate to fixed frame if needed
       PointCloudT cloud_current_transformed;
+      PointCloudT cloud_next_transformed_est;
+      PointCloudT cloud_next_transformed_gt;
       pcl::transformPointCloud(cloud_current, cloud_current_transformed, eigenFromTf(current_keyframe.pose));
-      result_pcd_current = writer.writeBinary<PointT>(cloud_filename_current, cloud_current_transformed);
+      tf::Transform a2b_est = current_keyframe.pose * transform_est;
+      tf::Transform a2b_gt = current_keyframe.pose * transform_gt;
+      pcl::transformPointCloud(cloud_next, cloud_next_transformed_est, eigenFromTf(a2b_est));
+      pcl::transformPointCloud(cloud_next, cloud_next_transformed_gt,  eigenFromTf(a2b_gt));
 
-      pub_model_.publish(cloud_current_transformed);
+      f2b_ = f2b_ * transform_est;
+      publishTransform(f2b_, fixed_frame_, base_frame_);
+
+      bool write_PCDs = false;
+      if(write_PCDs)
+      {
+        pcl::PCDWriter writer;
+        int result_pcd_current;
+        int result_pcd_next;
+        result_pcd_current = writer.writeBinary<PointT>(cloud_filename_current, cloud_current_transformed);
+        result_pcd_next = writer.writeBinary<PointT>(cloud_filename_next_est, cloud_next_transformed_est);
+        result_pcd_next = writer.writeBinary<PointT>(cloud_filename_next_gt, cloud_next_transformed_gt);
+      }
+
+      pub_cloud_est_.publish(cloud_next_transformed_est);
+      pub_cloud_gt_.publish(cloud_next_transformed_gt);
     }
     // +++++++++++++++++++++++++ Advance frames  ++++++++++++++++++++++++++++++++++++++++
 
@@ -617,6 +648,24 @@ bool MonocularVisualOdometry::fitness(const cv::Mat M, const cv::Mat E, const in
     return false;
 */
   return false;
+}
+
+void MonocularVisualOdometry::publishTransform(const tf::Transform &source2target_transform, const std::string& source_frame_id, const std::string& target_frame_id)
+{
+  ROS_INFO("Transforming Fixed Frame (%s) to Base (%s)", source_frame_id.c_str(), target_frame_id.c_str());
+
+  ros::Time current_time = ros::Time::now();
+  tf::StampedTransform transform_msg(
+      source2target_transform, current_time, source_frame_id, target_frame_id);
+  tf_broadcaster_.sendTransform (transform_msg);
+
+  ROS_WARN("Successfully sent transform Fixed (%s) to Base (%s)", source_frame_id.c_str(), target_frame_id.c_str());
+
+  OdomMsg odom;
+  odom.header.stamp = current_time;
+  odom.header.frame_id = source_frame_id;
+  tf::poseTFToMsg(source2target_transform, odom.pose.pose);
+  odom_publisher_.publish(odom);
 }
 
 void MonocularVisualOdometry::publishTransformF2B(const std_msgs::Header& header)
