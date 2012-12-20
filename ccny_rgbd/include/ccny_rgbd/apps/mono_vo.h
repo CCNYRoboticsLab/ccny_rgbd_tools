@@ -118,6 +118,8 @@ class MonocularVisualOdometry
     std::string base_frame_;
 
     std::string detector_type_;
+    std::string descriptor_type_;
+    double max_descriptor_space_distance_;
 
     // **** variables
     boost::mutex::scoped_lock mutex_lock_; ///< Thread lock on subscribed input images
@@ -128,11 +130,10 @@ class MonocularVisualOdometry
     int  frame_count_;
     ros::Time init_time_;
 
-    int min_inliers_;
-    int max_iterations_;
-    int distance_threshold_;
-    int max_PnP_iterations_;
-    int number_of_random_trees_;
+    // PnP parameters
+    int number_of_iterations_;
+    double reprojection_error_;
+    int min_inliers_count_;
 
     tf::Transform b2c_;
     tf::Transform f2b_;

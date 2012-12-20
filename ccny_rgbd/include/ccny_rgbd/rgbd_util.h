@@ -54,10 +54,7 @@ void getTfDifference(const tf::Transform& motion, double& dist, double& angle);
  * @param dist reference to the linear distance
  * @param angle reference to the angular distance
  */
-void getTfDifference(
-  const tf::Transform& a, 
-  const tf::Transform b, 
-  double& dist, double& angle);
+void getTfDifference(const tf::Transform& a, const tf::Transform& b, double& dist, double& angle);
 
 /** @brief Given a transfom (possibly computed as a difference between two transforms)
  * checks if either its angular or linar component exceeds a threshold
@@ -72,13 +69,19 @@ bool tfGreaterThan(const tf::Transform& a, double dist, double angle);
  * @param trans Eigen transform
  * @return tf version of the eigen transform
  */
-tf::Transform tfFromEigen(Eigen::Matrix4f E);
+tf::Transform tfFromEigen(const Eigen::Matrix4f& E);
 
 /* composes a tf::Transform from an Eigen 3x3 rotation matrix and a 3x1 translation vector
  */
 tf::Transform tfFromEigenRt(
-  const Matrix3f R,
-  const Vector3f t);
+  const Matrix3f& R,
+  const Vector3f& t);
+
+/* composes a tf::Transform from an cv::Mat 3x3 rotation matrix and a 3x1 translation vector
+ */
+tf::Transform tfFromCVRt(
+  const cv::Mat& R,
+  const cv::Mat& t);
 
 /** @brief Converts an tf::Transform transform to an Eigen transform
  * @param tf the tf transform
@@ -286,9 +289,9 @@ void depthImageFloatTo16bit(
   const cv::Mat& depth_image_in,
   cv::Mat& depth_image_out);
 
-/* creates a 4x4 perspective transformation matrix (OpenCV) from a 3x3 intrinsic matrix (Eigen)
+/* converts an Eigen 3x3 matrix into an OpenCV 3x3 matrix
  */
-void cv4x4PerspectiveMatrixFromEigenIntrinsic(const Matrix3f& intrinsic, cv::Mat& Q);
+void cv3x3FromEigen(const Matrix3f& emat, cv::Mat& Q);
 
 
 /** @brief converts a pair of virtual rgb/depth images from a point cloud projection
@@ -334,9 +337,12 @@ void tfFromImagePair(
   const cv::Mat& virtual_depth_img,
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
-  std::string feature_detection_alg = "GFT",
+  double max_descriptor_space_distance,
+  std::string feature_detection_alg = "ORB",
   std::string feature_descriptor_alg = "ORB",
   int number_of_iterations = 10,
+  float reprojection_error = 8.0,
+  int min_inliers_count = 100,
   bool draw_matches = false
 );
 
