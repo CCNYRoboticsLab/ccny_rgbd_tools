@@ -27,8 +27,8 @@ void KeyframeLoopDetector::generateKeyframeAssociations(
 
   //simplifiedRingAssociations(keyframes, associations);
   //ringAssociations(keyframes, associations);
-  //treeAssociations(keyframes, associations);
-  manualBruteForceAssociations(keyframes, associations);
+  treeAssociations(keyframes, associations);
+  //manualBruteForceAssociations(keyframes, associations);
 }
 
 bool KeyframeLoopDetector::addManualAssociation(
@@ -469,7 +469,7 @@ void KeyframeLoopDetector::ringAssociations(
     int kf_idx_b = kf_idx_a + n;
     if (kf_idx_b >= (int)keyframes.size()) 
       kf_idx_b -= (int)keyframes.size(); 
-
+    
     // set up the two keyframe references
     RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
     RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
@@ -674,23 +674,48 @@ void KeyframeLoopDetector::pairwiseMatchingRANSAC(
   //printf("\tInlier matches: %d\n", best_n_inliers);
 }
 
-/*
+
 void KeyframeLoopDetector::treeAssociations(
   KeyframeVector& keyframes,
   KeyframeAssociationVector& associations)
 {
-  // **** params
-  double inlier_threshold  = 0.30;
-  double matching_distance = 40.0;
-  //double matching_distance = 50.0; // for orb
-  double eps_reproj        = 5.0;
-
+   // RANSAC params
+  double max_eucl_dist    = 0.03;
+  double max_desc_dist    = 1.0;
+  double min_inlier_ratio = 1.0;
+  double min_inliers      = 30;
+  bool   save             = true;
+ 
+  // tree matching params
   int k_nn = 15;                        // look for X nearest neighbors
   int n_ransac_tests = 15;              // consider the first X frames with highest corr. count
-  int min_corresp_for_ransac_test = 15; // if there are fewer corresp. than X, don't bother to RANSAC
+  int min_corresp_for_ransac_test = 30; // if there are fewer corresp. than X, don't bother to RANSAC
+  
+  double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
+  
+  // **********************
+  // insert consecutive
+  for (unsigned int kf_idx_a = 0; kf_idx_a < keyframes.size()-1; ++kf_idx_a)
+  {
+    // determine second index, NO wrap-around
+    int kf_idx_b = kf_idx_a + 1;
 
-  bool save = true;
+    // set up the two keyframe references
+    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
 
+    // create an association object
+    KeyframeAssociation association;
+    association.kf_idx_a = kf_idx_a;
+    association.kf_idx_b = kf_idx_b;
+    //association.matches  = inlier_matches;  // TODO
+    association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;
+    associations.push_back(association);
+  }
+  
+  // *********************** 
+  // insert tree matches
+  
   cv::FlannBasedMatcher matcher;
   //cv::BFMatcher matcher(cv::NORM_HAMMING);  // for ORB
   std::vector<cv::Mat> descriptors_vector;
@@ -760,7 +785,7 @@ void KeyframeLoopDetector::treeAssociations(
       // test for order consistence
       // (+1 to ignore consec. frames)
       // and for minimum number of keypoints
-      if (index_b > index_a && 
+      if (index_b > index_a + 1 && 
           corresp_count >= min_corresp_for_ransac_test)
       {
         ransac_candidates.push_back(index_b);
@@ -779,52 +804,48 @@ void KeyframeLoopDetector::treeAssociations(
       unsigned int kf_idx_a = kf_idx;
       unsigned int kf_idx_b = ransac_candidates[rc];
 
-      RGBDFrame& frame_a = keyframes[kf_idx_a];
-      RGBDFrame& frame_b = keyframes[kf_idx_b];
+      RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
+      RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
 
       std::vector<cv::DMatch> all_matches;
       std::vector<cv::DMatch> inlier_matches;
 
-      getRANSACInliers(frame_a, frame_b, 
-        matching_distance, eps_reproj,
-        all_matches, inlier_matches);
+      // perform ransac matching, b onto a
+      Eigen::Matrix4f transformation;
 
-      double inlier_ratio = (double)inlier_matches.size() / (double)all_matches.size();
-      bool ransac_overlap = (inlier_ratio > inlier_threshold);
+      pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
+        max_eucl_dist_sq, max_desc_dist, min_inlier_ratio,
+        all_matches, inlier_matches, transformation);
 
-      if (ransac_overlap)
+      if (inlier_matches.size() >= min_inliers)
       {
         if (save)
         {
           cv::Mat img_matches;
-          cv::drawMatches(*(frame_a.getRGBImage()), frame_a.keypoints, 
-                          *(frame_b.getRGBImage()), frame_b.keypoints, 
+          cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                          keyframe_a.rgb_img, keyframe_a.keypoints, 
                           inlier_matches, img_matches);
 
           std::stringstream ss1;
           ss1 << kf_idx_a << "_to_" << kf_idx_b;
-          cv::imwrite("/home/idryanov/ros/images/" + ss1.str() + ".png", img_matches);
+          cv::imwrite("/home/idyanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
         }
 
         printf("RANSAC %d -> %d: PASS\n", kf_idx_a, kf_idx_b);
 
         // create an association object
-
         KeyframeAssociation association;
         association.kf_idx_a = kf_idx_a;
         association.kf_idx_b = kf_idx_b;
         association.matches  = inlier_matches;
-
-        associations.push_back(association);
+        association.a2b = tfFromEigen(transformation);
+        associations.push_back(association);      
       }
       else  
         printf("RANSAC %d -> %d: FAIL\n", kf_idx_a, kf_idx_b);
     }
   }
 }
-*/
-
-
 
 /*
 // 3D ransac, no descriptors

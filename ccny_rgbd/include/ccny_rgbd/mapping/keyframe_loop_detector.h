@@ -47,6 +47,10 @@ class KeyframeLoopDetector
 
     void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
 
+    void treeAssociations(
+      KeyframeVector& keyframes,
+      KeyframeAssociationVector& associations);
+    
     void simplifiedRingAssociations(  
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
