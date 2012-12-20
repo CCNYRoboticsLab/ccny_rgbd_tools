@@ -144,6 +144,8 @@ class MonocularVisualOdometry
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
     PointCloudT::Ptr model_ptr_;
+    ros::Publisher pub_cloud_est_; ///< Publisher for the point cloud model as estimated
+    ros::Publisher pub_cloud_gt_; ///< Publisher for the point cloud model (ground truth)
     ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
 
     image_transport::Publisher virtual_img_pub_;
@@ -167,6 +169,7 @@ class MonocularVisualOdometry
 
     void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
     void initParams();
+    void publishTransform(const tf::Transform &source2target_transform, const std::string& source_frame_id, const std::string& target_frame_id);
     void publishTransformF2B(const std_msgs::Header& header);
 
     bool getBaseToCameraTf(const std_msgs::Header& header);

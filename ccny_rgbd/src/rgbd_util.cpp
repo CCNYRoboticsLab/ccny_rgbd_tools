@@ -1030,7 +1030,6 @@ void tfFromImagePair(
 
     cv::Rodrigues(rvec, rmat);
     openCVRtToTf(rmat,tvec,transform);
-
 }
 
 } //namespace ccny_rgbd
