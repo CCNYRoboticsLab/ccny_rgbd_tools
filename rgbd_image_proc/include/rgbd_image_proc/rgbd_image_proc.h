@@ -48,7 +48,9 @@ class RGBDImageProc
 {
   public:
 
-    RGBDImageProc(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    RGBDImageProc(
+      const ros::NodeHandle& nh, 
+      const ros::NodeHandle& nh_private);
     virtual ~RGBDImageProc();
 
     void RGBDCallback(  
@@ -122,8 +124,9 @@ class RGBDImageProc
       const CameraInfoMsg::ConstPtr& rgb_info_msg,
       const CameraInfoMsg::ConstPtr& depth_info_msg);
     
-    bool loadCalibration();
-        
+    bool loadCalibration();   
+    bool loadUnwarpCalibration();
+
     void reconfigCallback(ProcConfig& config, uint32_t level);
 };
 
