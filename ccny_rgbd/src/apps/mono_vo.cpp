@@ -11,22 +11,18 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   ROS_INFO("Starting Monocular Visual Odometry from a 3D Dense Model");
   // **** init parameters
   initParams();
-
-  testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
-
-  /*
-  // **** init variables
-
-
   f2b_.setIdentity();
 
   // **** publishers
   if(publish_cloud_model_)
   {
-    pub_model_ = nh_private.advertise<PointCloudFeature>(
+    pub_model_ = nh_private.advertise<PointCloudT>(
         "model_3D", 1);
   }
 
+  testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
+
+  /*
   image_transport::ImageTransport it(nh_private_);
   if(publish_virtual_img_)
   {
@@ -77,14 +73,21 @@ std::string MonocularVisualOdometry::formKeyframeName(int keyframe_number, int n
   return keyframe_number_as_str;
 }
 
+void MonocularVisualOdometry::generateKeyframePaths(const std::string& keyframe_path, int keyframe_number, std::string& current_keyframe_path, std::string& next_keyframe_path)
+{
+  current_keyframe_path = keyframe_path + formKeyframeName(keyframe_number, 4);
+  next_keyframe_path = keyframe_path + formKeyframeName(keyframe_number+1, 4);
+  std::cout << "Current Frame: " << current_keyframe_path << std::endl;
+  std::cout << "Next Frame: " << next_keyframe_path << std::endl;
+}
+
 void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number)
 {
   tf::Transform transform_est; // Frame to frame
 
-  std::string current_keyframe_path = keyframe_path + formKeyframeName(keyframe_number, 4);
-  std::string next_keyframe_path = keyframe_path + formKeyframeName(keyframe_number+1, 4);
-  std::cout << "Current Frame: " << current_keyframe_path << std::endl;
-  std::cout << "Next Frame: " << next_keyframe_path << std::endl;
+  std::string current_keyframe_path;
+  std::string next_keyframe_path;
+  generateKeyframePaths(keyframe_path, keyframe_number, current_keyframe_path, next_keyframe_path);
 
   bool current_success = false;
   bool next_success = false;
@@ -108,21 +111,19 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
     }
   }
 
-  if(current_success && next_success)
+  cv::Mat cv_intrinsic = current_keyframe.model.intrinsicMatrix();
+  //std::cout << "CV Intrinsic matrix: " << cv_intrinsic <<std::endl;
+
+  Matrix3f intrinsic;
+  openCVRToEigenR(cv_intrinsic,intrinsic);
+  //std::cout << "Eigen Intrinsic matrix: " << intrinsic <<std::endl;
+
+  while(current_success && next_success)
   {
-    cv::Mat cv_intrinsic = current_keyframe.model.intrinsicMatrix();
-    //std::cout << "CV Intrinsic matrix: " << cv_intrinsic <<std::endl;
-
-    Matrix3f intrinsic;
-    openCVRToEigenR(cv_intrinsic,intrinsic);
-    //std::cout << "Eigen Intrinsic matrix: " << intrinsic <<std::endl;
-
-
     cv::namedWindow("Current", CV_WINDOW_KEEPRATIO);
     cv::imshow("Current", current_keyframe.rgb_img);
     cv::namedWindow("Next", CV_WINDOW_KEEPRATIO);
     cv::imshow("Next", next_keyframe.rgb_img);
-
     cv::waitKey(1);
 
     tfFromImagePair(
@@ -163,6 +164,42 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
 
     cv::waitKey(0);
 
+    if(publish_cloud_model_)
+    {
+      PointCloudT cloud_current = current_keyframe.cloud;
+      cloud_current.header.frame_id = fixed_frame_;
+      pcl::PCDWriter writer;
+      int result_pcd_current;
+      std::string cloud_filename_current = current_keyframe_path + ".cloud.pcd";
+      // derotate to fixed frame if needed
+      PointCloudT cloud_current_transformed;
+      pcl::transformPointCloud(cloud_current, cloud_current_transformed, eigenFromTf(current_keyframe.pose));
+      result_pcd_current = writer.writeBinary<PointT>(cloud_filename_current, cloud_current_transformed);
+
+      pub_model_.publish(cloud_current_transformed);
+    }
+    // +++++++++++++++++++++++++ Advance frames  ++++++++++++++++++++++++++++++++++++++++
+
+    ++keyframe_number;
+    generateKeyframePaths(keyframe_path, keyframe_number, current_keyframe_path, next_keyframe_path);
+
+    current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+    if(current_success)
+    {
+      if(loadKeyframe(next_keyframe, next_keyframe_path))
+      {
+        next_success = true;
+      }
+      else
+      {
+        int next_keyframe_number = 0; // Wraps around to the first frame
+        while(next_success == false)
+        {
+          next_success = loadKeyframe(next_keyframe, keyframe_path + formKeyframeName(next_keyframe_number, 4));
+          next_keyframe_number++;
+        }
+      }
+    }
   }
 
 
@@ -199,11 +236,12 @@ void MonocularVisualOdometry::initParams()
   if (!nh_private_.getParam ("apps/mono_vo/reprojection_error", reprojection_error_))
     reprojection_error_ = 8;
 
-  /*
+
   if (!nh_private_.getParam ("apps/mono_vo/publish_cloud_model", publish_cloud_model_))
     publish_cloud_model_ = false;
   if (!nh_private_.getParam ("apps/mono_vo/publish_virtual_img", publish_virtual_img_))
     publish_virtual_img_ = false;
+  /*
   if (!nh_private_.getParam ("apps/mono_vo/topic_cam_info", topic_cam_info_))
     topic_cam_info_ = "/camera/rgb/camera_info";
   if (!nh_private_.getParam ("apps/mono_vo/topic_image", topic_image_))

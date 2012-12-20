@@ -163,6 +163,7 @@ class MonocularVisualOdometry
     // **** private functions
     void testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number);
     std::string formKeyframeName(int keyframe_number, int num_of_chars);
+    void generateKeyframePaths(const std::string& keyframe_path, int keyframe_number, std::string& current_keyframe_path, std::string& next_keyframe_path);
 
     void imageCallback(const ImageMsg::ConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
     void initParams();
