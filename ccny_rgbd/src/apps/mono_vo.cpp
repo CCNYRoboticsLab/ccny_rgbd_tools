@@ -49,13 +49,11 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
     nh_, topic_cam_info_, 1);
 
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  /*
   int queue_size = 5;
   sync_.reset(new SynchronizerMonoVO(SyncPolicyMonoVO(queue_size), sub_rgb_, sub_info_));
   sync_->registerCallback(boost::bind(&MonocularVisualOdometry::imageCallback, this, _1, _2));
-  */
   //  testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
-    testEstimationFromVirtualKeyFrames(path_to_keyframes_, initial_keyframe_number_);
+//    testEstimationFromVirtualKeyFrames(path_to_keyframes_, initial_keyframe_number_);
 
 
 }
