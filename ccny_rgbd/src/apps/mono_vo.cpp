@@ -20,14 +20,16 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
         "model_3D", 1);
     pub_cloud_est_ = nh_private.advertise<PointCloudT>(
         "cloud_est", 1);
-    pub_cloud_gt_ = nh_private.advertise<PointCloudT>(
-        "cloud_gt", 1);
   }
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
     "odom", 5);
 
-  testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
+  if(readPointCloudFromPCDFile()==false)
+    ROS_FATAL("The sky needs its point cloud to operate!");
+
+//  testEstimationFromKeyFrames(path_to_keyframes_, initial_keyframe_number_);
+  testEstimationFromVirtualKeyFrames(path_to_keyframes_, initial_keyframe_number_);
 
   /*
   image_transport::ImageTransport it(nh_private_);
@@ -51,8 +53,6 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   // feature params
   setFeatureDetector();
 
-  if(readPointCloudFromPCDFile()==false)
-    ROS_FATAL("The sky needs its point cloud to operate!");
 
 
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
@@ -85,6 +85,25 @@ void MonocularVisualOdometry::generateKeyframePaths(const std::string& keyframe_
   next_keyframe_path = keyframe_path + formKeyframeName(keyframe_number+1, 4);
   std::cout << "Current Frame: " << current_keyframe_path << std::endl;
   std::cout << "Next Frame: " << next_keyframe_path << std::endl;
+}
+
+void MonocularVisualOdometry::getVirtualImageFromKeyframe(const PointCloudT& cloud, const Matrix3f& intrinsic, const tf::Transform& extrinsic_tf, cv::Mat& rgb_img, cv::Mat& depth_img)
+{
+  Matrix3f rmat;
+  Vector3f tvec;
+  tfToEigenRt(extrinsic_tf, rmat, tvec);
+
+  cv::Mat rgb_img_projected;
+  cv::Mat depth_img_projected;
+
+  projectCloudToImage(cloud, rmat, tvec, intrinsic, 320, 240, rgb_img_projected, depth_img_projected);   //FIXME: use the proper width and height
+
+  holeFilling2(rgb_img_projected, depth_img_projected, 3, rgb_img, depth_img);
+
+//  cv::medianBlur(rgb_img,rgb_img, 3);
+  double sigmaX = 1.5;
+  cv::GaussianBlur(rgb_img,rgb_img, cv::Size(3, 3), sigmaX);
+
 }
 
 void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number)
@@ -124,6 +143,8 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
   openCVRToEigenR(cv_intrinsic,intrinsic);
   //std::cout << "Eigen Intrinsic matrix: " << intrinsic <<std::endl;
 
+  f2b_ = current_keyframe.pose; // Initialized to first keyframe's position // TODO: temporarily
+
   while(current_success && next_success)
   {
     cv::namedWindow("Current", CV_WINDOW_KEEPRATIO);
@@ -135,7 +156,7 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
     tfFromImagePair(
       current_keyframe.rgb_img,
       next_keyframe.rgb_img,
-      next_keyframe.depth_img,
+      current_keyframe.depth_img,
       intrinsic,
       transform_est,
       max_descriptor_space_distance_,
@@ -170,47 +191,163 @@ void MonocularVisualOdometry::testEstimationFromKeyFrames(std::string keyframe_p
 
     cv::waitKey(0);
 
-    f2b_ = current_keyframe.pose; // Initialized to first keyframe's position // TODO: temporarily
+    f2b_ = f2b_ * transform_est;
+    publishTransform(f2b_, fixed_frame_, base_frame_);
 
     if(publish_cloud_model_)
     {
-      PointCloudT cloud_current = current_keyframe.cloud;
       PointCloudT cloud_next = next_keyframe.cloud;
-      cloud_current.header.frame_id = "current_frame";
-      cloud_next.header.frame_id = base_frame_;
-
-      std::string cloud_filename_current = current_keyframe_path + "_current.pcd";
+//      cloud_next.header.frame_id = base_frame_;
+      cloud_next.header.frame_id = fixed_frame_; // FIXME: Using fixed_problem to publish and visualize in the "odom" frame without need for transformation
       std::string cloud_filename_next_est = current_keyframe_path + "_next_est.pcd";
-      std::string cloud_filename_next_gt = current_keyframe_path + "_next_gt.pcd";
       // derotate to fixed frame if needed
-      PointCloudT cloud_current_transformed;
       PointCloudT cloud_next_transformed_est;
-      PointCloudT cloud_next_transformed_gt;
-      pcl::transformPointCloud(cloud_current, cloud_current_transformed, eigenFromTf(current_keyframe.pose));
-      tf::Transform a2b_est = current_keyframe.pose * transform_est;
-      tf::Transform a2b_gt = current_keyframe.pose * transform_gt;
-      pcl::transformPointCloud(cloud_next, cloud_next_transformed_est, eigenFromTf(a2b_est));
-      pcl::transformPointCloud(cloud_next, cloud_next_transformed_gt,  eigenFromTf(a2b_gt));
-
-      f2b_ = f2b_ * transform_est;
-      publishTransform(f2b_, fixed_frame_, base_frame_);
-
-      bool write_PCDs = false;
-      if(write_PCDs)
-      {
-        pcl::PCDWriter writer;
-        int result_pcd_current;
-        int result_pcd_next;
-        result_pcd_current = writer.writeBinary<PointT>(cloud_filename_current, cloud_current_transformed);
-        result_pcd_next = writer.writeBinary<PointT>(cloud_filename_next_est, cloud_next_transformed_est);
-        result_pcd_next = writer.writeBinary<PointT>(cloud_filename_next_gt, cloud_next_transformed_gt);
-      }
-
+      pcl::transformPointCloud(cloud_next, cloud_next_transformed_est, eigenFromTf(f2b_));
       pub_cloud_est_.publish(cloud_next_transformed_est);
-      pub_cloud_gt_.publish(cloud_next_transformed_gt);
     }
     // +++++++++++++++++++++++++ Advance frames  ++++++++++++++++++++++++++++++++++++++++
 
+    ++keyframe_number;
+    generateKeyframePaths(keyframe_path, keyframe_number, current_keyframe_path, next_keyframe_path);
+
+    current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+    if(current_success)
+    {
+      if(loadKeyframe(next_keyframe, next_keyframe_path))
+      {
+        next_success = true;
+      }
+      else
+      {
+        int next_keyframe_number = 0; // Wraps around to the first frame
+        while(next_success == false)
+        {
+          next_success = loadKeyframe(next_keyframe, keyframe_path + formKeyframeName(next_keyframe_number, 4));
+          next_keyframe_number++;
+        }
+      }
+    }
+  }
+
+}
+
+void MonocularVisualOdometry::testEstimationFromVirtualKeyFrames(std::string keyframe_path, int keyframe_number)
+{
+  tf::Transform transform_est; // Frame to frame
+
+  std::string current_keyframe_path;
+  std::string next_keyframe_path;
+  generateKeyframePaths(keyframe_path, keyframe_number, current_keyframe_path, next_keyframe_path);
+
+  bool current_success = false;
+  bool next_success = false;
+
+  RGBDKeyframe current_keyframe, next_keyframe;
+  current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+  if(current_success)
+  {
+    if(loadKeyframe(next_keyframe, next_keyframe_path))
+    {
+      next_success = true;
+    }
+    else
+    {
+      int next_keyframe_number = 0; // Wraps around to the first frame
+      while(next_success == false)
+      {
+        next_success = loadKeyframe(next_keyframe, keyframe_path + formKeyframeName(next_keyframe_number, 4));
+        next_keyframe_number++;
+      }
+    }
+  }
+
+  cv::Mat cv_intrinsic = current_keyframe.model.intrinsicMatrix();
+  //std::cout << "CV Intrinsic matrix: " << cv_intrinsic <<std::endl;
+
+  Matrix3f intrinsic;
+  openCVRToEigenR(cv_intrinsic,intrinsic);
+  //std::cout << "Eigen Intrinsic matrix: " << intrinsic <<std::endl;
+
+  f2b_ = current_keyframe.pose; // Initialized to first keyframe's position // TODO: temporarily
+
+  while(current_success && next_success)
+  {
+    cv::Mat virtual_rgb_img, virtual_depth_img;
+    ros::WallTime start_projection = ros::WallTime::now();
+    // Function being profiled
+    getVirtualImageFromKeyframe(*model_ptr_, intrinsic, f2b_.inverse(), virtual_rgb_img, virtual_depth_img);
+    ros::WallTime end_projection = ros::WallTime::now();
+    double delay_projection = 1000.0 * (end_projection      - start_projection).toSec();
+    printf("Projection delay =  %f ms\n", delay_projection);
+
+    cv::namedWindow("Current", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Current", virtual_rgb_img);
+    cv::namedWindow("Next", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Next", next_keyframe.rgb_img);
+    cv::waitKey(1);
+
+    tfFromImagePair(
+        virtual_rgb_img,
+        next_keyframe.rgb_img,
+        virtual_depth_img,
+        intrinsic,
+        transform_est,
+        max_descriptor_space_distance_,
+        detector_type_,
+        descriptor_type_,
+        number_of_iterations_,
+        (float) reprojection_error_,
+        min_inliers_count_,
+        true,
+        true // Profile (print execution times)
+    );
+    // Compare to ground truth
+    tf::Transform transform_gt = (current_keyframe.pose).inverse() * next_keyframe.pose;
+
+    // output
+    cv::Mat tvec_est, rmat_est;
+    tfToOpenCVRt(transform_est, rmat_est, tvec_est);
+    std::cout << "ESTIMATION:" << std::endl;
+    std::cout << "tvec:" << tvec_est << std::endl << "rmat:" << rmat_est << std::endl;
+
+    cv::Mat tvec_gt, rmat_gt;
+    tfToOpenCVRt(transform_gt, rmat_gt, tvec_gt);
+    std::cout << "GROUND TRUTH:" << std::endl;
+    std::cout << "tvec:" << tvec_gt << std::endl << "rmat:" << rmat_gt << std::endl;
+
+    // Error metric:
+    double dist, angle;
+    getTfDifference(transform_gt, transform_est, dist, angle);
+    std::cout << "ERROR:" << std::endl;
+    std::cout << "\t Distance difference: " << dist << " m" <<
+    std::endl << "\t Angle difference: " << RAD2DEG(angle) << " degrees" << std::endl;
+
+    f2b_ = f2b_ * transform_est;
+    //publishTransform(f2b_, fixed_frame_, base_frame_); // TODO
+
+    if(publish_cloud_model_)
+    {
+      PointCloudT cloud_next = next_keyframe.cloud;
+      //      cloud_next.header.frame_id = base_frame_;
+      cloud_next.header.frame_id = fixed_frame_; // FIXME: Using fixed_problem to publish and visualize in the "odom" frame without need for transformation
+      std::string cloud_filename_next_est = current_keyframe_path + "_next_est.pcd";
+      // derotate to fixed frame if needed
+      PointCloudT cloud_next_transformed_est;
+      pcl::transformPointCloud(cloud_next, cloud_next_transformed_est, eigenFromTf(f2b_));
+
+      bool write_PCDs = true;
+      if(write_PCDs)
+      {
+        pcl::PCDWriter writer;
+        int result_pcd_next;
+        result_pcd_next = writer.writeBinary<PointT>(cloud_filename_next_est, cloud_next_transformed_est);
+      }
+      pub_cloud_est_.publish(cloud_next_transformed_est);
+    }
+
+    cv::waitKey(0);
+
+    // +++++++++++++++++++++++++ Advance frames  ++++++++++++++++++++++++++++++++++++++++
     ++keyframe_number;
     generateKeyframePaths(keyframe_path, keyframe_number, current_keyframe_path, next_keyframe_path);
 
@@ -536,7 +673,7 @@ void MonocularVisualOdometry::imageCallback(const sensor_msgs::ImageConstPtr& rg
 
   cv::Mat rgb_img;
   cv::Mat depth_img;
-  projectCloudToImage(model_ptr_, rmat_, tvec_, intrinsic_matrix_, (int) cam_model_.width(), (int) cam_model_.height(), rgb_img, depth_img);
+  projectCloudToImage(*model_ptr_, rmat_, tvec_, intrinsic_matrix_, (int) cam_model_.width(), (int) cam_model_.height(), rgb_img, depth_img);
   // **** estimate motion ************************************************
 
     ros::WallTime start_PnP_reg = ros::WallTime::now();

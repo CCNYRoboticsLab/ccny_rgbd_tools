@@ -305,7 +305,7 @@ void cv3x3FromEigen(const Matrix3f& emat, cv::Mat& Q);
  * @param rgb_img the output virtual RGB-image
  * @param depth_img the output virtual depth-image
  */
-void projectCloudToImage(const PointCloudT::Ptr& cloud,
+void projectCloudToImage(const PointCloudT& cloud,
                          const Matrix3f& rmat,
                          const Vector3f& tvec,
                          const Matrix3f& intrinsic,
@@ -332,9 +332,9 @@ void holeFilling2(const cv::Mat& rgb_img,
 /* Finds the PnP transformation of the reference image based on the virtual images
  */
 void tfFromImagePair(
-  const cv::Mat& reference_img,
-  const cv::Mat& virtual_img,
-  const cv::Mat& virtual_depth_img,
+  const cv::Mat& current_img, ///< The reference or virtual image
+  const cv::Mat& next_img,
+  const cv::Mat& current_depth_img, /// The reference image's depth map to be used as mask and for 3D reprojection
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
   double max_descriptor_space_distance,
@@ -343,7 +343,8 @@ void tfFromImagePair(
   int number_of_iterations = 10,
   float reprojection_error = 8.0,
   int min_inliers_count = 100,
-  bool draw_matches = false
+  bool draw_matches = false,
+  bool profile = false
 );
 
 } // namespace ccny_rgbd

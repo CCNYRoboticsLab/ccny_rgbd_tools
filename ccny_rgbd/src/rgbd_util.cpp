@@ -480,7 +480,7 @@ void depthImageFloatTo16bit(
   depth_image_in.convertTo(depth_image_out, CV_16UC1, 1000.0);
 }
 
-void projectCloudToImage(const PointCloudT::Ptr& cloud,
+void projectCloudToImage(const PointCloudT& cloud,
                          const Matrix3f& rmat,
                          const Vector3f& tvec,
                          const Matrix3f& intrinsic,
@@ -494,10 +494,10 @@ void projectCloudToImage(const PointCloudT::Ptr& cloud,
   rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
 
-  for (uint i=0; i<cloud->points.size(); ++i)
+  for (uint i=0; i<cloud.points.size(); ++i)
   {
     // convert from pcl PointT to Eigen Vector3f
-    PointT point = cloud->points[i];
+    PointT point = cloud.points[i];
     Vector3f p_world;
     p_world(0,0) = point.x;
     p_world(1,0) = point.y;
@@ -650,7 +650,7 @@ void holeFilling2(const cv::Mat& rgb_img,
 void tfFromImagePair(
   const cv::Mat& current_img,
   const cv::Mat& next_img,
-  const cv::Mat& next_depth_img,
+  const cv::Mat& current_depth_img,
   const Matrix3f& intrinsic_matrix,
   tf::Transform& transform,
   double max_descriptor_space_distance,
@@ -659,15 +659,17 @@ void tfFromImagePair(
   int number_of_iterations,
   float reprojection_error,
   int min_inliers_count,
-  bool draw_matches
+  bool draw_matches,
+  bool profile
   )
 {
+  ros::WallTime start_feature_matching = ros::WallTime::now();
 
   // Mask next image with depth img as mask (takes care of wholes where information is missing)
-  cv::Mat next_img_mask;
-  next_depth_img.convertTo(next_img_mask, CV_8U);
+  cv::Mat current_img_mask;
+  current_depth_img.convertTo(current_img_mask, CV_8U);
   cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
-  cv::imshow("Mask", next_img_mask);
+  cv::imshow("Mask", current_img_mask);
 
   cv::Ptr<cv::FeatureDetector> feature_detector;
 
@@ -743,9 +745,8 @@ void tfFromImagePair(
   std::vector<cv::KeyPoint> keypoints_current;
   std::vector<cv::KeyPoint> keypoints_next;
 
-  feature_detector->detect(next_img, keypoints_next,next_img_mask);
-//  feature_detector->detect(next_img, keypoints_next);
-  feature_detector->detect(current_img, keypoints_current);
+  feature_detector->detect(current_img, keypoints_current,current_img_mask);
+  feature_detector->detect(next_img, keypoints_next);
 
   // Visualize keypoints
   /*
@@ -935,16 +936,16 @@ void tfFromImagePair(
       cv::Point2f cv_2D_point_train = keypoints_current[idx_train].pt;
       // Compute 3D point
       cv::Point2f cv_2D_point_query = keypoints_next[idx_query].pt;
-      float depth = (float) next_depth_img.at<uint16_t>((int) roundf(cv_2D_point_query.y), (int) roundf(cv_2D_point_query.x)) / 1000.0f;
+      float depth = (float) current_depth_img.at<uint16_t>((int) roundf(cv_2D_point_train.y), (int) roundf(cv_2D_point_train.x)) / 1000.0f;
       //printf("Depth(%f,%f) = %f \t", cv_2D_point_query.x, cv_2D_point_query.y, depth);
       if(depth > 0)
       {
         candidate_matches.push_back(match);
-        corr_2D_points_vector.push_back(cv_2D_point_train);
+        corr_2D_points_vector.push_back(cv_2D_point_query);
 
         Vector3f p_cam;
-        p_cam(0,0) = cv_2D_point_query.x * depth;
-        p_cam(1,0) = cv_2D_point_query.y * depth;
+        p_cam(0,0) = cv_2D_point_train.x * depth;
+        p_cam(1,0) = cv_2D_point_train.y * depth;
         p_cam(2,0) = depth;
         //printf("Point in Camera frame: (%f,%f, %f) \t", p_cam(0,0), p_cam(1,0), p_cam(2,0));
 
@@ -963,6 +964,13 @@ void tfFromImagePair(
 //        ROS_ERROR("Depth value shouldn't be zero");
 //      }
     }
+  }
+
+  ros::WallTime end_feature_matching = ros::WallTime::now();
+  if(profile)
+  {
+    double delay_feature_matching = 1000.0 * (end_feature_matching      - start_feature_matching).toSec();
+    printf("Feature-Matching delay =  %f ms\n", delay_feature_matching);
   }
 
   if(draw_matches)
@@ -986,50 +994,59 @@ void tfFromImagePair(
   if(number_of_candidate_matches < min_inliers_count)
     min_inliers_count = number_of_candidate_matches; // update minimum
 
-    // -----------------------------------------------------------------------------
-    // ------- transformation computation with PnP ---------------------------------
-    cv::Mat M; // The intrinsic matrix
-    cv3x3FromEigen(intrinsic_matrix, M);
+  // -----------------------------------------------------------------------------
+  // ------- transformation computation with PnP ---------------------------------
+  cv::Mat M; // The intrinsic matrix
+  cv3x3FromEigen(intrinsic_matrix, M);
 
-    cv::Mat rvec, rmat;
-    cv::Mat tvec;
-    // FIXME: commented temporarily because there is not initial trasformation being passed
-//    tfToOpenCVRt(transform, rmat, tvec);
-//    cv::Rodrigues(rmat, rvec);
+  cv::Mat rvec, rmat;
+  cv::Mat tvec;
+  // FIXME: commented temporarily because there is not initial trasformation being passed
+  //    tfToOpenCVRt(transform, rmat, tvec);
+  //    cv::Rodrigues(rmat, rvec);
 
-    bool useExtrinsicGuess = false;
-    std::vector<int> inliers_indices;
-//          cv::solvePnP(corr_3D_points_vector, corr_2D_points_vector, M, cv::Mat(), rvec, tvec, true);
-    cv::solvePnPRansac(corr_3D_points_vector, corr_2D_points_vector, M, cv::Mat(), rvec, tvec, useExtrinsicGuess,
-                       number_of_iterations, reprojection_error, min_inliers_count, inliers_indices);
-    std::cout << inliers_indices.size() << " inliers" << std::endl;
-    if(draw_matches)
+  bool useExtrinsicGuess = false;
+  std::vector<int> inliers_indices;
+
+  ros::WallTime start_PnP_RANSAC = ros::WallTime::now();
+  //          cv::solvePnP(corr_3D_points_vector, corr_2D_points_vector, M, cv::Mat(), rvec, tvec, true);
+  cv::solvePnPRansac(corr_3D_points_vector, corr_2D_points_vector, M, cv::Mat(), rvec, tvec, useExtrinsicGuess,
+                     number_of_iterations, reprojection_error, min_inliers_count, inliers_indices);
+  if(profile)
+  {
+    printf("PnP-RANSAC delay =  %f ms\n", getMsDuration(start_PnP_RANSAC));
+  }
+
+  std::cout << inliers_indices.size() << " inliers" << std::endl;
+  if(draw_matches)
+  {
+    std::vector<cv::DMatch> inliers_matches;
+
+    for (unsigned int m_idx = 0; m_idx < inliers_indices.size(); ++m_idx)
     {
-      std::vector<cv::DMatch> inliers_matches;
+      cv::DMatch match = candidate_matches[inliers_indices[m_idx]];
+      inliers_matches.push_back(match);
+      cv::Mat current_img_copy = current_img.clone();
+      cv::Mat next_img_copy = next_img.clone();
 
-      for (unsigned int m_idx = 0; m_idx < inliers_indices.size(); ++m_idx)
-      {
-        cv::DMatch match = candidate_matches[inliers_indices[m_idx]];
-        inliers_matches.push_back(match);
-        cv::Mat current_img_copy = current_img.clone();
-        cv::Mat next_img_copy = next_img.clone();
-
-        cv::Mat matches_result_img;
-        cv::drawMatches(
-            next_img_copy, keypoints_next, // Query image and its keypoints
-            current_img_copy, keypoints_current, // Train image and its keypoints
-            inliers_matches, // the matches
-            matches_result_img // the image produced
-        ); // color of the lines
-        cv::namedWindow("Matches Inliers", CV_WINDOW_KEEPRATIO);
-        cv::imshow("Matches Inliers", matches_result_img);
-      }
-      cv::waitKey(1);
-
+      cv::Mat matches_result_img;
+      cv::drawMatches(
+          next_img_copy, keypoints_next, // Query image and its keypoints
+          current_img_copy, keypoints_current, // Train image and its keypoints
+          inliers_matches, // the matches
+          matches_result_img // the image produced
+      ); // color of the lines
+      cv::namedWindow("Matches Inliers", CV_WINDOW_KEEPRATIO);
+      cv::imshow("Matches Inliers", matches_result_img);
     }
+    cv::waitKey(1);
 
-    cv::Rodrigues(rvec, rmat);
-    openCVRtToTf(rmat,tvec,transform);
+  }
+
+  cv::Rodrigues(rvec, rmat);
+  tf::Transform next2current_tf;
+  openCVRtToTf(rmat, tvec, next2current_tf);
+  transform = next2current_tf.inverse();
 }
 
 } //namespace ccny_rgbd

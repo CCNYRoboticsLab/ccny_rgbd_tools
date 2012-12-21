@@ -17,7 +17,7 @@ void test_projection()
   PointCloudT::Ptr cloud;
   cloud.reset(new PointCloudT());
   pcl::PCDReader reader;
-  reader.read ("/home/rvalenti/ros/PCDs/office.pcd", *cloud);
+  reader.read ("/home/rvalenti/ros/PCDs/office.pcd", cloud);
   
   Matrix3f rmat1; 
   Matrix3f rmat2;
@@ -44,7 +44,7 @@ void test_projection()
 
   Matrix3f intrinsic;
   openCVRToEigenR(intr, intrinsic);
-  projectCloudToImage(*cloud, rmat, tvec, intrinsic, 320, 240, rgb_img, depth_img);
+  projectCloudToImage(cloud, rmat, tvec, intrinsic, 320, 240, rgb_img, depth_img);
   holeFilling2(rgb_img, depth_img, 3, filled_rgb_img, filled_depth_img);
 
   medianBlur(filled_rgb_img,filtered_img, 3);  
