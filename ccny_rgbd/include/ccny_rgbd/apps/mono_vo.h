@@ -145,7 +145,6 @@ class MonocularVisualOdometry
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
     PointCloudT::Ptr model_ptr_;
     ros::Publisher pub_cloud_est_; ///< Publisher for the point cloud model as estimated
-    ros::Publisher pub_cloud_gt_; ///< Publisher for the point cloud model (ground truth)
     ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
 
     image_transport::Publisher virtual_img_pub_;
@@ -164,6 +163,9 @@ class MonocularVisualOdometry
 
     // **** private functions
     void testEstimationFromKeyFrames(std::string keyframe_path, int keyframe_number);
+    void testEstimationFromVirtualKeyFrames(std::string keyframe_path, int keyframe_number);
+    void getVirtualImageFromKeyframe(const PointCloudT& cloud, const Matrix3f& intrinsic, const tf::Transform& extrinsic_tf, cv::Mat& rgb_img, cv::Mat& depth_img);
+
     std::string formKeyframeName(int keyframe_number, int num_of_chars);
     void generateKeyframePaths(const std::string& keyframe_path, int keyframe_number, std::string& current_keyframe_path, std::string& next_keyframe_path);
 
