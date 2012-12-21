@@ -4,7 +4,8 @@ namespace ccny_rgbd
 {
 
 KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  KeyframeGenerator(nh, nh_private)
+  nh_(nh), 
+  nh_private_(nh_private)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
 
@@ -18,9 +19,15 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "keyframe_edges", 1);
 
   // **** params
- 
+
+  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
+    fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("full_map_res", full_map_res_))
     full_map_res_ = 0.01;
+  if (!nh_private_.getParam ("kf/kf_dist_eps", kf_dist_eps_))
+    kf_dist_eps_  = 0.10;
+  if (!nh_private_.getParam ("kf/kf_angle_eps", kf_angle_eps_))
+    kf_angle_eps_  = 10.0 * M_PI / 180.0;
   
   // **** services
 
@@ -38,6 +45,8 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
   save_full_service_ = nh_.advertiseService(
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
+  add_manual_keyframe_service_ = nh_.advertiseService(
+    "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
 
   // **** subscribers
 
@@ -58,7 +67,7 @@ KeyframeMapper::~KeyframeMapper()
 {
 
 }
-
+  
 void KeyframeMapper::RGBDCallback(
   const ImageMsg::ConstPtr& depth_msg,
   const ImageMsg::ConstPtr& rgb_msg,
@@ -79,9 +88,53 @@ void KeyframeMapper::RGBDCallback(
     return;
   }
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
-  bool result = KeyframeGenerator::processFrame(frame, transform);
+  bool result = processFrame(frame, transform);
   if (result) publishKeyframeData(keyframes_.size() - 1);
 }
+
+bool KeyframeMapper::processFrame(
+  const RGBDFrame& frame, 
+  const tf::Transform& pose)
+{
+  bool result; // if true, add new frame
+
+  if(keyframes_.empty() || manual_add_)
+  {
+    result = true;
+  }
+  else
+  {
+    double dist, angle;
+    getTfDifference(pose, keyframes_.back().pose, dist, angle);
+
+    if (dist > kf_dist_eps_ || angle > kf_angle_eps_)
+      result = true;
+    else 
+      result = false;
+  }
+
+  if (result) addKeyframe(frame, pose);
+  return result;
+}
+
+void KeyframeMapper::addKeyframe(
+  const RGBDFrame& frame, 
+  const tf::Transform& pose)
+{
+  //ROS_INFO("Adding frame");
+  RGBDKeyframe keyframe(frame);
+  keyframe.pose = pose;
+  keyframe.constructDensePointCloud();
+
+  if (manual_add_)
+  {
+    ROS_INFO("Adding frame manually");
+    manual_add_ = false;
+    keyframe.manually_added = true;
+  }
+  keyframes_.push_back(keyframe);
+}
+
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
   PublishKeyframe::Request& request,
@@ -331,6 +384,15 @@ bool KeyframeMapper::saveFullMap(const std::string& path)
   int result_pcd = writer.writeBinary<PointT>(path + ".pcd", full_map_f);  
 
   return result_pcd;
+}
+
+bool KeyframeMapper::addManualKeyframeSrvCallback(
+  AddManualKeyframe::Request& request,
+  AddManualKeyframe::Response& response)
+{
+  manual_add_ = true;
+
+  return true;
 }
 
 } // namespace ccny_rgbd

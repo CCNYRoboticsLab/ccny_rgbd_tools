@@ -9,8 +9,11 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 
+#include "ccny_rgbd/types.h"
+#include "ccny_rgbd/structures/rgbd_frame.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd/mapping/keyframe_generator.h"
+
+#include "ccny_rgbd/AddManualKeyframe.h"
 #include "ccny_rgbd/PublishKeyframe.h"
 #include "ccny_rgbd/PublishAllKeyframes.h"
 #include "ccny_rgbd/Recolor.h"
@@ -20,7 +23,7 @@
 namespace ccny_rgbd
 {
 
-class KeyframeMapper: public KeyframeGenerator
+class KeyframeMapper
 {
   public:
 
@@ -48,8 +51,18 @@ class KeyframeMapper: public KeyframeGenerator
     bool loadKeyframesSrvCallback(Load::Request& request,
                                   Load::Response& response);
 
+    bool addManualKeyframeSrvCallback(AddManualKeyframe::Request& request,
+                                  AddManualKeyframe::Response& response);
+    
   protected:
 
+    ros::NodeHandle nh_;
+    ros::NodeHandle nh_private_;
+    
+    std::string fixed_frame_;
+    
+    KeyframeVector keyframes_;
+    
     virtual void RGBDCallback(
       const ImageMsg::ConstPtr& depth_msg,
       const ImageMsg::ConstPtr& rgb_msg,
@@ -67,24 +80,33 @@ class KeyframeMapper: public KeyframeGenerator
     ros::ServiceServer save_full_service_;
     ros::ServiceServer load_kf_service_;
     ros::ServiceServer save_kf_ff_service_;
+    ros::ServiceServer add_manual_keyframe_service_;
 
     tf::TransformListener tf_listener_;
 
     boost::shared_ptr<image_transport::ImageTransport> rgb_it_;
     boost::shared_ptr<image_transport::ImageTransport> depth_it_;
     boost::shared_ptr<Synchronizer> sync_;
-       
-    double full_map_res_;
-    
+        
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;
+
+    // params
+    double full_map_res_;
+    double kf_dist_eps_;
+    double kf_angle_eps_;
+          
+    // state vars
+    bool manual_add_;
+    
+    bool processFrame(const RGBDFrame& frame, const tf::Transform& pose);
+    void addKeyframe(const RGBDFrame& frame, const tf::Transform& pose);
 
     void publishMatchEdge(int i, int j);
     void publishKeyframeData(int i);
     void publishKeyframePose(int i);
     void publishEdges();
-
     bool saveFullMap(const std::string& path);
 };
 
