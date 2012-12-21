@@ -18,8 +18,9 @@
         output="screen">
     
     <!-- Resample by a factor of 2-->
-    <param name="scale" value="0.6"/>
-    
+    <param name="scale" value="1.0"/>
+    <param name="unwarp" value="true"/>
+    <param name="publish_cloud" value="false"/>
     <param name="calib_path" value="$(env HOME)/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/"/>
         
   </node>

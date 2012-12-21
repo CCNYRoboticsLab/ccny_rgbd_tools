@@ -74,6 +74,8 @@ class KeyframeMapper: public KeyframeGenerator
     boost::shared_ptr<image_transport::ImageTransport> depth_it_;
     boost::shared_ptr<Synchronizer> sync_;
        
+    double full_map_res_;
+    
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;

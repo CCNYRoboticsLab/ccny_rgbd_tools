@@ -17,6 +17,11 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   edges_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_edges", 1);
 
+  // **** params
+ 
+  if (!nh_private_.getParam ("full_map_res", full_map_res_))
+    full_map_res_ = 0.01;
+  
   // **** services
 
   pub_frame_service_ = nh_.advertiseService(
@@ -297,7 +302,7 @@ bool KeyframeMapper::saveFullSrvCallback(
 
 bool KeyframeMapper::saveFullMap(const std::string& path)
 {
-  double vgf_res = 0.01;
+  double full_map_res_ = 0.01;
 
   PointCloudT::Ptr full_map(new PointCloudT());
   full_map->header.frame_id = fixed_frame_;
@@ -318,7 +323,7 @@ bool KeyframeMapper::saveFullMap(const std::string& path)
   PointCloudT full_map_f;
   pcl::VoxelGrid<PointT> vgf;
   vgf.setInputCloud(full_map);
-  vgf.setLeafSize(vgf_res, vgf_res, vgf_res);
+  vgf.setLeafSize(full_map_res_, full_map_res_, full_map_res_);
   vgf.filter(full_map_f);
 
   // write out

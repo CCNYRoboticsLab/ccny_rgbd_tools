@@ -695,10 +695,12 @@ void KeyframeLoopDetector::treeAssociations(
   
   // **********************
   // insert consecutive
+  
   for (unsigned int kf_idx_a = 0; kf_idx_a < keyframes.size()-1; ++kf_idx_a)
   {
     // determine second index, NO wrap-around
     int kf_idx_b = kf_idx_a + 1;
+    if (kf_idx_b == keyframes.size()) kf_idx_b = 0;
 
     // set up the two keyframe references
     RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
@@ -708,11 +710,49 @@ void KeyframeLoopDetector::treeAssociations(
     KeyframeAssociation association;
     association.kf_idx_a = kf_idx_a;
     association.kf_idx_b = kf_idx_b;
-    //association.matches  = inlier_matches;  // TODO
     association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;
+
+    // **** inliers? determine them by simply checking NN
+    PointCloudFeature::Ptr cloud_a(new PointCloudFeature());
+    PointCloudFeature::Ptr cloud_b(new PointCloudFeature());
+       
+    pointCloudFromMeans(keyframe_a.kp_means, *cloud_a);
+    pointCloudFromMeans(keyframe_b.kp_means, *cloud_b);
+    
+    pcl::transformPointCloud(*cloud_a, *cloud_a, eigenFromTf(keyframe_a.pose));
+    pcl::transformPointCloud(*cloud_b, *cloud_b, eigenFromTf(keyframe_b.pose));   
+    
+    pcl::KdTreeFLANN<PointFeature> tree;
+    tree.setInputCloud(cloud_a);
+    
+    for (unsigned int idx_b = 0; idx_b < cloud_b->size(); ++idx_b)
+    {
+      const PointFeature& point_b = cloud_b->points[idx_b];    
+      
+      if (isnan(point_b.z)) continue;
+      
+      IntVector indices;
+      FloatVector dist_sq;  
+      indices.resize(1);
+      dist_sq.resize(1);
+      
+      int n_retrieved = tree.nearestKSearch(point_b, 1, indices, dist_sq);
+      
+      if (n_retrieved > 0 && dist_sq[0] < 0.10 * 0.10)
+      {
+        int idx_a = indices[0];
+        cv::DMatch match;
+        
+        match.queryIdx = idx_b;
+        match.trainIdx = idx_a;
+        match.distance = 0.0;
+        association.matches.push_back(match);
+      }
+    }
+    
     associations.push_back(association);
   }
-  
+
   // *********************** 
   // insert tree matches
   

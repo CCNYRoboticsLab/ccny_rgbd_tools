@@ -38,7 +38,7 @@ void KeyframeLoopSolverSBA::solve(
 
   // solve
   printf("solving...\n");
-  sys_sba_.doSBA(10, 1e-3, SBA_DENSE_CHOLESKY);
+  sys_sba_.doSBA(50, 1e-3, SBA_DENSE_CHOLESKY);
   printf("solving done.\n");
 
   // visualize, after solving
