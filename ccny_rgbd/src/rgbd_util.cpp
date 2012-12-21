@@ -344,10 +344,13 @@ void projectCloudToImage(const PointCloudT& cloud,
     // convert from pcl PointT to Eigen Vector3f
     PointT point = cloud.points[i];
     Vector3f p_world;
+    if (isnan(point.x) || isnan(point.y) || isnan(point.z) ) continue;
+
     p_world(0,0) = point.x;
     p_world(1,0) = point.y;
     p_world(2,0) = point.z;
     
+
     // transforms into the camera frame  
     Vector3f p_cam = rmat * p_world + tvec; 
     double depth = p_cam(2,0) * 1000.0;       //depth in millimiter
@@ -513,8 +516,16 @@ void tfFromImagePair(
   // Mask next image with depth img as mask (takes care of wholes where information is missing)
   cv::Mat current_img_mask;
   current_depth_img.convertTo(current_img_mask, CV_8U);
-  cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
-  cv::imshow("Mask", current_img_mask);
+  if(draw_matches)
+  {
+    cv::namedWindow("Virtual Image", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Virtual Image", current_img);
+    cv::namedWindow("Monocular Image", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Monocular Image", next_img);
+    cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
+    cv::imshow("Mask", current_img_mask);
+    cv::waitKey(1);
+  }
 
   cv::Ptr<cv::FeatureDetector> feature_detector;
 
@@ -811,11 +822,9 @@ void tfFromImagePair(
     }
   }
 
-  ros::WallTime end_feature_matching = ros::WallTime::now();
   if(profile)
   {
-    double delay_feature_matching = 1000.0 * (end_feature_matching      - start_feature_matching).toSec();
-    printf("Feature-Matching delay =  %f ms\n", delay_feature_matching);
+    printf("Feature-Matching delay =  %f ms \t using %s detector and %s descriptor\n", getMsDuration(start_feature_matching), feature_detection_alg.c_str(), feature_descriptor_alg.c_str());
   }
 
   if(draw_matches)
@@ -859,7 +868,7 @@ void tfFromImagePair(
                      number_of_iterations, reprojection_error, min_inliers_count, inliers_indices);
   if(profile)
   {
-    printf("PnP-RANSAC delay =  %f ms\n", getMsDuration(start_PnP_RANSAC));
+    printf("PnP-RANSAC delay =  %f ms  using %d iterations (Finding %d inliers)\n", getMsDuration(start_PnP_RANSAC), number_of_iterations, (int) inliers_indices.size());
   }
 
   std::cout << inliers_indices.size() << " inliers" << std::endl;
