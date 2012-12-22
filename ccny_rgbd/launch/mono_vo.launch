@@ -1,8 +1,8 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
-  #arg name="PATH_TO_PCD" default="$(env HOME)/ros/PCDs" #
-  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD" />
+  <arg name="PATH_TO_PCD" default="$(env HOME)/ros" />
+  #arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD"
   #arg name="PCD_NAME" default="office.pcd" # PCD file name (with extension)
   <arg name="PCD_NAME" default="ccny_office_640_loop.pcd" /> # PCD file name (with extension)
   <arg name="FULL_PCD_NAME" default="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
@@ -27,46 +27,43 @@
     #param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" #
     # param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_raw" #
     <param name="apps/mono_vo/topic_cam_info" value="/rgbd/info" />
-    <param name="apps/mono_vo/topic_image"  value="/rgbd/rgb" />
+    <param name="apps/mono_vo/topic_image"    value="/rgbd/rgb" />
     
     # Frames
     <param name="fixed_frame" value="/odom"/>
     <param name="base_frame"  value="/camera_link"/>
        
-    #### RANSAC params for initial pose estimation ######################
-
-    #### PnP parameters ################################
-    <param name="apps/mono_vo/number_of_iterations"   value="2000"/>
-    <param name="apps/mono_vo/min_inliers_count"   value="60"/>
-    <param name="apps/mono_vo/reprojection_error"   value="16"/>
+    ##########################################################################
+   
+    <param name="apps/mono_vo/image_width"                   value="320" /> 
+    <param name="apps/mono_vo/image_height"                  value="240" /> 
+   
+    <!-- works for 0.2 speed
+    <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
+    <param name="apps/mono_vo/min_inliers_count"             value="50"/>
+    <param name="apps/mono_vo/max_reproj_error"              value="2"/>   
+    <param name="apps/mono_vo/detector_threshold"            value="800" /> 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
+    <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
+    -->
     
-    <param name="apps/mono_vo/assume_initial_position"   value="true"/>
-    <param name="apps/mono_vo/visualize_correspondences"   value="true"/>
+    <!-- works for 0.5 speed
+    <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
+    <param name="apps/mono_vo/min_inliers_count"             value="50"/>
+    <param name="apps/mono_vo/max_reproj_error"              value="2"/>   
+    <param name="apps/mono_vo/detector_threshold"            value="800" /> 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
+    <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
+    -->
+
+    <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
+    <param name="apps/mono_vo/min_inliers_count"             value="50"/>
+    <param name="apps/mono_vo/max_reproj_error"              value="2"/>   
+    <param name="apps/mono_vo/detector_threshold"            value="800" /> 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
+    <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
+    <param name="apps/mono_vo/virtual_image_fill"            value="3"/>
     
-    #### features #####################################
-    <param name="apps/mono_vo/detector_type"       value="SURF"/> #  ORB, FAST, STAR, SURF, MSER, GFT (Good features to track)
-    <param name="apps/mono_vo/descriptor_type"       value="SURF"/> #  ORB, BRIEF, FREAK, SURF
-    # param name="apps/mono_vo/max_descriptor_space_distance" value="0.4"  # With real images
-    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> # With virtual image 
-    <param name="apps/mono_vo/image_width" value="320" /> 
-    <param name="apps/mono_vo/image_height" value="240" /> 
-
-    #### features: GFT ################################
-
-    <param name="feature/GFT/n_features"   value = "150"/>
-    <param name="feature/GFT/min_distance" value = "0.0"/>
-    <param name="feature/GFT/quality_level"   value = "0.01"/>
-    <param name="feature/GFT/grid_cells"   value = "1"/>
-
-    #### features: SURF ###############################
-  
-    <param name="feature/SURF/hessian_threshold" value = "600"/>
-    <param name="feature/SURF/upright"           value = "false"/>
-
-    #### features: ORB ###############################
-  
-    <param name="feature/ORB/n_features"     value = "300"/>
-    <param name="feature/ORB/edge_threshold" value = "31"/>
-  </node>
+   </node>
 
 </launch>

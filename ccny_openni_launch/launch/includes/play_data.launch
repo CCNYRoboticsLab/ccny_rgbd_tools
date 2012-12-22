@@ -5,7 +5,7 @@
   <arg name="delay"/>
 
   <node pkg="rosbag" type="play" name="play" output="screen"
-    args="$(arg path)/$(arg bag_name) --clock --loop --start=0.0 --queue=1000 -d $(arg delay) --rate=1.0">
+    args="$(arg path)/$(arg bag_name) --clock --loop --start=0.0 --queue=1000 -d $(arg delay) --rate=1">
 
   </node>
 

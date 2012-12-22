@@ -153,7 +153,7 @@ void projectCloudToImage(const PointCloudT& cloud,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img);
 
-/*Fills the holes due to the sparse model in the projected image
+/* Fills the holes due to the sparse model in the projected image
  * N.B. mask size has to be a odd number 
  */
 void holeFilling(const cv::Mat& rgb_img,
@@ -167,25 +167,6 @@ void holeFilling2(const cv::Mat& rgb_img,
                  uint mask_size,
                  cv::Mat& filled_rgb_img,
                  cv::Mat& filled_depth_img);
-
-/* Finds the PnP transformation of the reference image based on the virtual images
- */
-void tfFromImagePair(
-  const cv::Mat& current_img, ///< The reference or virtual image
-  const cv::Mat& next_img,
-  const cv::Mat& current_depth_img, /// The reference image's depth map to be used as mask and for 3D reprojection
-  const Matrix3f& intrinsic_matrix,
-  tf::Transform& transform,
-  double max_descriptor_space_distance,
-  std::string feature_detection_alg = "ORB",
-  std::string feature_descriptor_alg = "ORB",
-  int number_of_iterations = 10,
-  float reprojection_error = 8.0,
-  int min_inliers_count = 100,
-  bool draw_matches = false,
-  bool profile = false
-);
-
 
 } // namespace ccny_rgbd
 
