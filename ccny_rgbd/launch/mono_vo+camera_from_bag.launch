@@ -8,6 +8,7 @@
   <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
   <arg name="FULL_PCD_NAME" value="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
   <arg name="BAG_PLAY_DELAY" value="0.0" /> # Delay in seconds to start the bag's playback
+  <arg name="BAG_PLAY_RATE" value="1.0" /> # Rate value in Hz? 1 is normal, 10 is faster, 0.1 is slower
   
   # ORB, SURF, GTF, KLT
   <arg name="detector_type" value="GFT"/> 
@@ -27,6 +28,7 @@
       <arg name="PATH_TO_BAG" value="$(arg PATH_TO_BAG)" />
       <arg name="BAG_NAME" value="$(arg BAG_NAME)" />
       <arg name="BAG_PLAY_DELAY" value="$(arg BAG_PLAY_DELAY)" />
+      <arg name="BAG_PLAY_RATE" value="$(arg BAG_PLAY_RATE)" />
   </include>
 
 </launch>

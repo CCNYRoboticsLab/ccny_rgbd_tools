@@ -1,8 +1,8 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
-  <arg name="PATH_TO_PCD" default="$(env HOME)/ros" />
-  #arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD"
+  #arg name="PATH_TO_PCD" default="$(env HOME)/ros" #
+  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD" />
   #arg name="PCD_NAME" default="office.pcd" # PCD file name (with extension)
   <arg name="PCD_NAME" default="ccny_office_640_loop.pcd" /> # PCD file name (with extension)
   <arg name="FULL_PCD_NAME" default="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
@@ -24,10 +24,14 @@
     <param name="apps/mono_vo/publish_virtual_img" value="true"/> 
 
     # Topics:
-    #param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" #
-    # param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_raw" #
+    # Camera from bag (no calibration)
+    <param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" />
+    <param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_raw" />
+    # Camera with calibration files
+    <!--
     <param name="apps/mono_vo/topic_cam_info" value="/rgbd/info" />
     <param name="apps/mono_vo/topic_image"    value="/rgbd/rgb" />
+    -->
     
     # Frames
     <param name="fixed_frame" value="/odom"/>
