@@ -314,7 +314,7 @@ void projectCloudToImage(const PointCloudT& cloud,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img);
 
-/*Fills the holes due to the sparse model in the projected image
+/* Fills the holes due to the sparse model in the projected image
  * N.B. mask size has to be a odd number 
  */
 void holeFilling(const cv::Mat& rgb_img,
