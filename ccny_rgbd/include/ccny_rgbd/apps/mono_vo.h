@@ -124,8 +124,8 @@ class MonocularVisualOdometry
       const PointCloudT& cloud, 
       const Matrix3f& intrinsic, 
       const tf::Transform& extrinsic_tf, 
-      cv::Mat& rgb_img, 
-      cv::Mat& depth_img);
+      cv::Mat& virtual_rgb_img,
+      cv::Mat& virtual_depth_img);
     
     std::string formKeyframeName(int keyframe_number, int num_of_chars);
     void generateKeyframePaths(

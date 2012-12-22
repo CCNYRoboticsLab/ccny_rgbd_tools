@@ -118,8 +118,8 @@ void MonocularVisualOdometry::getVirtualImageFromKeyframe(
   const PointCloudT& cloud, 
   const Matrix3f& intrinsic, 
   const tf::Transform& extrinsic_tf, 
-  cv::Mat& rgb_img, 
-  cv::Mat& depth_img)
+  cv::Mat& virtual_rgb_img, 
+  cv::Mat& virtual_depth_img)
 {
   Matrix3f rmat;
   Vector3f tvec;
@@ -130,11 +130,11 @@ void MonocularVisualOdometry::getVirtualImageFromKeyframe(
 
   projectCloudToImage(cloud, rmat, tvec, intrinsic, image_width_, image_height_, rgb_img_projected, depth_img_projected);
 
-  holeFilling2(rgb_img_projected, depth_img_projected, virtual_image_fill_, rgb_img, depth_img);
+  holeFilling2(rgb_img_projected, depth_img_projected, virtual_image_fill_, virtual_rgb_img, virtual_depth_img);
 
   //cv::medianBlur(rgb_img,rgb_img, 3);
   if (virtual_image_blur_ > 1)
-    cv::GaussianBlur(rgb_img, rgb_img, cv::Size(virtual_image_blur_, virtual_image_blur_), 0);
+    cv::GaussianBlur(virtual_rgb_img, virtual_rgb_img, cv::Size(virtual_image_blur_, virtual_image_blur_), 0);
 }
 
 bool MonocularVisualOdometry::readPointCloudFromPCDFile()
@@ -188,7 +188,9 @@ void MonocularVisualOdometry::imageCallback(
   }
 
   cv::Mat rgb_img = cv_bridge::toCvShare(rgb_msg)->image;
+//  cv::Mat rgb_img = cv_bridge::toCvCopy(rgb_msg)->image;
 
+  ROS_INFO("Number of channels: %d", rgb_img.channels());
   // Process frame for position estimation
   estimatePose(model_ptr_, rgb_img);
 
@@ -218,17 +220,25 @@ void MonocularVisualOdometry::estimatePose(
   cv::Mat virtual_img, virtual_depth_img;
   getVirtualImageFromKeyframe(*model_cloud, intrinsic_matrix_, f2c.inverse(), virtual_img, virtual_depth_img); 
   ros::WallTime end_proj = ros::WallTime::now();
-  
+  // Resize monocular image:
+  cv::Mat mono_img_resized;
+  cv::resize(mono_img, mono_img_resized, cv::Size(image_width_, image_height_) );
+
   if(draw_image_pair)
   {
     cv::namedWindow("Virtual Image", 0);
     cv::namedWindow("Monocular Image", 0);
 
     cv::imshow("Virtual Image", virtual_img);
-    cv::imshow("Monocular Image", mono_img);
-    cv::waitKey(1);
+    ROS_WARN("Good virtual image");
+
+    cv::imshow("Monocular Image", mono_img_resized);
+    ROS_WARN("good mono image");
+
+    cv::waitKey(0);
   }
   
+
   // **** get motion estimation *********************************************
 
   // **** Feature detection
@@ -242,13 +252,13 @@ void MonocularVisualOdometry::estimatePose(
   cv::SurfFeatureDetector feature_detector(detector_threshold_);
   std::vector<cv::KeyPoint> keypoints_virtual, keypoints_mono;
   feature_detector.detect(virtual_img, keypoints_virtual, virtual_img_mask);
-  feature_detector.detect(mono_img, keypoints_mono);
+  feature_detector.detect(mono_img_resized, keypoints_mono);
 
   // descriptor extraction
   cv::SurfDescriptorExtractor descriptor_extractor; 
   cv::Mat descriptors_virtual, descriptors_mono;
   descriptor_extractor.compute(virtual_img, keypoints_virtual, descriptors_virtual);
-  descriptor_extractor.compute(mono_img, keypoints_mono, descriptors_mono);
+  descriptor_extractor.compute(mono_img_resized, keypoints_mono, descriptors_mono);
   
   ros::WallTime end_detect = ros::WallTime::now();  
   
@@ -313,7 +323,7 @@ void MonocularVisualOdometry::estimatePose(
   if(draw_candidate_matches)
   {
     cv::Mat virtual_img_copy = virtual_img.clone();
-    cv::Mat mono_img_copy    = mono_img.clone();
+    cv::Mat mono_img_copy    = mono_img_resized.clone();
 
     cv::Mat matches_result_img;
     cv::drawMatches(
@@ -363,7 +373,7 @@ void MonocularVisualOdometry::estimatePose(
     }
     
     cv::Mat virtual_img_copy = virtual_img.clone();
-    cv::Mat mono_img_copy    = mono_img.clone();
+    cv::Mat mono_img_copy    = mono_img_resized.clone();
 
     cv::Mat matches_result_img;
     cv::drawMatches(

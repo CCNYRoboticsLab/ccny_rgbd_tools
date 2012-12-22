@@ -5,6 +5,7 @@
   <arg name="path"     default="$(env HOME)/ros/bags/rgbd" />
   <arg name="bag_name" default="rgbd.bag" />
   <arg name="play_delay" default="2.0" />
+  <arg name="rate" default="1" />
 
   <!-- Play the bagged data -->
 
@@ -12,6 +13,7 @@
     <arg name="path"     value="$(arg path)"/>
     <arg name="bag_name" value="$(arg bag_name)"/>
     <arg name="delay" value="$(arg play_delay)"/>
+    <arg name="rate" value="$(arg rate)"/>
   </include>
 
   <!-- Load reasonable defaults for the relative pose between cameras  -->
