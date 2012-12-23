@@ -1,3 +1,16 @@
+/* ======================================================================
+ * mono_vo.cpp
+ *       Final Project
+ *
+ *  Written by Carlos Jaramillo, Roberto Valenti and Ivan Dryanovski
+ *  3D Computer Vision - CSc 83020 at CUNY GC - Prof. Stamos - (Fall 2012)
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ * ======================================================================
+ */
 #include "ccny_rgbd/apps/mono_vo.h"
 
 namespace ccny_rgbd {
@@ -22,7 +35,7 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   }
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
-    "odom", 5);
+    "odom", 1);
 
   if(readPointCloudFromPCDFile()==false)
     ROS_FATAL("The sky needs its point cloud to operate!");
@@ -188,15 +201,13 @@ void MonocularVisualOdometry::imageCallback(
   }
 
   cv::Mat rgb_img = cv_bridge::toCvShare(rgb_msg)->image;
-//  cv::Mat rgb_img = cv_bridge::toCvCopy(rgb_msg)->image;
 
-  ROS_INFO("Number of channels: %d", rgb_img.channels());
   // Process frame for position estimation
   estimatePose(model_ptr_, rgb_img);
 
-  if(publish_cloud_model_)
+  if(publish_cloud_model_ && (frame_count_ % 100 == 0)) // Don't publish too often because it slows things down
   {
-    //pub_model_.publish(*model_ptr_);
+    pub_model_.publish(*model_ptr_);
   }
  
   frame_count_++;
@@ -228,14 +239,9 @@ void MonocularVisualOdometry::estimatePose(
   {
     cv::namedWindow("Virtual Image", 0);
     cv::namedWindow("Monocular Image", 0);
-
     cv::imshow("Virtual Image", virtual_img);
-    ROS_WARN("Good virtual image");
-
     cv::imshow("Monocular Image", mono_img_resized);
-    ROS_WARN("good mono image");
-
-    cv::waitKey(0);
+    cv::waitKey(1);
   }
   
 
@@ -423,6 +429,12 @@ void MonocularVisualOdometry::publishTransform(const tf::Transform &source2targe
   tf::StampedTransform transform_msg(
         source2target_transform, current_time, source_frame_id, target_frame_id);
   tf_broadcaster_.sendTransform (transform_msg);
+
+  OdomMsg odom;
+  odom.header.stamp = current_time;
+  odom.header.frame_id = source_frame_id;
+  tf::poseTFToMsg(source2target_transform, odom.pose.pose);
+  odom_publisher_.publish(odom);
 }
 
 bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)

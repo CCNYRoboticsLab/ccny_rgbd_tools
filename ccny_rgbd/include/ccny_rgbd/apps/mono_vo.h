@@ -1,5 +1,18 @@
 #ifndef CCNY_RGBD_MONO_VO
 #define CCNY_RGBD_MONO_VO
+/* ======================================================================
+ * mono_vo.h
+ *       Final Project
+ *
+ *  Written by Carlos Jaramillo, Roberto Valenti and Ivan Dryanovski
+ *  3D Computer Vision - CSc 83020 at CUNY GC - Prof. Stamos - (Fall 2012)
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ * ======================================================================
+ */
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -53,9 +66,11 @@ class MonocularVisualOdometry
     ros::NodeHandle nh_private_;
     tf::TransformListener tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
-    ros::Publisher odom_publisher_;
 
-//    boost::shared_ptr<image_transport::ImageTransport> rgb_it_;
+    // **** Publishers
+    ros::Publisher odom_publisher_;
+    ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
+
     boost::shared_ptr<SynchronizerMonoVO> sync_;
     image_geometry::PinholeCameraModel cam_model_;
     Matrix3f intrinsic_matrix_;
@@ -100,8 +115,6 @@ class MonocularVisualOdometry
 
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
     PointCloudT::Ptr model_ptr_;
-    ros::Publisher pub_cloud_est_; ///< Publisher for the point cloud model as estimated
-    ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
 
     image_transport::Publisher virtual_img_pub_;
 
