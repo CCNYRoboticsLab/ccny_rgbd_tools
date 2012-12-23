@@ -6,7 +6,7 @@
   <arg name="BAG_NAME" default="ccny_rooms_03" />  # Bag name only (Without extension)
   <arg name="FULL_BAG_NAME" default="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
   <arg name="BAG_PLAY_DELAY" default="0.0" /> # Delay in seconds to start the bag's playback
-  <arg name="BAG_PLAY_RATE" default="1.0" /> # Rate value??? 1 is normal, 10 is faster, 0.1 is slower
+  <arg name="BAG_PLAY_RATE" default="0.2" /> # Rate value or speed (FPS = rate*known_fps for images) 1 is normal, 10 is faster, 0.1 is slower
   
   <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
       <arg name="path" value="$(arg PATH_TO_BAG)" />
@@ -17,10 +17,8 @@
 
   <arg name="calibration_files_path" default="$(arg PATH_TO_BAG)/calibration/" />
     
-    <!--
   <include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch">
         <arg name="calib_path" value="$(arg calibration_files_path)" />
   </include>   
-   -->
 
 </launch>
