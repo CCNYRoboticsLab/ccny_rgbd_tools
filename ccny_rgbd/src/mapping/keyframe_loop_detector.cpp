@@ -31,6 +31,7 @@ void KeyframeLoopDetector::generateKeyframeAssociations(
   //manualBruteForceAssociations(keyframes, associations);
 }
 
+/*
 bool KeyframeLoopDetector::pairwiseAlignGICP(
   RGBDKeyframe& keyframe_a, RGBDKeyframe& keyframe_b,
   const tf::Transform& initial_guess, 
@@ -152,7 +153,7 @@ bool KeyframeLoopDetector::pairwiseAlignGICP(
 
   return true;
 }
-
+*/
 
 void KeyframeLoopDetector::prepareFeaturesForRANSAC(
   KeyframeVector& keyframes)

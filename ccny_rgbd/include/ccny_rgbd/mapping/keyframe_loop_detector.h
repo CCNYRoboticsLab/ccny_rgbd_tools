@@ -6,10 +6,6 @@
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <opencv2/nonfree/features2d.hpp>
 
-#include <ccny_gicp/gicp.h>
-#include <ccny_gicp/types.h>
-#include <ccny_gicp/gicp_align.h>
-
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/structures/keyframe_association.h"
 
@@ -70,11 +66,6 @@ class KeyframeLoopDetector
     }
 
     void getRandomIndices(int k, int n, std::vector<int>& output);
-
-    bool pairwiseAlignGICP(
-      RGBDKeyframe& keyframe_a, RGBDKeyframe& keyframe_b,
-      const tf::Transform& initial_guess, 
-      tf::Transform& transform);
 
     void pairwiseMatchingRANSAC(
       RGBDFrame& frame_a, RGBDFrame& frame_b,

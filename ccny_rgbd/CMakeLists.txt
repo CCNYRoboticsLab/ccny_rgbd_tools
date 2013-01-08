@@ -69,7 +69,6 @@ rosbuild_add_library (ccny_rgbd_util
 
 # will link using full path
 target_link_libraries(ccny_rgbd_mapping toro3d) 
-target_link_libraries(ccny_rgbd_mapping ccny_gicp) 
 
 ################################################################
 # Build visual odometry application
