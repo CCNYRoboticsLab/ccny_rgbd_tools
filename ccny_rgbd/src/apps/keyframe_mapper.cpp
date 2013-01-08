@@ -42,8 +42,6 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframe", &KeyframeMapper::publishKeyframeSrvCallback, this);
   pub_frames_service_ = nh_.advertiseService(
     "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
-  recolor_service_ = nh_.advertiseService(
-    "recolor", &KeyframeMapper::recolorSrvCallback, this);
   save_kf_service_ = nh_.advertiseService(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
   save_kf_ff_service_ = nh_.advertiseService(
@@ -56,9 +54,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
   generate_associations_service_ = nh_.advertiseService(
     "generate_associations", &KeyframeMapper::generateAssociationsSrvCallback, this);
-  add_manual_association_service_ = nh_.advertiseService(
-    "add_manual_association", &KeyframeMapper::addManualAssociationSrvCallback, this);
-  solve_loop_service_ = nh_.advertiseService(
+   solve_loop_service_ = nh_.advertiseService(
     "solve_loop", &KeyframeMapper::solveLoopSrvCallback, this);
  
   // **** subscribers
@@ -162,34 +158,6 @@ bool KeyframeMapper::publishKeyframeSrvCallback(
   publishKeyframeData(request.id);
   publishKeyframePose(request.id);
   usleep(25000);
-
-  return true;
-}
-
-bool KeyframeMapper::recolorSrvCallback(
-  Recolor::Request&  request,
-  Recolor::Response& response)
-{
-  srand(time(NULL));
-
-  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
-  {
-    ROS_INFO("Recoloring frame %d", kf_idx);
-    RGBDKeyframe& keyframe = keyframes_[kf_idx];
-
-    int r = rand() % 255;
-    int g = rand() % 255;
-    int b = rand() % 255;
-
-    for (unsigned int pt_idx = 0; pt_idx < keyframe.cloud.points.size(); ++pt_idx)
-    {
-      PointT& p = keyframe.cloud.points[pt_idx];
-      
-      p.r = r;
-      p.g = g;
-      p.b = b;
-    }
-  }
 
   return true;
 }
@@ -418,23 +386,6 @@ bool KeyframeMapper::generateAssociationsSrvCallback(
   publishKeyframeAssociations();
 
   return true;
-}
-
-bool KeyframeMapper::addManualAssociationSrvCallback(
-  AddManualAssociation::Request& request,
-  AddManualAssociation::Response& response)
-{
-  int kf_idx_a = request.a;
-  int kf_idx_b = request.b;
-
-  // TODO: check for out of bounds
-
-  bool result = loop_detector_->addManualAssociation(
-    kf_idx_a, kf_idx_b, keyframes_, associations_);
-
-  publishKeyframeAssociations();
-
-  return result;
 }
 
 bool KeyframeMapper::solveLoopSrvCallback(

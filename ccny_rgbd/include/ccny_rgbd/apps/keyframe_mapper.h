@@ -17,12 +17,10 @@
 #include "ccny_rgbd/mapping/keyframe_loop_solver_toro.h"
 
 #include "ccny_rgbd/GenerateAssociations.h"
-#include "ccny_rgbd/AddManualAssociation.h"
 #include "ccny_rgbd/SolveLoop.h"
 #include "ccny_rgbd/AddManualKeyframe.h"
 #include "ccny_rgbd/PublishKeyframe.h"
 #include "ccny_rgbd/PublishAllKeyframes.h"
-#include "ccny_rgbd/Recolor.h"
 #include "ccny_rgbd/Save.h"
 #include "ccny_rgbd/Load.h"
 
@@ -43,10 +41,6 @@ class KeyframeMapper
     bool publishKeyframeSrvCallback(
       PublishKeyframe::Request& request,
       PublishKeyframe::Response& response);
-
-    bool recolorSrvCallback(
-      Recolor::Request& request,
-      Recolor::Response& response);
 
     bool saveKeyframesSrvCallback(
       Save::Request& request,
@@ -71,10 +65,6 @@ class KeyframeMapper
      bool generateAssociationsSrvCallback(
       GenerateAssociations::Request& request,
       GenerateAssociations::Response& response);
-
-    bool addManualAssociationSrvCallback(
-      AddManualAssociation::Request& request,
-      AddManualAssociation::Response& response);
 
     bool solveLoopSrvCallback(
       SolveLoop::Request& request,
@@ -102,11 +92,9 @@ class KeyframeMapper
     ros::Publisher associations_pub_;
     
     ros::ServiceServer generate_associations_service_;
-    ros::ServiceServer add_manual_association_service_;
     ros::ServiceServer solve_loop_service_;   
     ros::ServiceServer pub_frames_service_;
     ros::ServiceServer pub_frame_service_;
-    ros::ServiceServer recolor_service_;
     ros::ServiceServer save_kf_service_;
     ros::ServiceServer save_full_service_;
     ros::ServiceServer load_kf_service_;

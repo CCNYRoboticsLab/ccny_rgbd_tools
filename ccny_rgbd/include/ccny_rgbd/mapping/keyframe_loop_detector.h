@@ -29,11 +29,6 @@ class KeyframeLoopDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
 
-    bool addManualAssociation(
-      int kf_idx_a, int kf_idx_b,
-      KeyframeVector& keyframes,
-      KeyframeAssociationVector& associations);
-
    protected:
   
     ros::NodeHandle nh_;
