@@ -8,15 +8,11 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_private_(nh_private)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
-
+ 
   // **** init variables
 
-  keyframes_pub_ = nh_.advertise<PointCloudT>(
-    "keyframes", 1);
-  poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_poses", 1);
-  edges_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_edges", 1);
+  loop_detector_ = new KeyframeLoopDetector(nh, nh_private);
+  loop_solver_ = new KeyframeLoopSolverTORO(nh, nh_private);
 
   // **** params
 
@@ -28,6 +24,17 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     kf_dist_eps_  = 0.10;
   if (!nh_private_.getParam ("kf/kf_angle_eps", kf_angle_eps_))
     kf_angle_eps_  = 10.0 * M_PI / 180.0;
+  
+  // **** publishers
+    
+  associations_pub_ = nh_.advertise<visualization_msgs::Marker>( 
+    "keyframe_associations", 1);
+  keyframes_pub_ = nh_.advertise<PointCloudT>(
+    "keyframes", 1);
+  poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
+    "keyframe_poses", 1);
+  edges_pub_ = nh_.advertise<visualization_msgs::Marker>( 
+    "keyframe_edges", 1);
   
   // **** services
 
@@ -47,7 +54,13 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
   add_manual_keyframe_service_ = nh_.advertiseService(
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
-
+  generate_associations_service_ = nh_.advertiseService(
+    "generate_associations", &KeyframeMapper::generateAssociationsSrvCallback, this);
+  add_manual_association_service_ = nh_.advertiseService(
+    "add_manual_association", &KeyframeMapper::addManualAssociationSrvCallback, this);
+  solve_loop_service_ = nh_.advertiseService(
+    "solve_loop", &KeyframeMapper::solveLoopSrvCallback, this);
+ 
   // **** subscribers
 
   image_transport::ImageTransport rgb_it(nh_);
@@ -393,6 +406,90 @@ bool KeyframeMapper::addManualKeyframeSrvCallback(
   manual_add_ = true;
 
   return true;
+}
+
+bool KeyframeMapper::generateAssociationsSrvCallback(
+  GenerateAssociations::Request& request,
+  GenerateAssociations::Response& response)
+{
+  associations_.clear();
+  loop_detector_->generateKeyframeAssociations(keyframes_, associations_);
+
+  publishKeyframeAssociations();
+
+  return true;
+}
+
+bool KeyframeMapper::addManualAssociationSrvCallback(
+  AddManualAssociation::Request& request,
+  AddManualAssociation::Response& response)
+{
+  int kf_idx_a = request.a;
+  int kf_idx_b = request.b;
+
+  // TODO: check for out of bounds
+
+  bool result = loop_detector_->addManualAssociation(
+    kf_idx_a, kf_idx_b, keyframes_, associations_);
+
+  publishKeyframeAssociations();
+
+  return result;
+}
+
+bool KeyframeMapper::solveLoopSrvCallback(
+  SolveLoop::Request& request,
+  SolveLoop::Response& response)
+{
+  loop_solver_->solve(keyframes_, associations_);
+
+  publishKeyframeAssociations();
+
+  return true;
+}
+
+void KeyframeMapper::publishKeyframeAssociations()
+{
+  visualization_msgs::Marker marker;
+  marker.header.stamp = ros::Time::now();
+  marker.header.frame_id = fixed_frame_;
+  marker.ns = "RANSAC";
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  marker.points.resize(associations_.size() * 2);
+  marker.scale.x = 0.001;
+
+  marker.color.a = 1.0;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 0.0;
+
+  for (unsigned int as_idx = 0; as_idx < associations_.size(); ++as_idx)
+  {
+    // set up shortcut references
+    const KeyframeAssociation& association = associations_[as_idx];
+    int kf_idx_a = association.kf_idx_a;
+    int kf_idx_b = association.kf_idx_b;
+    RGBDKeyframe& keyframe_a = keyframes_[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes_[kf_idx_b];
+
+    int idx_start = as_idx*2;
+    int idx_end   = as_idx*2 + 1;
+
+    // start point for the edge
+    marker.points[idx_start].x = keyframe_a.pose.getOrigin().getX();  
+    marker.points[idx_start].y = keyframe_a.pose.getOrigin().getY();
+    marker.points[idx_start].z = keyframe_a.pose.getOrigin().getZ();
+
+    // end point for the edge
+    marker.points[idx_end].x = keyframe_b.pose.getOrigin().getX();  
+    marker.points[idx_end].y = keyframe_b.pose.getOrigin().getY();
+    marker.points[idx_end].z = keyframe_b.pose.getOrigin().getZ();
+  }
+
+  associations_pub_.publish(marker);
 }
 
 } // namespace ccny_rgbd

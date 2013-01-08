@@ -54,7 +54,6 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation.cpp
   src/registration/motion_estimation_icp.cpp
   src/registration/motion_estimation_icp_prob_model.cpp
-  src/registration/motion_prediction_imu.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_mapping
@@ -100,23 +99,6 @@ rosbuild_add_executable(keyframe_mapper_node
   src/apps/keyframe_mapper.cpp)
 
 target_link_libraries (keyframe_mapper_node
-  ccny_rgbd_structures 
-  ccny_rgbd_mapping
-  ccny_rgbd_util
-  boost_signals 
-  boost_system
-)
-
-################################################################
-# Build keyframe loop mapper application
-################################################################
-
-rosbuild_add_executable(keyframe_loop_mapper_node 
-  src/node/keyframe_loop_mapper_node.cpp
-  src/apps/keyframe_mapper.cpp
-  src/apps/keyframe_loop_mapper.cpp)
-
-target_link_libraries (keyframe_loop_mapper_node
   ccny_rgbd_structures 
   ccny_rgbd_mapping
   ccny_rgbd_util
