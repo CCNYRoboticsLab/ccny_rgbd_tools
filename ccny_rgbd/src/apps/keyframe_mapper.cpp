@@ -5,13 +5,13 @@ namespace ccny_rgbd
 
 KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), 
-  nh_private_(nh_private)
+  nh_private_(nh_private),
+  loop_detector_(nh_, nh_private_)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
  
   // **** init variables
 
-  loop_detector_ = new KeyframeLoopDetector(nh, nh_private);
   loop_solver_ = new KeyframeLoopSolverTORO(nh, nh_private);
 
   // **** params
@@ -74,7 +74,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
 KeyframeMapper::~KeyframeMapper()
 {
-
+  delete loop_solver_;
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -381,7 +381,7 @@ bool KeyframeMapper::generateAssociationsSrvCallback(
   GenerateAssociations::Response& response)
 {
   associations_.clear();
-  loop_detector_->generateKeyframeAssociations(keyframes_, associations_);
+  loop_detector_.generateKeyframeAssociations(keyframes_, associations_);
 
   publishKeyframeAssociations();
 

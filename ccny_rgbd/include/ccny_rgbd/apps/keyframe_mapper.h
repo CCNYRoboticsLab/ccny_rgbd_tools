@@ -119,7 +119,7 @@ class KeyframeMapper
     // state vars
     bool manual_add_;
 
-    KeyframeLoopDetector * loop_detector_;
+    KeyframeLoopDetector loop_detector_;
     KeyframeLoopSolver   * loop_solver_;
 
     KeyframeAssociationVector associations_;
