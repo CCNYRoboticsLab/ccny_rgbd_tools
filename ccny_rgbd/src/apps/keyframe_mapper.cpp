@@ -20,9 +20,9 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("full_map_res", full_map_res_))
     full_map_res_ = 0.01;
-  if (!nh_private_.getParam ("kf/kf_dist_eps", kf_dist_eps_))
+  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
     kf_dist_eps_  = 0.10;
-  if (!nh_private_.getParam ("kf/kf_angle_eps", kf_angle_eps_))
+  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
     kf_angle_eps_  = 10.0 * M_PI / 180.0;
   
   // **** publishers
