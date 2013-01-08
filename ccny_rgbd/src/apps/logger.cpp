@@ -108,7 +108,6 @@ void Logger::RGBDCallback(
   {
     cv_bridge::CvImagePtr rgb_ptr = cv_bridge::toCvCopy(rgb_msg);
     cv::imwrite(ss_rgb_path_.str() + ss_filename.str(), rgb_ptr->image);
-        
     ROS_INFO("RGB %s saved", ss_filename.str().c_str());
 
     cv::imshow("RGB", rgb_ptr->image);
@@ -118,7 +117,6 @@ void Logger::RGBDCallback(
   {
     cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depth_msg);
     cv::imwrite(ss_depth_path_.str() + ss_filename.str(), depth_ptr->image);
-
     ROS_INFO("Depth %s saved", ss_filename.str().c_str());
     
     cv::imshow("Depth", depth_ptr->image);

@@ -31,6 +31,7 @@
 #include "ccny_rgbd/features/orb_detector.h"
 #include "ccny_rgbd/features/surf_detector.h"
 #include "ccny_rgbd/features/gft_detector.h"
+#include "ccny_rgbd/features/star_detector.h"
 
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/registration/motion_estimation_icp.h"

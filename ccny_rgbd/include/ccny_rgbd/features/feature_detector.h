@@ -30,15 +30,16 @@ class FeatureDetector
     virtual ~FeatureDetector();
 
     void findFeatures(RGBDFrame& frame);
-    inline double findFeaturesTimed(RGBDFrame& frame);
 
-    virtual void findFeatures(RGBDFrame& frame, const cv::Mat * input_img) = 0;
+    virtual void findFeatures(RGBDFrame& frame, const cv::Mat& input_img) = 0;
 
     inline int getSmooth() const;
     inline double getMaxRange() const;
+    inline double getMaxStDev() const;
 
     inline void setSmooth(int smooth);
     inline void setMaxRange(double max_range);
+    inline void setMaxStDev(double max_stdev);
 
   protected:
 
@@ -53,14 +54,13 @@ class FeatureDetector
     ros::Publisher covariances_publisher_;
 
     int smooth_;
+
     double max_range_;
+    double max_stdev_;
+
     bool show_keypoints_;
     bool publish_features_;
     bool publish_covariances_;
-
-    //bool mask_created_;
-    //cv::Mat mask_img_;
-    //int mask_w_;
 
     void publishCovariances(RGBDFrame& frame);
 };

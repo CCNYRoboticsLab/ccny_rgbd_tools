@@ -2,13 +2,17 @@
 
 <launch>
 
+  #### RGBD PROCESSING ####################################
+  
+  <!--include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch"/-->
+
   #### VISUAL ODOMETRY ####################################
 
   # ORB, SURF, GTF, KLT
   <arg name="detector_type" default="GFT"/> 
 
   # ICP, ICPModel, RANSAC
-  <arg name="reg_type" default="ICP"/> 
+  <arg name="reg_type" default="ICPProbModel"/> 
 
   <include file="$(find ccny_rgbd)/launch/visual_odometry.launch">
     <arg name="detector_type" value="$(arg detector_type)"/>
@@ -16,22 +20,34 @@
   </include>
 
   #### OCTREE MAPPING #####################################
-
+  <!--
   <node pkg="ccny_rgbd" type="octree_mapper_node" name="octree_mapper_node" 
     output="screen">
-    <param name="resolution" value="0.02"/>
+    <param name="resolution" value="0.05"/>
   </node>
-
+  -->
   #### KEYFRAME MAPPING ###################################
 
   <node pkg="ccny_rgbd" type="keyframe_mapper_node" name="keyframe_mapper_node" 
     output="screen">
 
-    <param name="kf/kf_dist_eps"  value="0.30"/>
-    <param name="kf/kf_angle_eps" value="0.50"/> 
+    <param name="kf_dist_eps"  value="0.15"/>
+    <param name="kf_angle_eps" value="0.15"/> 
+    <param name="full_map_res" value="0.005"/>
 
   </node>
 
+  #### OCTOMAP MAPPING #####################################
+  <!--
+  <node pkg="octomap_server" name="octomap_server" type="octomap_server_node"
+    output="screen">
+  
+    <remap from="cloud_in" to="/rgbd/cloud"/>
+    
+    <param name="frame_id"   value="odom"/>
+    <param name="resolution" value="0.05"/>
+  </node>
+  -->
 </launch>
 
 

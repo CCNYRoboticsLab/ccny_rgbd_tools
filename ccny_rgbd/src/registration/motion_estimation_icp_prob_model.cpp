@@ -8,61 +8,70 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   model_idx_(0),
   model_size_(0)
 {
-  // **** init variables
-
-  f2b_.setIdentity();
-
-  // *** init params
-
-  max_association_dist_ = 0.03;
-  max_association_dist_sq_ = max_association_dist_ * max_association_dist_;
-
+  // **** init params
 
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
     base_frame_ = "/camera_link";
 
-  int icp_max_iterations;
-  double icp_tf_epsilon;
-  double icp_max_corresp_dist;
-  bool use_ransac_rejection;
-  double ransac_inlier_threshold;
-
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", icp_max_iterations))
-    icp_max_iterations = 30;
-  if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon", icp_tf_epsilon))
-    icp_tf_epsilon = 0.000001;
-  if (!nh_private_.getParam ("reg/ICPProbModel/use_ransac_rejection", use_ransac_rejection))
-    use_ransac_rejection = false;
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist", icp_max_corresp_dist))
-    icp_max_corresp_dist = 0.15;
-  if (!nh_private_.getParam ("reg/ICPProbModel/ransac_inlier_threshold", ransac_inlier_threshold))
-    ransac_inlier_threshold = 0.10;
-
+  if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_linear", tf_epsilon_linear_))
+    tf_epsilon_linear_ = 1e-3; // 1 mm
+  if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_angular", tf_epsilon_angular_))
+    tf_epsilon_angular_ = 1.7e-2; // 1 deg
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", max_iterations_))
+    max_iterations_ = 10;
+  if (!nh_private_.getParam ("reg/ICPProbModel/min_correspondences", min_correspondences_))
+    min_correspondences_ = 15;
   if (!nh_private_.getParam ("reg/ICPProbModel/max_model_size", max_model_size_))
     max_model_size_ = 3000;
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_association_dist", max_association_dist_mah_))
-    max_association_dist_mah_ = 7.0;
+  
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist_eucl", max_corresp_dist_eucl_))
+    max_corresp_dist_eucl_ = 0.15;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist_mah", max_corresp_dist_mah_))
+    max_corresp_dist_mah_ = 10.0;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_assoc_dist_mah", max_assoc_dist_mah_))
+    max_assoc_dist_mah_ = 10.0;
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
-    n_nearest_neighbors_ = 1;
-  if (!nh_private_.getParam ("reg/ICPProbModel/alpha", alpha_))
-    alpha_ = 0.5;
+    n_nearest_neighbors_ = 4;
 
-  reg_.setMaxIterations(icp_max_iterations);
-  reg_.setTransformationEpsilon(icp_tf_epsilon);
-  reg_.setMaxCorrDist(icp_max_corresp_dist);
-  reg_.setUseRANSACRejection(use_ransac_rejection);
-  reg_.setRANSACThreshold(ransac_inlier_threshold);
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model", publish_model_))
+    publish_model_ = false;
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cov", publish_model_cov_))
+    publish_model_cov_ = true;
 
+  // **** variables
+
+  // derived params
+  max_corresp_dist_eucl_sq_ = max_corresp_dist_eucl_ * max_corresp_dist_eucl_;
+  max_corresp_dist_mah_sq_ =  max_corresp_dist_mah_ *  max_corresp_dist_mah_;
+  max_assoc_dist_mah_sq_ = max_assoc_dist_mah_ * max_assoc_dist_mah_;
+  
   model_ptr_.reset(new PointCloudFeature());
-
   model_ptr_->header.frame_id = fixed_frame_;
 
-  model_publisher_ = nh_.advertise<PointCloudFeature>(
-    "model", 1);
-  covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
-    "model_covariances", 1);
+  f2b_.setIdentity(); 
+  I_.setIdentity();
+
+  // **** publishers
+
+  if (publish_model_)
+  {
+    model_publisher_ = nh_.advertise<PointCloudFeature>(
+      "model", 1);
+  }
+  if (publish_model_cov_)
+  {
+    covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
+      "model_covariances", 1);
+  }
+
+  // **** services
+
+  save_service_ = nh_.advertiseService(
+    "save_sparse_map", &MotionEstimationICPProbModel::saveSrvCallback, this);
+  load_service_ = nh_.advertiseService(
+    "load_sparse_map", &MotionEstimationICPProbModel::loadSrvCallback, this);
 }
 
 MotionEstimationICPProbModel::~MotionEstimationICPProbModel()
@@ -71,21 +80,21 @@ MotionEstimationICPProbModel::~MotionEstimationICPProbModel()
 }
 
 void MotionEstimationICPProbModel::addToModel(
-  const cv::Mat& feature_mean,
-  const cv::Mat& feature_cov)
+  const Vector3f& data_mean,
+  const Matrix3f& data_cov)
 {
   // **** create a PCL point
 
-  PointFeature feature_point;
-  feature_point.x = feature_mean.at<double>(0,0);
-  feature_point.y = feature_mean.at<double>(1,0);
-  feature_point.z = feature_mean.at<double>(2,0);
+  PointFeature data_point;
+  data_point.x = data_mean(0,0);
+  data_point.y = data_mean(1,0);
+  data_point.z = data_mean(2,0);
 
   if (model_size_ < max_model_size_)
   { 
-    covariances_.push_back(feature_cov);
-    means_.push_back(feature_mean);
-    model_ptr_->push_back(feature_point);
+    covariances_.push_back(data_cov);
+    means_.push_back(data_mean);
+    model_ptr_->push_back(data_point);
     
     model_size_++;
   }
@@ -94,48 +103,12 @@ void MotionEstimationICPProbModel::addToModel(
     if (model_idx_ == max_model_size_)
       model_idx_ = 0;
 
-    covariances_.at(model_idx_) = feature_cov;
-    means_.at(model_idx_) = feature_mean;
-    model_ptr_->at(model_idx_) = feature_point;
+    covariances_.at(model_idx_) = data_cov;
+    means_.at(model_idx_) = data_mean;
+    model_ptr_->at(model_idx_) = data_point;
   }
 
   model_idx_++;
-}
-
-
-// extrats the rotation component of a transform and converts it 
-// to an opencv 3x3 matrix
-/*
-void MotionEstimationICPProbModel::transformToRotationCV(
-  const tf::Transform& transform,
-  cv::Mat& rotation)
-{
-  tf::Matrix3x3 rotation_tf(transform.getRotation());
-
-  rotation = cv::Mat(3, 3, CV_64F);
-  for(int i = 0; i < 3; ++i)
-  for(int j = 0; j < 3; ++j)     
-    rotation.at<double>(j,i) = rotation_tf[j][i];
-}*/
-
-void MotionEstimationICPProbModel::transformToRotationCV(
-  const tf::Transform& transform,
-  cv::Mat& translation,
-  cv::Mat& rotation)
-{
-  // extract translation
-  tf::Vector3 translation_tf = transform.getOrigin();
-  translation = cv::Mat(3, 1, CV_64F);
-  translation.at<double>(0,0) = translation_tf.getX();
-  translation.at<double>(1,0) = translation_tf.getY();
-  translation.at<double>(2,0) = translation_tf.getZ();
-
-  // extract rotation
-  tf::Matrix3x3 rotation_tf(transform.getRotation());
-  rotation = cv::Mat(3, 3, CV_64F);
-  for(int i = 0; i < 3; ++i)
-  for(int j = 0; j < 3; ++j)     
-    rotation.at<double>(j,i) = rotation_tf[j][i];
 }
 
 bool MotionEstimationICPProbModel::getMotionEstimationImpl(
@@ -143,209 +116,374 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   const tf::Transform& prediction,
   tf::Transform& motion)
 {
+  //TODO: currently ignores prediction
+
   bool result;
+  Vector3fVector data_means;
+  Matrix3fVector data_covariances;
 
-  // TODO - move out
-  cv::Mat I(3, 3, CV_64F);
-  cv::setIdentity(I);
-
-  PointCloudFeature::Ptr features_ptr =
-    boost::shared_ptr<PointCloudFeature> (new PointCloudFeature());
-
-  // account for prediction
-  // prediction is in the world frame
-  tf::Transform predicted_f2b = prediction * f2b_;
-
-  // rotate into the fixed frame and account for prediction
-  pcl::transformPointCloud(frame.features , *features_ptr, eigenFromTf(predicted_f2b * b2c_));
-  features_ptr->header.frame_id = fixed_frame_;
-
-  // **** build model ***************************************************
+  // remove nans from distributinos
+  removeInvalidDistributions(
+    frame.kp_means, frame.kp_covariances, frame.kp_valid,
+    data_means, data_covariances);
+  
+  // transform distributions to world frame
+  transformDistributions(data_means, data_covariances, f2b_ * b2c_);
+       
+  // **** perform registration
 
   if (model_size_ == 0)
   {
-    ROS_WARN("No points in model");
+    ROS_INFO("No points in model: initializing from features.");
     motion.setIdentity();
-
-    // calculate rotation and translation matrices
-    cv::Mat t, R;
-    transformToRotationCV(f2b_ * b2c_, t, R);
-    
-    for (unsigned int kp_idx = 0; kp_idx < frame.kp_covariance.size(); ++kp_idx)
-    {
-      if (!frame.kp_valid[kp_idx]) continue;
-
-      const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
-      const cv::Mat& feature_cov  = frame.kp_covariance[kp_idx];
-
-      cv::Mat feature_mean_tf = R * feature_mean + t;
-      cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
-
-      addToModel(feature_mean_tf, feature_cov_tf);
-    }      
+    initializeModelFromData(data_means, data_covariances);
+    result = true;
   }
   else
   {
-    // **** icp ***********************************************************
+    // align using icp 
+    result = alignICPEuclidean(data_means, motion);
+    //result = alignICPMahalanobis(data_means, data_covariances, motion);
 
-    pcl::KdTreeFLANN<PointFeature> tree_data;
-    pcl::KdTreeFLANN<PointFeature> tree_model;
+    if (!result) return false;
 
-    tree_data.setInputCloud(features_ptr);
-    tree_model.setInputCloud(model_ptr_);
-
-    reg_.setDataCloud  (&*features_ptr);
-    reg_.setModelCloud (&*model_ptr_);
-
-    reg_.setDataTree  (&tree_data);
-    reg_.setModelTree (&tree_model);
-
-    result = reg_.align();
+    constrainMotion(motion);
+    f2b_ = motion * f2b_;
     
-    if (result)
-    { 
-      tf::Transform correction = tfFromEigen(reg_.getFinalTransformation());
+    // transform distributions to world frame
+    transformDistributions(data_means, data_covariances, motion);
 
-      motion = correction * prediction;
-      constrainMotion(motion);
-
-      f2b_ = motion * f2b_;
-    }
-    else
-    {
-      // TODO - clean this up
-      f2b_ = predicted_f2b;
-      motion = prediction;
-    }
-  
-    // **** update model
-    for (unsigned int kp_idx = 0; kp_idx < frame.keypoints.size(); ++kp_idx)
-    {
-      // skip invalid
-      if (!frame.kp_valid[kp_idx]) continue;  
-
-      // decompose transform
-      cv::Mat t, R;
-      transformToRotationCV(f2b_ * b2c_, t, R);
-
-      // rotate to fixed frame
-      const cv::Mat& feature_mean = frame.kp_mean[kp_idx];
-      const cv::Mat& feature_cov = frame.kp_covariance[kp_idx];
-       
-      cv::Mat feature_mean_tf = R * feature_mean + t;
-      cv::Mat feature_cov_tf  = R * feature_cov * R.t();  
- 
-      // find nearest neighbor in model 
-      double mah_dist;
-      int mah_nn_idx;   
-      getNNMahalanobis(tree_model, feature_mean_tf, feature_cov_tf, 
-                       mah_dist, mah_nn_idx);
-   
-      if (mah_dist < max_association_dist_mah_)
-      {
-        // **** KF update *********************************
-
-        // predicted state
-        const cv::Mat& model_mean_pred = means_[mah_nn_idx];
-        const cv::Mat& model_cov_pred  = covariances_[mah_nn_idx];
-       
-        // calculate measurement and cov residual
-        cv::Mat y = feature_mean_tf - model_mean_pred;
-        cv::Mat S = feature_cov_tf + model_cov_pred;
-
-        // calculate Kalman gain
-        cv::Mat K = model_cov_pred * S.inv();
-        
-        // updated state estimate (mean and cov)
-        cv::Mat model_mean_upd = model_mean_pred + K * y;
-        cv::Mat model_cov_upd  = (I - K) * model_cov_pred;
-        
-        // update in model
-        means_[mah_nn_idx] = model_mean_upd;
-        covariances_[mah_nn_idx] = model_cov_upd;
-
-        PointFeature updated_point;
-        updated_point.x = model_mean_upd.at<double>(0,0);
-        updated_point.y = model_mean_upd.at<double>(1,0);
-        updated_point.z = model_mean_upd.at<double>(2,0);
-
-        model_ptr_->points[mah_nn_idx] = updated_point;
-      }
-      else
-      {
-        addToModel(feature_mean_tf, feature_cov_tf);
-      }
-    }
+    // update model: inserts new features and updates old ones with KF
+    updateModelFromData(data_means, data_covariances);
   }
 
-  model_ptr_->header.stamp = ros::Time::now(); // TODO - change to actual timestamp
-  model_ptr_->width = model_ptr_->points.size();
-  model_publisher_.publish(model_ptr_);
-  //printf("Model size: %d\n", (int)model_ptr_->points.size()); 
+  // update the model tree
+  model_tree_.setInputCloud(model_ptr_);
 
-  publishCovariances();
+  if (publish_model_)
+  {
+    // update model pointcloud and publish
+    model_ptr_->header.stamp = frame.header.stamp;
+    model_ptr_->width = model_ptr_->points.size();
+    model_publisher_.publish(model_ptr_);
+  }
+  if (publish_model_cov_)
+    publishCovariances();
 
   return result;
 }
 
-void MotionEstimationICPProbModel::getNNMahalanobis(
-  const pcl::KdTreeFLANN<PointFeature>& model_tree,
-  const cv::Mat& f_mean,
-  const cv::Mat& f_cov,
-  double& mah_dist,
-  int& mah_nn_idx)
+bool MotionEstimationICPProbModel::alignICPMahalanobis(
+  const Vector3fVector& data_means_in,
+  const Matrix3fVector& data_covariances_in,
+  tf::Transform& correction)
 {
-  // precalculate inverse matrix
-  cv::Mat f_cov_inv;
-  cv::invert(f_cov, f_cov_inv);
+  pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
 
-  // find n Euclidean nearest neighbors
-  std::vector<int> indices;
-  std::vector<float> dist_sq;
+  Vector3fVector data_means(data_means_in);
+  Matrix3fVector data_covariances(data_covariances_in);
+
+  // initialize the result transform
+  Eigen::Matrix4f final_transformation; 
+  final_transformation.setIdentity();
   
+  // create a point cloud from the means
+  PointCloudFeature data_cloud;
+  pointCloudFromMeans(data_means, data_cloud);
+
+  for (int iteration = 0; iteration < max_iterations_; ++iteration)
+  {    
+    // get corespondences
+    IntVector data_indices, model_indices;
+    getCorrespMahalanobis(data_means, data_covariances, data_indices, model_indices);
+   
+    if ((int)data_indices.size() <  min_correspondences_)
+    {
+      ROS_WARN("[ICP] Not enough correspondences (%d of %d minimum). Leacing ICP loop",
+        (int)data_indices.size(),  min_correspondences_);
+      return false;
+    }
+
+    // estimae transformation
+    Eigen::Matrix4f transformation; 
+    svd.estimateRigidTransformation (data_cloud, data_indices,
+                                     *model_ptr_, model_indices,
+                                     transformation);
+    
+    // rotate   
+    pcl::transformPointCloud(data_cloud, data_cloud, transformation);
+    
+    // transform distributions to world frame
+    transformDistributions(data_means, data_covariances, tfFromEigen(transformation));
+       
+    // accumulate incremental tf
+    final_transformation = transformation * final_transformation;
+
+    // check for convergence
+    double linear, angular;
+    getTfDifference(
+      tfFromEigen(transformation), linear, angular);
+    if (linear  < tf_epsilon_linear_ &&
+        angular < tf_epsilon_angular_)
+    {
+      //printf("(%f %f) conv. at [%d] leaving loop\n", 
+      //  linear*1000.0, angular*10.0*180.0/3.14, iteration);
+      break; 
+    }
+  }
+  
+  correction = tfFromEigen(final_transformation);
+  return true;
+}
+
+bool MotionEstimationICPProbModel::alignICPEuclidean(
+  const Vector3fVector& data_means,
+  tf::Transform& correction)
+{
+  pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
+
+  // create a point cloud from the means
+  PointCloudFeature data_cloud;
+  pointCloudFromMeans(data_means, data_cloud);
+
+  // initialize the result transform
+  Eigen::Matrix4f final_transformation; 
+  final_transformation.setIdentity();
+  
+  for (int iteration = 0; iteration < max_iterations_; ++iteration)
+  {    
+    // get corespondences
+    IntVector data_indices, model_indices;
+    getCorrespEuclidean(data_cloud, data_indices, model_indices);
+   
+    if ((int)data_indices.size() <  min_correspondences_)
+    {
+      ROS_WARN("[ICP] Not enough correspondences (%d of %d minimum). Leacing ICP loop",
+        (int)data_indices.size(),  min_correspondences_);
+      return false;
+    }
+
+    // estimae transformation
+    Eigen::Matrix4f transformation; 
+    svd.estimateRigidTransformation (data_cloud, data_indices,
+                                     *model_ptr_, model_indices,
+                                     transformation);
+    
+    // rotate   
+    pcl::transformPointCloud(data_cloud, data_cloud, transformation);
+    
+    // accumulate incremental tf
+    final_transformation = transformation * final_transformation;
+
+    // check for convergence
+    double linear, angular;
+    getTfDifference(
+      tfFromEigen(transformation), linear, angular);
+    if (linear  < tf_epsilon_linear_ &&
+        angular < tf_epsilon_angular_)
+    {
+      //printf("(%f %f) conv. at [%d] leaving loop\n", 
+      //  linear*1000.0, angular*10.0*180.0/3.14, iteration);
+      break; 
+    }
+  }
+  
+  correction = tfFromEigen(final_transformation);
+  return true;
+}
+
+void MotionEstimationICPProbModel::getCorrespMahalanobis(
+  const Vector3fVector& data_means,
+  const Matrix3fVector& data_covariances,
+  IntVector& data_indices,
+  IntVector& model_indices)
+{
+  IntVector indices;
+  FloatVector dists_sq;
+
   indices.resize(n_nearest_neighbors_);
-  dist_sq.resize(n_nearest_neighbors_);
+  dists_sq.resize(n_nearest_neighbors_);
 
-  PointFeature p_f;
-  p_f.x = f_mean.at<double>(0,0);
-  p_f.y = f_mean.at<double>(1,0);
-  p_f.z = f_mean.at<double>(2,0);
+  for (unsigned int data_idx = 0; data_idx < data_means.size(); ++data_idx)
+  {
+    const Vector3f data_mean = data_means[data_idx];
+    const Matrix3f data_cov  = data_covariances[data_idx];
+    
+    int mah_nn_idx;
+    double mah_dist_sq;
+    
+    bool nn_result = getNNMahalanobis(
+      data_mean, data_cov, mah_nn_idx, mah_dist_sq, indices, dists_sq);
 
-  model_tree.nearestKSearch(p_f, 1, indices, dist_sq);
+    if (nn_result && mah_dist_sq < max_corresp_dist_mah_sq_)
+    {
+      data_indices.push_back(data_idx);
+      model_indices.push_back(mah_nn_idx);
+    }
+  }  
+}
+
+void MotionEstimationICPProbModel::getCorrespEuclidean(
+  const PointCloudFeature& data_cloud,
+  IntVector& data_indices,
+  IntVector& model_indices)
+{
+  for (unsigned int data_idx = 0; data_idx < data_cloud.size(); ++data_idx)
+  {
+    const PointFeature& data_point = data_cloud.points[data_idx];
+    
+    int eucl_nn_idx;
+    double eucl_dist_sq;
+    
+    bool nn_result = getNNEuclidean(data_point, eucl_nn_idx, eucl_dist_sq);
+    
+    if (nn_result && eucl_dist_sq < max_corresp_dist_eucl_sq_)
+    {
+      data_indices.push_back(data_idx);
+      model_indices.push_back(eucl_nn_idx);
+    }
+  }  
+}
+
+bool MotionEstimationICPProbModel::getNNEuclidean(
+  const PointFeature& data_point,
+  int& eucl_nn_idx, double& eucl_dist_sq)
+{
+  // find n Euclidean nearest neighbors
+  IntVector indices;
+  FloatVector dist_sq;
+  
+  indices.resize(1);
+  dist_sq.resize(1);
+  
+  int n_retrieved = model_tree_.nearestKSearch(data_point, 1, indices, dist_sq);
+  
+  if (n_retrieved != 0)
+  {
+    eucl_nn_idx = indices[0];
+    eucl_dist_sq = dist_sq[0];
+    return true;
+  }
+  else return false;
+}
+
+bool MotionEstimationICPProbModel::getNNMahalanobis(
+  const Vector3f& data_mean, const Matrix3f& data_cov,
+  int& mah_nn_idx, double& mah_dist_sq,
+  IntVector& indices, FloatVector& dists_sq)
+{
+  PointFeature p_data;
+  p_data.x = data_mean(0,0);
+  p_data.y = data_mean(1,0);
+  p_data.z = data_mean(2,0);
+
+  int n_retrieved = model_tree_.nearestKSearch(p_data, n_nearest_neighbors_, indices, dists_sq);
 
   // iterate over Euclidean NNs to find Mah. NN
-
-  // TODO - clean this up
-  double best_mah_dist = 9999999;
+  double best_mah_dist_sq = 0;
   int best_mah_nn_idx = -1;
-  int best_i; // optionally print this to check how far in we found the best one
-  for (int i = 0; i < n_nearest_neighbors_; i++)
+  //int best_i = 0; // optionally print this to check how far in we found the best one
+  for (int i = 0; i < n_retrieved; i++)
   {
     int nn_idx = indices[i];
    
-    const cv::Mat& m_mean = means_[nn_idx];
-    const cv::Mat& m_cov  = covariances_[nn_idx];
+    const Vector3f& model_mean = means_[nn_idx];
+    const Matrix3f& model_cov  = covariances_[nn_idx];
 
-    cv::Mat diff_mat = m_mean - f_mean;
-    cv::Mat sum_cov = m_cov + f_cov;
-    cv::Mat sum_cov_inv;
-    cv::invert(sum_cov, sum_cov_inv);
+    Vector3f diff_mat = model_mean - data_mean;
+    Matrix3f sum_cov = model_cov + data_cov;
+    Matrix3f sum_cov_inv = sum_cov.inverse();
 
-    cv::Mat mah_mat = diff_mat.t() * sum_cov_inv * diff_mat;
+    Eigen::Matrix<float,1,1> mah_mat = diff_mat.transpose() * sum_cov_inv * diff_mat;
 
-    double mah_dist = sqrt(mah_mat.at<double>(0,0));
-
-    if (mah_dist < best_mah_dist)
+    double mah_dist_sq = mah_mat(0,0);
+  
+    if (best_mah_nn_idx == -1 || mah_dist_sq < best_mah_dist_sq)
     {
-      best_mah_dist   = mah_dist;
-      best_mah_nn_idx = nn_idx;
-      best_i = i;
+      best_mah_dist_sq = mah_dist_sq;
+      best_mah_nn_idx  = nn_idx;
+      //best_i = i;
     }
   }
 
-  if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
-  mah_dist   = best_mah_dist;
-  mah_nn_idx = best_mah_nn_idx;
+  if (best_mah_nn_idx != -1)
+  {  
+    //if (best_i != 0) printf("BEST NEIGHBOR WAS #%d\n", best_i);
+    mah_dist_sq = best_mah_dist_sq;
+    mah_nn_idx  = best_mah_nn_idx;
+    return true;
+  }
+  else return false;
+}
+  
+void MotionEstimationICPProbModel::initializeModelFromData(
+  const Vector3fVector& data_means,
+  const Matrix3fVector& data_covariances)
+{
+  for (unsigned int idx = 0; idx < data_means.size(); ++idx)
+  {
+    const Vector3f& mean = data_means[idx];
+    const Matrix3f& cov  = data_covariances[idx];     
+    addToModel(mean, cov);
+  }
+}
+
+void MotionEstimationICPProbModel::updateModelFromData(
+  const Vector3fVector& data_means,
+  const Matrix3fVector& data_covariances)
+{
+  // pre-allocate search vectors
+  IntVector indices;
+  FloatVector dists_sq;
+  indices.resize(n_nearest_neighbors_);
+  dists_sq.resize(n_nearest_neighbors_);
+
+  for (unsigned int idx = 0; idx < data_means.size(); ++idx)
+  {
+    const Vector3f& data_mean = data_means[idx];
+    const Matrix3f& data_cov  = data_covariances[idx];
+    
+    // find nearest neighbor in model 
+    double mah_dist_sq;
+    int mah_nn_idx;   
+    bool nn_result = getNNMahalanobis(
+      data_mean, data_cov, mah_nn_idx, mah_dist_sq, indices, dists_sq);
+  
+    if (nn_result && mah_dist_sq < max_assoc_dist_mah_sq_)
+    {
+      // **** KF update *********************************
+
+      // predicted state
+      const Vector3f& model_mean_pred = means_[mah_nn_idx];
+      const Matrix3f& model_cov_pred  = covariances_[mah_nn_idx];
+      
+      // calculate measurement and cov residual
+      Vector3f y = data_mean - model_mean_pred;
+      Matrix3f S = data_cov + model_cov_pred;
+
+      // calculate Kalman gain
+      Matrix3f K = model_cov_pred * S.inverse();
+      
+      // updated state estimate (mean and cov)
+      Vector3f model_mean_upd = model_mean_pred + K * y;
+      Matrix3f model_cov_upd  = (I_ - K) * model_cov_pred;
+      
+      // update in model
+      means_[mah_nn_idx] = model_mean_upd;
+      covariances_[mah_nn_idx] = model_cov_upd;
+
+      PointFeature updated_point;
+      updated_point.x = model_mean_upd(0,0);
+      updated_point.y = model_mean_upd(1,0);
+      updated_point.z = model_mean_upd(2,0);
+
+      model_ptr_->points[mah_nn_idx] = updated_point;
+    }
+    else
+    {
+      addToModel(data_mean, data_cov);
+    }
+  }
 }
 
 void MotionEstimationICPProbModel::publishCovariances()
@@ -371,7 +509,13 @@ void MotionEstimationICPProbModel::publishCovariances()
     cv::Mat evl(1, 3, CV_64F);
     cv::Mat evt(3, 3, CV_64F);
 
-    cv::Mat& cov = covariances_[i];
+    const Matrix3f& cov_eigen = covariances_[i];
+
+    cv::Mat cov(3,3,CV_64F);
+    for(int j = 0; j < 3; ++j)  
+    for(int i = 0; i < 3; ++i)
+      cov.at<double>(j,i) = cov_eigen(j,i);
+
     cv::eigen(cov, evl, evt);
 
     double mx = model_ptr_->points[i].x;
@@ -404,6 +548,86 @@ void MotionEstimationICPProbModel::publishCovariances()
   }
 
   covariances_publisher_.publish(marker);
+}
+
+bool MotionEstimationICPProbModel::saveSrvCallback(
+  ccny_rgbd::Save::Request& request,
+  ccny_rgbd::Save::Response& response)
+{
+  ROS_INFO("Saving model to %s", request.filename.c_str());
+
+  bool result = saveModel(request.filename);
+
+  if (result)
+    ROS_INFO("Successfully saved model.");
+  else
+    ROS_ERROR("Failed to save model.");
+
+  return result;
+}
+
+bool MotionEstimationICPProbModel::loadSrvCallback(
+  ccny_rgbd::Save::Request& request,
+  ccny_rgbd::Save::Response& response)
+{
+  ROS_INFO("Loading model from %s...", request.filename.c_str());
+
+  bool result = loadModel(request.filename);
+
+  if (result)
+    ROS_INFO("Successfully loaded model.");
+  else
+    ROS_ERROR("Failed to load model.");
+
+  return result;
+}
+
+bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
+{
+// FIXME - load and save eigen
+/*
+  // save as OpenCV yml matrix
+  std::string filename_yml = filename + ".yml";
+
+  cv::FileStorage fs(filename_yml, cv::FileStorage::WRITE);
+  fs << "means"       << means_;
+  fs << "covariances" << covariances_; 
+  fs << "model_idx"   << model_idx_;  
+  fs << "model_size"  << model_size_;    
+*/   
+
+  // save as pcd
+  std::string filename_pcd = filename + ".pcd";
+  pcl::PCDWriter writer;
+  int result_pcd = writer.writeBinary<PointFeature>(filename_pcd, *model_ptr_);
+
+  return (result_pcd == 0); // TODO: also OpenCV result
+}
+
+bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
+{
+// FIXME - load and save eigen
+/*
+  // load OpenCV yml matrix
+  std::string filename_yml = filename + ".yml";
+
+  cv::FileStorage fs(filename_yml, cv::FileStorage::READ);
+  fs["means"] >> means_;
+  fs["covariances"] >> covariances_;
+  fs["model_idx"] >> model_idx_;
+  fs["model_size"] >> model_size_;
+*/
+
+  // load pcd
+  std::string filename_pcd = filename + ".pcd";
+  pcl::PCDReader reader;
+  int result_pcd = reader.read<PointFeature>(filename_pcd, *model_ptr_);
+  model_ptr_->header.frame_id = fixed_frame_;
+
+  // update the model tree
+  model_tree_.setInputCloud(model_ptr_);
+
+  return (result_pcd == 0); // TODO: also OpenCV result
 }
 
 } // namespace ccny_rgbd

@@ -2,7 +2,7 @@
 \mainpage
 \htmlinclude manifest.html
 
-\b ccny_rgbd_calibrate 
+\b rgbd_image_proc 
 
 <!-- 
 Provide an overview of your package.

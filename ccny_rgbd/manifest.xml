@@ -12,6 +12,7 @@
 
   <depend package="roscpp"/>
   <depend package="pcl"/>
+  <depend package="ccny_toro"/>
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>
@@ -26,7 +27,7 @@
   <depend package="nodelet"/>
 
   <export>
-    <cpp cflags="-I${prefix}/include"/>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib/"/>
   </export>
 
 </package>

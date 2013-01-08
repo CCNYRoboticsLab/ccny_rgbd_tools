@@ -4,19 +4,21 @@
 #include <tf/transform_datatypes.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/kdtree/kdtree.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 #include <visualization_msgs/Marker.h>
 
 #include "ccny_rgbd/registration/motion_estimation.h"
-#include "ccny_rgbd/structures/feature_history.h"
+#include "ccny_rgbd/Save.h"
+#include "ccny_rgbd/Load.h"
 
 namespace ccny_rgbd
 {
 
-typedef std::vector<cv::Mat> MatVector;
-
 class MotionEstimationICPProbModel: public MotionEstimation
 {
-  typedef ccny_rgbd::ICPKd<PointFeature, PointFeature> ICPReg;
+  typedef pcl::KdTreeFLANN<PointFeature> KdTree;
 
   public:
 
@@ -32,56 +34,108 @@ class MotionEstimationICPProbModel: public MotionEstimation
   
     int getModelSize() const { return model_size_; }
 
+    bool saveSrvCallback(ccny_rgbd::Save::Request& request,
+                         ccny_rgbd::Save::Response& response);
+    bool loadSrvCallback(ccny_rgbd::Save::Request& request,
+                         ccny_rgbd::Save::Response& response);
+
   private:
 
     // **** ros
 
     ros::Publisher model_publisher_;
     ros::Publisher covariances_publisher_;
+    ros::ServiceServer save_service_;
+    ros::ServiceServer load_service_;
 
     // **** params
 
     std::string fixed_frame_; 
     std::string base_frame_;
 
-    double max_association_dist_;
-    double alpha_;
+    int max_iterations_;
+    int min_correspondences_;
+    int n_nearest_neighbors_; // for searching for mah NN
+    int max_model_size_;      // bound for how many features to store in the model
 
-    int max_model_size_;    // bound for how many features to store in the model
+    double tf_epsilon_linear_;   
+    double tf_epsilon_angular_;
+
+    double max_assoc_dist_mah_;
+    double max_corresp_dist_mah_;
+    double max_corresp_dist_eucl_;
     
+    bool publish_model_;      // for visualization
+    bool publish_model_cov_;  // for visualization
+
+    // derived
+    double max_assoc_dist_mah_sq_;
+    double max_corresp_dist_mah_sq_;
+    double max_corresp_dist_eucl_sq_;
+
     // **** variables
 
+    PointCloudFeature::Ptr model_ptr_;   
     int model_idx_;         // current intex in the ring buffer
     int model_size_;        // current model size
-    int n_nearest_neighbors_; // for searching for mah NN
+    Vector3fVector means_;
+    Matrix3fVector covariances_;
 
-    double max_association_dist_sq_;
-    double max_association_dist_mah_;
+    KdTree model_tree_;
+
+    Matrix3f I_;
     
-    ICPReg reg_;
-    PointCloudFeature::Ptr model_ptr_;   
-    MatVector covariances_;
-    MatVector means_;
     tf::Transform f2b_; // Fixed frame to Base (moving) frame
+    
+    // ***** funtions
+  
+    bool alignICPEuclidean(
+      const Vector3fVector& data_means,
+      tf::Transform& correction);
+
+    bool alignICPMahalanobis(
+      const Vector3fVector& data_means_in,
+      const Matrix3fVector& data_covariances_in,
+      tf::Transform& correction);
+
+    void getCorrespEuclidean(
+      const PointCloudFeature& data_cloud,
+      IntVector& data_indices,
+      IntVector& model_indices);
+    
+    void getCorrespMahalanobis(
+      const Vector3fVector& data_means,
+      const Matrix3fVector& data_covariances,
+      IntVector& data_indices,
+      IntVector& model_indices);
+ 
+    bool getNNEuclidean(
+      const PointFeature& data_point,
+      int& eucl_nn_idx, double& eucl_dist_sq);
+
+    bool getNNMahalanobis(
+      const Vector3f& data_mean, const Matrix3f& data_cov,
+      int& mah_nn_idx, double& mah_dist_sq,
+      IntVector& indices, FloatVector& dists_sq);
+
+    void updateModelFromData(const Vector3fVector& data_means,
+                             const Matrix3fVector& data_covariances);
+  
+    void initializeModelFromData(
+      const Vector3fVector& data_means,
+      const Matrix3fVector& data_covariances);
+
+    void addToModel(
+      const Vector3f& data_mean,
+      const Matrix3f& data_cov);
 
     void publishCovariances();
-
-    void getNNMahalanobis(
-      const pcl::KdTreeFLANN<PointFeature>& model_tree,
-      const cv::Mat& f_mean,
-      const cv::Mat& f_cov,
-      double& mah_dist,
-      int& mah_nn_idx);
-
-  void transformToRotationCV(const tf::Transform& transform,
-                             cv::Mat& translation,
-                             cv::Mat& rotation);
-
-    void addToModel(const cv::Mat& feature_mean,
-                    const cv::Mat& feature_cov);
+    
+    bool saveModel(const std::string& filename);
+    bool loadModel(const std::string& filename);
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_MOTION_ESTIMATION_ICP_PROB_MODEL_H
 

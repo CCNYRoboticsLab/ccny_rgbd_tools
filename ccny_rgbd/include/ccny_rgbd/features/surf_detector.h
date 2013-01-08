@@ -16,7 +16,7 @@ class SurfDetector: public FeatureDetector
     SurfDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
     ~SurfDetector();
 
-    void findFeatures(RGBDFrame& frame, const cv::Mat * input_img);
+    void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
   private:
 

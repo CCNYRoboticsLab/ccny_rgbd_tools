@@ -1,6 +1,9 @@
 <!-- Entry point for using OpenNI devices -->
 <launch>
 
+  <param name="/camera/driver/image_mode" value="5"/>
+  <param name="/camera/driver/depth_mode" value="5"/>
+
   <!-- "camera" should uniquely identify the device. All topics are pushed down
        into the "camera" namespace, and it is prepended to tf frame ids. -->
   <arg name="camera" default="camera" />
@@ -23,8 +26,6 @@
 
   <!-- Use OpenNI's factory-calibrated depth->RGB registration? -->
   <arg name="depth_registration" default="false" />
-  <arg name="image_mode"         value="5" />
-  <arg name="depth_mode"         value="5" />
 
   <!-- Arguments for remapping all device namespaces -->
   <arg name="rgb"              default="rgb" />

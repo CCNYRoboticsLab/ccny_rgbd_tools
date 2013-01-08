@@ -33,12 +33,9 @@ OctreeMapper::OctreeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   image_transport::ImageTransport rgb_it(nh_);
   image_transport::ImageTransport depth_it(nh_);
 
-  sub_depth_.subscribe(
-    depth_it, "/camera/depth_registered/image_rect_raw", 1);
-  sub_rgb_.subscribe(
-    rgb_it, "/camera/rgb/image_rect_color", 1);
-  sub_info_.subscribe(
-    nh_, "/camera/rgb/camera_info", 1);
+  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
+  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
+  sub_info_.subscribe(nh_, "/rgbd/info", 1);
 
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
   int queue_size = 5;
@@ -85,11 +82,11 @@ void OctreeMapper::RGBDCallback(
   // TODO: cleanup constructors
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
   RGBDKeyframe keyframe(frame);
-  keyframe.constructDataCloud();
+  keyframe.constructDensePointCloud();
 
   // transform to world frame
   PointCloudT cloud_tf;
-  pcl_ros::transformPointCloud (keyframe.data, cloud_tf, transform);
+  pcl_ros::transformPointCloud (keyframe.cloud, cloud_tf, transform);
   cloud_tf.header.frame_id = fixed_frame_;
 
   // add to map
@@ -178,7 +175,6 @@ bool OctreeMapper::saveSrvCallback(
   ROS_INFO("Map has %dK points", (int)map_->points.size()/1024);
 
   pcl::io::savePCDFileBinary<PointT>(request.filename, *map_);
-  //pcl::io::savePLYFile<PointT>(request.filename + ".ply", *map_);
 
   ROS_INFO("Save successful");
   return true;

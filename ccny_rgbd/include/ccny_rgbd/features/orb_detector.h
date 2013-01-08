@@ -19,7 +19,7 @@ class OrbDetector: public FeatureDetector
     void setNFeatures(unsigned int n_features);
     unsigned int getNFeatures() const;
 
-    void findFeatures(RGBDFrame& frame, const cv::Mat * input_img);
+    void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
   private:
 

@@ -25,6 +25,8 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
     feature_detector_ = new SurfDetector(nh_, nh_private_);
   else if (detector_type_ == "GFT")
     feature_detector_ = new GftDetector(nh_, nh_private_);
+  else if (detector_type_ == "STAR")
+    feature_detector_ = new StarDetector(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
 
@@ -46,12 +48,9 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
   image_transport::ImageTransport rgb_it(nh_);
   image_transport::ImageTransport depth_it(nh_);
 
-  sub_depth_.subscribe(
-    depth_it, "/camera/depth_registered/image_rect_raw", 1);
-  sub_rgb_.subscribe(
-    rgb_it, "/camera/rgb/image_rect_color", 1);
-  sub_info_.subscribe(
-    nh_, "/camera/rgb/camera_info", 1);
+  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
+  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
+  sub_info_.subscribe(nh_, "/rgbd/info", 1);
 
   // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
   int queue_size = 5;
@@ -126,8 +125,8 @@ void VisualOdometry::imageCb(
 
   ros::WallTime end = ros::WallTime::now();
 
-  int n_features = frame.features.points.size();
-  int n_keypoints = frame.keypoints.size();
+  int n_features = frame.keypoints.size();
+  int n_valid_features = frame.n_valid_keypoints;
 
   double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
   double d_features = 1000.0 * (end_features - start_features).toSec();
@@ -144,7 +143,7 @@ void VisualOdometry::imageCb(
   printf("[%d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
     frame_count_,
     d_frame, 
-    detector_type_.c_str(), n_features, n_keypoints, d_features, 
+    detector_type_.c_str(), n_features, n_valid_features, d_features, 
     reg_type_.c_str(), d_reg, 
     d_total);
 
@@ -154,7 +153,8 @@ void VisualOdometry::imageCb(
     frame_count_, time, 
     d_frame, d_features, d_reg, 
     n_features, model_size);
-
+*/
+/*
   // for position profiling
   printf("%d \t %.2f \t %.3f \t %.3f \t %.3f \n",
     frame_count_, time, 
