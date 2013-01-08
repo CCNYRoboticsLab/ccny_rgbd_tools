@@ -12,7 +12,6 @@
 
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/structures/keyframe_association.h"
-#include "ccny_rgbd/mapping/keyframe_generator.h"
 
 namespace ccny_rgbd
 {

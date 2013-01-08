@@ -20,7 +20,6 @@ KeyframeLoopMapper::KeyframeLoopMapper(ros::NodeHandle nh, ros::NodeHandle nh_pr
 
   loop_detector_ = new KeyframeLoopDetector(nh, nh_private);
 
-  //loop_solver_ = new KeyframeLoopSolverSBA(nh, nh_private);
   loop_solver_ = new KeyframeLoopSolverTORO(nh, nh_private);
 }
 

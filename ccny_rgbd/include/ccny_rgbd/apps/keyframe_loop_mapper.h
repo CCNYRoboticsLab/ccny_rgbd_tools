@@ -6,7 +6,6 @@
 #include "ccny_rgbd/apps/keyframe_mapper.h"
 #include "ccny_rgbd/mapping/keyframe_loop_detector.h"
 #include "ccny_rgbd/mapping/keyframe_loop_solver.h"
-#include "ccny_rgbd/mapping/keyframe_loop_solver_sba.h"
 #include "ccny_rgbd/mapping/keyframe_loop_solver_toro.h"
 
 #include "ccny_rgbd/GenerateAssociations.h"

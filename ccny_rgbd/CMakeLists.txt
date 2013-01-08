@@ -58,10 +58,8 @@ rosbuild_add_library (ccny_rgbd_registration
 )
 
 rosbuild_add_library (ccny_rgbd_mapping
-  src/mapping/keyframe_generator.cpp
   src/mapping/keyframe_loop_detector.cpp
   src/mapping/keyframe_loop_solver.cpp
-  src/mapping/keyframe_loop_solver_sba.cpp
   src/mapping/keyframe_loop_solver_toro.cpp
   src/mapping/octree_pointcloud_storage.cpp
 )
