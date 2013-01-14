@@ -16,7 +16,9 @@ bool analyzeCloud(
   const PointCloudT::Ptr& cloud,
   double& best_angle);
 
-void analyzeKeyframe(RGBDKeyframe& keyframe);
+bool analyzeKeyframe(
+  RGBDKeyframe& keyframe,
+  double& best_angle);
 
 } // namespace ccny_rgbd
 

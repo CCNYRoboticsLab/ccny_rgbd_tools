@@ -189,23 +189,6 @@ target_link_libraries(ccny_rgbd_map_util
 )
 
 ################################################################
-# normals test app
-################################################################
-
-rosbuild_add_executable(normals
-  src/rgbd_normals.cpp)
-
-target_link_libraries (normals
-  ccny_rgbd_structures 
-  ccny_rgbd_util
-  ccny_rgbd_map_util
-  boost_signals 
-  boost_system
-  boost_filesystem
-  ${OPENCV_LIBRARIES}
-)
-
-################################################################
 # mls test app
 ################################################################
 
@@ -215,6 +198,7 @@ rosbuild_add_executable(mls
   target_link_libraries (mls
   ccny_rgbd_structures 
   ccny_rgbd_util
+  ccny_rgbd_map_util
   boost_signals 
   boost_system
   boost_filesystem
@@ -237,6 +221,25 @@ rosbuild_add_executable(global_yaw_histogram_align
   boost_filesystem
   ${OPENCV_LIBRARIES}
   )
+  
+################################################################
+# keyframe yaw rotation test app
+################################################################
+
+rosbuild_add_executable(keyframe_yaw_histogram_align
+  src/rgbd_normals.cpp
+  src/keyframe_yaw_histogram_align.cpp)
+
+  target_link_libraries (keyframe_yaw_histogram_align
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  ccny_rgbd_map_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+  )
+  
   
 ################################################################
 # ransac test app

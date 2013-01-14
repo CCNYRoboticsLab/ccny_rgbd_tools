@@ -16,7 +16,6 @@ void alignGlobalMap(
   vgf.setLeafSize(vgf_res, vgf_res, vgf_res);
   vgf.filter(*cloud_f);
 
-  /*
   // rotate 45 deg
   tf::Transform t;
   t.setOrigin(tf::Vector3(0,0,0));
@@ -24,7 +23,7 @@ void alignGlobalMap(
   q.setRPY(0, 0, M_PI/6.0);
   t.setRotation(q);
   pcl::transformPointCloud(*cloud_f, *cloud_f, eigenFromTf(t)); 
-*/
+
   // show map
   printf("Showing map\n");
   cv::Mat map_r;

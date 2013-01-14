@@ -22,16 +22,11 @@ global alignement idea:
     walls snap into place
 */
 
-int main(int argc, char** argv)
-{
-  ccny_rgbd::analyzeKeyframes();
-  return 0;
-}
-
 namespace ccny_rgbd {
 
 void analyzeKeyframes()
 {
+/*
   KeyframeVector keyframes;
   loadKeyframes(keyframes, "/home/idyanov/ros/images/ccny_3rooms_seq_loop");
 
@@ -72,6 +67,7 @@ void analyzeKeyframes()
   }
 
   saveKeyframes(keyframes, "/home/idyanov/ros/images/ccny_3rooms_seq_loop_hist");
+*/
 }
 
 bool analyzeCloud(
@@ -143,7 +139,9 @@ bool analyzeCloud(
   return true;
 }
 
-void analyzeKeyframe(RGBDKeyframe& keyframe)
+bool analyzeKeyframe(
+  RGBDKeyframe& keyframe,
+  double& best_angle)
 {
   // params
   double vgf_res = 0.01;
@@ -211,10 +209,13 @@ void analyzeKeyframe(RGBDKeyframe& keyframe)
   cv::Mat hist_exp_img;
   createImageFromHistogram(hist_exp, hist_exp_img);
   cv::imshow("hist_exp_img", hist_exp_img);
-  double best_angle;
+  cv::waitKey(0);
+  
   alignHistogram(histogram, hist_exp, degrees_per_bin, best_angle);
 
   if (best_angle > 45) best_angle-=90.0;
+  
+  /*
   tf::Quaternion q;
   q.setRPY(0, 0, best_angle * M_PI / 180);
   tf::Transform tf;
@@ -223,38 +224,10 @@ void analyzeKeyframe(RGBDKeyframe& keyframe)
   
   pcl::transformPointCloud(*cloud_f, *cloud_f, eigenFromTf(tf));
   keyframe.cloud = *cloud_f;
-
-  cv::waitKey(0);
+  */
+  
+  // TODO: return false if bad histogram
+  return true;
 }
-
-/*
-void buildGlobalMap(
-  const KeyframeVector& keyframes,
-  PointCloudT& global_map,
-  double resolution)
-{
-  PointCloudT::Ptr map_unf(new PointCloudT());
-
-  // create global cloud
-  for (unsigned int i = 0; i < keyframes.size(); ++i)
-  {
-    printf("Adding in keyframe %d of %d\n", i, (int)keyframes.size());
-    const RGBDKeyframe& keyframe = keyframes[i];
-   
-    PointCloudT cloud; 
-    pcl::transformPointCloud(keyframe.cloud, cloud, eigenFromTf(keyframe.pose));
-
-    *map_unf += cloud;
-  }
-
-  // filter cloud
-  printf("Filtering cloud\n");
-  PointCloudT::Ptr cloud_f;
-  cloud_f.reset(new PointCloudT());
-  pcl::VoxelGrid<PointT> vgf;
-  vgf.setInputCloud(map_unf);
-  vgf.setLeafSize(resolution, resolution, resolution);
-  vgf.filter(global_map);
-}*/
   
 } // namespace ccny_rgbd
