@@ -60,6 +60,7 @@ rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_loop_detector.cpp
   src/mapping/keyframe_loop_solver.cpp
   src/mapping/keyframe_loop_solver_toro.cpp
+  src/mapping/keyframe_loop_solver_g2o.cpp
   src/mapping/octree_pointcloud_storage.cpp
 )
 

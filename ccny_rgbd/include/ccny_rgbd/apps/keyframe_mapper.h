@@ -15,6 +15,7 @@
 #include "ccny_rgbd/mapping/keyframe_loop_detector.h"
 #include "ccny_rgbd/mapping/keyframe_loop_solver.h"
 #include "ccny_rgbd/mapping/keyframe_loop_solver_toro.h"
+#include "ccny_rgbd/mapping/keyframe_loop_solver_g2o.h"
 
 #include "ccny_rgbd/GenerateAssociations.h"
 #include "ccny_rgbd/SolveLoop.h"
