@@ -26,7 +26,24 @@ class KeyframeLoopSolverG2O: public KeyframeLoopSolver
 
   private:
 
-
+    int vertexIdx;
+    g2o::SparseOptimizer optimizer;
+    g2o::BlockSolverX::LinearSolverType * linearSolver;
+    g2o::BlockSolverX * solver_ptr;
+        
+    void addVertex(
+      const Eigen::Matrix4f& vertex_pose,
+      int vertex_idx);
+    
+    void addEdge(
+      int from_idx,
+      int to_idx,
+      const Eigen::Matrix4f& relative_pose,
+      const Eigen::Matrix<double,6,6>& information_matrix);
+    
+    void optimizeGraph();
+    
+    void updatePoses(KeyframeVector& keyframes);
 };
 
 } //namespace ccny_rgbd
