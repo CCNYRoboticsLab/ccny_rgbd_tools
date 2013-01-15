@@ -1,15 +1,13 @@
 <package>
   <description brief="ccny_rgbd">
 
-     RGB-D tools form visual odometry and mapping
+     RGB-D tools for visual odometry and mapping.
 
   </description>
   <author>Ivan Dryanovski</author>
-  <license>BSD</license>
+  <license>GPL</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd</url>
-  <depend package="roscpp"/>
-
   <depend package="roscpp"/>
   <depend package="pcl"/>
   <depend package="ccny_g2o"/>

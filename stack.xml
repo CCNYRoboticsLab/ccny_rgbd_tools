@@ -1,7 +1,7 @@
 <stack>
   <description brief="ccny_rgbd">ccny_rgbd</description>
   <author>Maintained by Ivan Dryanovski</author>
-  <license>GPL</license>  
+  <license>GPL, LGPLv3</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd</url>
   <depend stack="ros" />

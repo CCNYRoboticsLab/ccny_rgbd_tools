@@ -1,11 +1,11 @@
 <package>
   <description brief="rgbd_image_proc">
 
-     rgbd_image_proc
+     Performs rectification and unwarping of RGB-D images, using a user-provided calibration.
 
   </description>
   <author>Ivan Dryanovski</author>
-  <license>BSD</license>
+  <license>GPL</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/rgbd_image_proc</url>
   <depend package="roscpp"/>
