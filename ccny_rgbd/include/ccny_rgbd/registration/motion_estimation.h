@@ -6,7 +6,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/registration/motion_prediction_imu.h"
 
 namespace ccny_rgbd
 {
@@ -47,16 +46,6 @@ class MotionEstimation
 
   private:
 
-    boost::mutex mutex_;
-    ros::Subscriber odom_subscriber_;
-
-    MotionPredictionImu * motion_prediction_;
-
-    bool have_odom_msg_;
-    OdomMsg latest_odom_;
-    OdomMsg last_used_odom_;
-
-    void odomCallback(const OdomMsg::ConstPtr& odom_msg);
 };
 
 } //namespace ccny_rgbd

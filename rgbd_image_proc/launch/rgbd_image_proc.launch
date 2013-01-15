@@ -2,21 +2,27 @@
 <!-- todo: nodelets -->
 <launch>
 
+  <!-- Nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_proc_manager" args="manager"
+        output="screen"/>
+
   <!-- Debayered images -->
   <node pkg="nodelet" type="nodelet" name="debayer"
-        args="standalone image_proc/debayer">
-        
+        args="load image_proc/debayer rgbd_proc_manager">    
     <remap from="image_raw"   to="/camera/rgb/image_raw"/>
     <remap from="image_color" to="/camera/rgb/image_color"/>
-        
   </node>
 
-  <node pkg="rgbd_image_proc" type="rgbd_image_proc_node" name="rgbd_image_proc_node"
-    output="screen">
+  <node pkg="nodelet" type="nodelet" name="rgbd_image_proc"
+        args="load rgbd_image_proc/RGBDImageProcNodelet rgbd_proc_manager"
+        output="screen">
     
     <!-- Resample by a factor of 2-->
-    <param name="scale" value="0.5"/>
-    
+    <param name="scale" value="1.0"/>
+    <param name="unwarp" value="true"/>
+    <param name="publish_cloud" value="false"/>
+    <param name="calib_path" value="$(env HOME)/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/"/>
+        
   </node>
   
 </launch>

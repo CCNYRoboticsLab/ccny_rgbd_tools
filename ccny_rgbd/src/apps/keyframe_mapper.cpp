@@ -4,27 +4,44 @@ namespace ccny_rgbd
 {
 
 KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  KeyframeGenerator(nh, nh_private)
+  nh_(nh), 
+  nh_private_(nh_private),
+  loop_detector_(nh_, nh_private_)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
-
+ 
   // **** init variables
 
+  loop_solver_ = new KeyframeLoopSolverG2O(nh, nh_private);
+  
+  // **** params
+
+  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
+    fixed_frame_ = "/odom";
+  if (!nh_private_.getParam ("full_map_res", full_map_res_))
+    full_map_res_ = 0.01;
+  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
+    kf_dist_eps_  = 0.10;
+  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
+    kf_angle_eps_  = 10.0 * M_PI / 180.0;
+  
+  // **** publishers
+    
+  associations_pub_ = nh_.advertise<visualization_msgs::Marker>( 
+    "keyframe_associations", 1);
   keyframes_pub_ = nh_.advertise<PointCloudT>(
     "keyframes", 1);
   poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_poses", 1);
   edges_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_edges", 1);
-
+  
   // **** services
 
   pub_frame_service_ = nh_.advertiseService(
     "publish_keyframe", &KeyframeMapper::publishKeyframeSrvCallback, this);
   pub_frames_service_ = nh_.advertiseService(
     "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
-  recolor_service_ = nh_.advertiseService(
-    "recolor", &KeyframeMapper::recolorSrvCallback, this);
   save_kf_service_ = nh_.advertiseService(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
   save_kf_ff_service_ = nh_.advertiseService(
@@ -33,7 +50,13 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
   save_full_service_ = nh_.advertiseService(
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
-
+  add_manual_keyframe_service_ = nh_.advertiseService(
+    "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
+  generate_associations_service_ = nh_.advertiseService(
+    "generate_associations", &KeyframeMapper::generateAssociationsSrvCallback, this);
+   solve_loop_service_ = nh_.advertiseService(
+    "solve_loop", &KeyframeMapper::solveLoopSrvCallback, this);
+ 
   // **** subscribers
 
   image_transport::ImageTransport rgb_it(nh_);
@@ -51,9 +74,9 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
 KeyframeMapper::~KeyframeMapper()
 {
-
+  delete loop_solver_;
 }
-
+  
 void KeyframeMapper::RGBDCallback(
   const ImageMsg::ConstPtr& depth_msg,
   const ImageMsg::ConstPtr& rgb_msg,
@@ -74,9 +97,53 @@ void KeyframeMapper::RGBDCallback(
     return;
   }
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
-  bool result = KeyframeGenerator::processFrame(frame, transform);
+  bool result = processFrame(frame, transform);
   if (result) publishKeyframeData(keyframes_.size() - 1);
 }
+
+bool KeyframeMapper::processFrame(
+  const RGBDFrame& frame, 
+  const tf::Transform& pose)
+{
+  bool result; // if true, add new frame
+
+  if(keyframes_.empty() || manual_add_)
+  {
+    result = true;
+  }
+  else
+  {
+    double dist, angle;
+    getTfDifference(pose, keyframes_.back().pose, dist, angle);
+
+    if (dist > kf_dist_eps_ || angle > kf_angle_eps_)
+      result = true;
+    else 
+      result = false;
+  }
+
+  if (result) addKeyframe(frame, pose);
+  return result;
+}
+
+void KeyframeMapper::addKeyframe(
+  const RGBDFrame& frame, 
+  const tf::Transform& pose)
+{
+  //ROS_INFO("Adding frame");
+  RGBDKeyframe keyframe(frame);
+  keyframe.pose = pose;
+  keyframe.constructDensePointCloud();
+
+  if (manual_add_)
+  {
+    ROS_INFO("Adding frame manually");
+    manual_add_ = false;
+    keyframe.manually_added = true;
+  }
+  keyframes_.push_back(keyframe);
+}
+
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
   PublishKeyframe::Request& request,
@@ -91,34 +158,6 @@ bool KeyframeMapper::publishKeyframeSrvCallback(
   publishKeyframeData(request.id);
   publishKeyframePose(request.id);
   usleep(25000);
-
-  return true;
-}
-
-bool KeyframeMapper::recolorSrvCallback(
-  Recolor::Request&  request,
-  Recolor::Response& response)
-{
-  srand(time(NULL));
-
-  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
-  {
-    ROS_INFO("Recoloring frame %d", kf_idx);
-    RGBDKeyframe& keyframe = keyframes_[kf_idx];
-
-    int r = rand() % 255;
-    int g = rand() % 255;
-    int b = rand() % 255;
-
-    for (unsigned int pt_idx = 0; pt_idx < keyframe.cloud.points.size(); ++pt_idx)
-    {
-      PointT& p = keyframe.cloud.points[pt_idx];
-      
-      p.r = r;
-      p.g = g;
-      p.b = b;
-    }
-  }
 
   return true;
 }
@@ -297,7 +336,7 @@ bool KeyframeMapper::saveFullSrvCallback(
 
 bool KeyframeMapper::saveFullMap(const std::string& path)
 {
-  double vgf_res = 0.01;
+  double full_map_res_ = 0.01;
 
   PointCloudT::Ptr full_map(new PointCloudT());
   full_map->header.frame_id = fixed_frame_;
@@ -318,7 +357,7 @@ bool KeyframeMapper::saveFullMap(const std::string& path)
   PointCloudT full_map_f;
   pcl::VoxelGrid<PointT> vgf;
   vgf.setInputCloud(full_map);
-  vgf.setLeafSize(vgf_res, vgf_res, vgf_res);
+  vgf.setLeafSize(full_map_res_, full_map_res_, full_map_res_);
   vgf.filter(full_map_f);
 
   // write out
@@ -326,6 +365,82 @@ bool KeyframeMapper::saveFullMap(const std::string& path)
   int result_pcd = writer.writeBinary<PointT>(path + ".pcd", full_map_f);  
 
   return result_pcd;
+}
+
+bool KeyframeMapper::addManualKeyframeSrvCallback(
+  AddManualKeyframe::Request& request,
+  AddManualKeyframe::Response& response)
+{
+  manual_add_ = true;
+
+  return true;
+}
+
+bool KeyframeMapper::generateAssociationsSrvCallback(
+  GenerateAssociations::Request& request,
+  GenerateAssociations::Response& response)
+{
+  associations_.clear();
+  loop_detector_.generateKeyframeAssociations(keyframes_, associations_);
+
+  publishKeyframeAssociations();
+
+  return true;
+}
+
+bool KeyframeMapper::solveLoopSrvCallback(
+  SolveLoop::Request& request,
+  SolveLoop::Response& response)
+{
+  loop_solver_->solve(keyframes_, associations_);
+
+  publishKeyframeAssociations();
+
+  return true;
+}
+
+void KeyframeMapper::publishKeyframeAssociations()
+{
+  visualization_msgs::Marker marker;
+  marker.header.stamp = ros::Time::now();
+  marker.header.frame_id = fixed_frame_;
+  marker.ns = "RANSAC";
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  marker.points.resize(associations_.size() * 2);
+  marker.scale.x = 0.001;
+
+  marker.color.a = 1.0;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 0.0;
+
+  for (unsigned int as_idx = 0; as_idx < associations_.size(); ++as_idx)
+  {
+    // set up shortcut references
+    const KeyframeAssociation& association = associations_[as_idx];
+    int kf_idx_a = association.kf_idx_a;
+    int kf_idx_b = association.kf_idx_b;
+    RGBDKeyframe& keyframe_a = keyframes_[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes_[kf_idx_b];
+
+    int idx_start = as_idx*2;
+    int idx_end   = as_idx*2 + 1;
+
+    // start point for the edge
+    marker.points[idx_start].x = keyframe_a.pose.getOrigin().getX();  
+    marker.points[idx_start].y = keyframe_a.pose.getOrigin().getY();
+    marker.points[idx_start].z = keyframe_a.pose.getOrigin().getZ();
+
+    // end point for the edge
+    marker.points[idx_end].x = keyframe_b.pose.getOrigin().getX();  
+    marker.points[idx_end].y = keyframe_b.pose.getOrigin().getY();
+    marker.points[idx_end].z = keyframe_b.pose.getOrigin().getZ();
+  }
+
+  associations_pub_.publish(marker);
 }
 
 } // namespace ccny_rgbd

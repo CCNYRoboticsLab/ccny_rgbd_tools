@@ -1,0 +1,13 @@
+Index: g2o/solvers/cholmod/linear_solver_cholmod.h
+===================================================================
+--- g2o/solvers/cholmod/linear_solver_cholmod.h	(revision 30)
++++ g2o/solvers/cholmod/linear_solver_cholmod.h	(working copy)
+@@ -23,7 +23,7 @@
+ #include "g2o/stuff/timeutil.h"
+ #include "g2o/stuff/sparse_helper.h"
+ 
+-#include <cholmod.h>
++#include <suitesparse/cholmod.h>
+ 
+ namespace g2o {
+ 

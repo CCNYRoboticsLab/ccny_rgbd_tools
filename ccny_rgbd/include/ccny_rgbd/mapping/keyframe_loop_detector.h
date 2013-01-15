@@ -6,13 +6,8 @@
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <opencv2/nonfree/features2d.hpp>
 
-#include <ccny_gicp/gicp.h>
-#include <ccny_gicp/types.h>
-#include <ccny_gicp/gicp_align.h>
-
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/structures/keyframe_association.h"
-#include "ccny_rgbd/mapping/keyframe_generator.h"
 
 namespace ccny_rgbd
 {
@@ -30,11 +25,6 @@ class KeyframeLoopDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
 
-    bool addManualAssociation(
-      int kf_idx_a, int kf_idx_b,
-      KeyframeVector& keyframes,
-      KeyframeAssociationVector& associations);
-
    protected:
   
     ros::NodeHandle nh_;
@@ -47,6 +37,10 @@ class KeyframeLoopDetector
 
     void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
 
+    void treeAssociations(
+      KeyframeVector& keyframes,
+      KeyframeAssociationVector& associations);
+    
     void simplifiedRingAssociations(  
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
@@ -72,11 +66,6 @@ class KeyframeLoopDetector
     }
 
     void getRandomIndices(int k, int n, std::vector<int>& output);
-
-    bool pairwiseAlignGICP(
-      RGBDKeyframe& keyframe_a, RGBDKeyframe& keyframe_b,
-      const tf::Transform& initial_guess, 
-      tf::Transform& transform);
 
     void pairwiseMatchingRANSAC(
       RGBDFrame& frame_a, RGBDFrame& frame_b,

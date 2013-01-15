@@ -6,7 +6,7 @@
   <arg name="detector_type" default="GFT"/> 
 
   # ICP, ICPModel, RANSAC
-  <arg name="reg_type" default="ICP"/> 
+  <arg name="reg_type" default="ICPProbModel"/> 
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
     output="screen">

@@ -27,11 +27,6 @@ link_directories(${OPENCV_LIBRARY_DIRS})
 # boost
 rosbuild_add_boost_directories()
 
-# TORO
-add_library(toro3d STATIC IMPORTED)
-rosbuild_find_ros_package(ccny_toro)
-set_property(TARGET toro3d PROPERTY IMPORTED_LOCATION ${ccny_toro_PACKAGE_PATH}/lib/libtoro3d.a)
-
 ################################################################
 # Build libraries
 ################################################################
@@ -54,15 +49,12 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation.cpp
   src/registration/motion_estimation_icp.cpp
   src/registration/motion_estimation_icp_prob_model.cpp
-  src/registration/motion_prediction_imu.cpp
 )
 
 rosbuild_add_library (ccny_rgbd_mapping
-  src/mapping/keyframe_generator.cpp
   src/mapping/keyframe_loop_detector.cpp
   src/mapping/keyframe_loop_solver.cpp
-  src/mapping/keyframe_loop_solver_sba.cpp
-  src/mapping/keyframe_loop_solver_toro.cpp
+  src/mapping/keyframe_loop_solver_g2o.cpp
   src/mapping/octree_pointcloud_storage.cpp
 )
 
@@ -70,9 +62,12 @@ rosbuild_add_library (ccny_rgbd_util
   src/rgbd_util.cpp
 )
 
-# will link using full path
-target_link_libraries(ccny_rgbd_mapping toro3d) 
-target_link_libraries(ccny_rgbd_mapping ccny_gicp) 
+target_link_libraries(ccny_rgbd_mapping
+  cholmod
+  g2o_core
+  g2o_solver_cholmod
+  g2o_solver_csparse
+  g2o_types_slam3d)
 
 ################################################################
 # Build visual odometry application
@@ -102,23 +97,6 @@ rosbuild_add_executable(keyframe_mapper_node
   src/apps/keyframe_mapper.cpp)
 
 target_link_libraries (keyframe_mapper_node
-  ccny_rgbd_structures 
-  ccny_rgbd_mapping
-  ccny_rgbd_util
-  boost_signals 
-  boost_system
-)
-
-################################################################
-# Build keyframe loop mapper application
-################################################################
-
-rosbuild_add_executable(keyframe_loop_mapper_node 
-  src/node/keyframe_loop_mapper_node.cpp
-  src/apps/keyframe_mapper.cpp
-  src/apps/keyframe_loop_mapper.cpp)
-
-target_link_libraries (keyframe_loop_mapper_node
   ccny_rgbd_structures 
   ccny_rgbd_mapping
   ccny_rgbd_util
