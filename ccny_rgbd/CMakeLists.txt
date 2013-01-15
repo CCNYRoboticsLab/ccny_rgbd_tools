@@ -60,6 +60,7 @@ rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_loop_detector.cpp
   src/mapping/keyframe_loop_solver.cpp
   src/mapping/keyframe_loop_solver_toro.cpp
+  src/mapping/keyframe_loop_solver_g2o.cpp
   src/mapping/octree_pointcloud_storage.cpp
 )
 
@@ -69,6 +70,12 @@ rosbuild_add_library (ccny_rgbd_util
 
 # will link using full path
 target_link_libraries(ccny_rgbd_mapping toro3d) 
+target_link_libraries(ccny_rgbd_mapping
+  cholmod
+  g2o_core
+  g2o_solver_cholmod
+  g2o_solver_csparse
+  g2o_types_slam3d)
 
 ################################################################
 # Build visual odometry application

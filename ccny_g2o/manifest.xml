@@ -1,0 +1,18 @@
+<package>
+  <description brief="ccny_g2o">
+
+     Local install of g2o
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_g2o</url>
+
+  <export>
+    <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>
+  </export>
+
+</package>
+
+

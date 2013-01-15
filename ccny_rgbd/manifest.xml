@@ -13,6 +13,7 @@
   <depend package="roscpp"/>
   <depend package="pcl"/>
   <depend package="ccny_toro"/>
+  <depend package="ccny_g2o"/>
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>
