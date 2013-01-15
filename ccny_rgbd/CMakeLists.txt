@@ -27,11 +27,6 @@ link_directories(${OPENCV_LIBRARY_DIRS})
 # boost
 rosbuild_add_boost_directories()
 
-# TORO
-add_library(toro3d STATIC IMPORTED)
-rosbuild_find_ros_package(ccny_toro)
-set_property(TARGET toro3d PROPERTY IMPORTED_LOCATION ${ccny_toro_PACKAGE_PATH}/lib/libtoro3d.a)
-
 ################################################################
 # Build libraries
 ################################################################
@@ -59,7 +54,6 @@ rosbuild_add_library (ccny_rgbd_registration
 rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_loop_detector.cpp
   src/mapping/keyframe_loop_solver.cpp
-  src/mapping/keyframe_loop_solver_toro.cpp
   src/mapping/keyframe_loop_solver_g2o.cpp
   src/mapping/octree_pointcloud_storage.cpp
 )
@@ -68,8 +62,6 @@ rosbuild_add_library (ccny_rgbd_util
   src/rgbd_util.cpp
 )
 
-# will link using full path
-target_link_libraries(ccny_rgbd_mapping toro3d) 
 target_link_libraries(ccny_rgbd_mapping
   cholmod
   g2o_core

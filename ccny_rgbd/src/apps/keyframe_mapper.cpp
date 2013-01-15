@@ -12,7 +12,6 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
  
   // **** init variables
 
-  //loop_solver_ = new KeyframeLoopSolverTORO(nh, nh_private);
   loop_solver_ = new KeyframeLoopSolverG2O(nh, nh_private);
   
   // **** params
