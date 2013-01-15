@@ -6,13 +6,13 @@ namespace ccny_rgbd
 KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), 
   nh_private_(nh_private),
-  loop_detector_(nh_, nh_private_)
+  graph_detector_(nh_, nh_private_)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
  
   // **** init variables
 
-  loop_solver_ = new KeyframeLoopSolverG2O(nh, nh_private);
+  graph_solver_ = new KeyframeGraphSolverG2O(nh, nh_private);
   
   // **** params
 
@@ -54,8 +54,8 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
   generate_associations_service_ = nh_.advertiseService(
     "generate_associations", &KeyframeMapper::generateAssociationsSrvCallback, this);
-   solve_loop_service_ = nh_.advertiseService(
-    "solve_loop", &KeyframeMapper::solveLoopSrvCallback, this);
+   solve_graph_service_ = nh_.advertiseService(
+    "solve_graph", &KeyframeMapper::solveGraphSrvCallback, this);
  
   // **** subscribers
 
@@ -74,7 +74,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
 
 KeyframeMapper::~KeyframeMapper()
 {
-  delete loop_solver_;
+  delete graph_solver_;
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -381,18 +381,18 @@ bool KeyframeMapper::generateAssociationsSrvCallback(
   GenerateAssociations::Response& response)
 {
   associations_.clear();
-  loop_detector_.generateKeyframeAssociations(keyframes_, associations_);
+  graph_detector_.generateKeyframeAssociations(keyframes_, associations_);
 
   publishKeyframeAssociations();
 
   return true;
 }
 
-bool KeyframeMapper::solveLoopSrvCallback(
-  SolveLoop::Request& request,
-  SolveLoop::Response& response)
+bool KeyframeMapper::solveGraphSrvCallback(
+  SolveGraph::Request& request,
+  SolveGraph::Response& response)
 {
-  loop_solver_->solve(keyframes_, associations_);
+  graph_solver_->solve(keyframes_, associations_);
 
   publishKeyframeAssociations();
 

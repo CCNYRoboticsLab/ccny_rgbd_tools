@@ -12,11 +12,11 @@
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd/mapping/keyframe_loop_detector.h"
-#include "ccny_rgbd/mapping/keyframe_loop_solver_g2o.h"
+#include "ccny_rgbd/mapping/keyframe_graph_detector.h"
+#include "ccny_rgbd/mapping/keyframe_graph_solver_g2o.h"
 
 #include "ccny_rgbd/GenerateAssociations.h"
-#include "ccny_rgbd/SolveLoop.h"
+#include "ccny_rgbd/SolveGraph.h"
 #include "ccny_rgbd/AddManualKeyframe.h"
 #include "ccny_rgbd/PublishKeyframe.h"
 #include "ccny_rgbd/PublishAllKeyframes.h"
@@ -65,9 +65,9 @@ class KeyframeMapper
       GenerateAssociations::Request& request,
       GenerateAssociations::Response& response);
 
-    bool solveLoopSrvCallback(
-      SolveLoop::Request& request,
-      SolveLoop::Response& response);
+    bool solveGraphSrvCallback(
+      SolveGraph::Request& request,
+      SolveGraph::Response& response);
     
   protected:
 
@@ -91,7 +91,7 @@ class KeyframeMapper
     ros::Publisher associations_pub_;
     
     ros::ServiceServer generate_associations_service_;
-    ros::ServiceServer solve_loop_service_;   
+    ros::ServiceServer solve_graph_service_;   
     ros::ServiceServer pub_frames_service_;
     ros::ServiceServer pub_frame_service_;
     ros::ServiceServer save_kf_service_;
@@ -118,8 +118,8 @@ class KeyframeMapper
     // state vars
     bool manual_add_;
 
-    KeyframeLoopDetector loop_detector_;
-    KeyframeLoopSolver   * loop_solver_;
+    KeyframeGraphDetector graph_detector_;
+    KeyframeGraphSolver   * graph_solver_;
 
     KeyframeAssociationVector associations_;
     
