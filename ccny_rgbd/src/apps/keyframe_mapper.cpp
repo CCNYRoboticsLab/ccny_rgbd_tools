@@ -52,8 +52,8 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
   add_manual_keyframe_service_ = nh_.advertiseService(
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
-  generate_associations_service_ = nh_.advertiseService(
-    "generate_associations", &KeyframeMapper::generateAssociationsSrvCallback, this);
+  generate_graph_service_ = nh_.advertiseService(
+    "generate_graph", &KeyframeMapper::generateGraphSrvCallback, this);
    solve_graph_service_ = nh_.advertiseService(
     "solve_graph", &KeyframeMapper::solveGraphSrvCallback, this);
  
@@ -376,9 +376,9 @@ bool KeyframeMapper::addManualKeyframeSrvCallback(
   return true;
 }
 
-bool KeyframeMapper::generateAssociationsSrvCallback(
-  GenerateAssociations::Request& request,
-  GenerateAssociations::Response& response)
+bool KeyframeMapper::generateGraphSrvCallback(
+  GenerateGraph::Request& request,
+  GenerateGraph::Response& response)
 {
   associations_.clear();
   graph_detector_.generateKeyframeAssociations(keyframes_, associations_);

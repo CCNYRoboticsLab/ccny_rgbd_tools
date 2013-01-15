@@ -15,7 +15,7 @@
 #include "ccny_rgbd/mapping/keyframe_graph_detector.h"
 #include "ccny_rgbd/mapping/keyframe_graph_solver_g2o.h"
 
-#include "ccny_rgbd/GenerateAssociations.h"
+#include "ccny_rgbd/GenerateGraph.h"
 #include "ccny_rgbd/SolveGraph.h"
 #include "ccny_rgbd/AddManualKeyframe.h"
 #include "ccny_rgbd/PublishKeyframe.h"
@@ -61,9 +61,9 @@ class KeyframeMapper
       AddManualKeyframe::Request& request,
       AddManualKeyframe::Response& response);
     
-     bool generateAssociationsSrvCallback(
-      GenerateAssociations::Request& request,
-      GenerateAssociations::Response& response);
+     bool generateGraphSrvCallback(
+      GenerateGraph::Request& request,
+      GenerateGraph::Response& response);
 
     bool solveGraphSrvCallback(
       SolveGraph::Request& request,
@@ -90,7 +90,7 @@ class KeyframeMapper
     ros::Publisher edges_pub_;
     ros::Publisher associations_pub_;
     
-    ros::ServiceServer generate_associations_service_;
+    ros::ServiceServer generate_graph_service_;
     ros::ServiceServer solve_graph_service_;   
     ros::ServiceServer pub_frames_service_;
     ros::ServiceServer pub_frame_service_;
