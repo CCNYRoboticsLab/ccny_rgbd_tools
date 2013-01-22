@@ -25,8 +25,9 @@ void KeyframeGraphDetector::generateKeyframeAssociations(
 {
   prepareFeaturesForRANSAC(keyframes);
 
-  //simplifiedRingAssociations(keyframes, associations);
-  //ringAssociations(keyframes, associations);
+  // inserts consecutive associations from the visual odometry
+  visualOdometryAssociations(keyframes, associations);
+  
   treeAssociations(keyframes, associations);
   //manualBruteForceAssociations(keyframes, associations);
 }
@@ -55,8 +56,9 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
       keyframe.keypoints.clear();
       detector.detect(keyframe.rgb_img, keyframe.keypoints);
 
-      printf("\t[%d] %d keypoints detecting with %.1f\n", 
-        kf_idx, (int)keyframe.keypoints.size(), surf_threshold); 
+      printf("[KF %d of %d] %d SURF keypoints detected (threshold: %.1f)\n", 
+        (int)kf_idx, (int)keyframes.size(), 
+        (int)keyframe.keypoints.size(), surf_threshold); 
 
       if ((int)keyframe.keypoints.size() < desired_keypoints)
         surf_threshold /= 2.0;
@@ -83,29 +85,28 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
   }
 }
 
-// produces k random numbers in the range [0, n).
-void KeyframeGraphDetector::getRandomIndices(
-  int k, int n, std::vector<int>& output)
+void KeyframeGraphDetector::visualOdometryAssociations(
+  KeyframeVector& keyframes,
+  KeyframeAssociationVector& associations)
 {
-  // TODO: This is Monte-Carlo based random sampling, maybe
-  //       not the best way to do this
-
-  while ((int)output.size() < k)
+  for (unsigned int kf_idx_a = 0; kf_idx_a < keyframes.size()-1; ++kf_idx_a)
   {
-    int random_number = rand() % n;
-    bool duplicate = false;    
+    // determine second index, NO wrap-around
+    unsigned int kf_idx_b = kf_idx_a + 1;
 
-    for (unsigned int i = 0; i < output.size(); ++i)
-    {
-      if (output[i] == random_number)
-      {
-        duplicate = true;
-        break;
-      }
-    }
+    // set up the two keyframe references
+    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
 
-    if (!duplicate)
-      output.push_back(random_number);
+    // create an association object
+    KeyframeAssociation association;
+    
+    association.type = KeyframeAssociation::VO;    
+    association.kf_idx_a = kf_idx_a;
+    association.kf_idx_b = kf_idx_b;
+    association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;
+
+    associations.push_back(association);
   }
 }
 
@@ -120,25 +121,6 @@ void KeyframeGraphDetector::manualBruteForceAssociations(
   double min_inliers      = 20;
 
   double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
-
-  // insert time-consecutive frames
-  for (unsigned int kf_idx = 0; kf_idx < keyframes.size()-1; ++kf_idx)
-  {
-    unsigned int kf_idx_a = kf_idx;
-    unsigned int kf_idx_b = kf_idx+1;
-
-    // set up the two keyframe references
-    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
-    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
-
-    // create an association object
-    KeyframeAssociation association;
-    association.kf_idx_a = kf_idx_a;
-    association.kf_idx_b = kf_idx_b;
-    //association.matches  = inlier_matches;
-    association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;;
-    associations.push_back(association);
-  }
 
   // generate a list of all keyframe indices, for which the keyframe
   // is manually added
@@ -181,6 +163,7 @@ void KeyframeGraphDetector::manualBruteForceAssociations(
 
       // create an association object
       KeyframeAssociation association;
+      association.type = KeyframeAssociation::RANSAC;
       association.kf_idx_a = kf_idx_a;
       association.kf_idx_b = kf_idx_b;
       association.matches  = inlier_matches;
@@ -192,187 +175,6 @@ void KeyframeGraphDetector::manualBruteForceAssociations(
       printf("[RANSAC %d -> %d] FAIL (%d / %d)\n", 
         kf_idx_a, kf_idx_b,
         (int)inlier_matches.size(), (int)all_matches.size());
-    }
-  }
-}
-
-void KeyframeGraphDetector::simplifiedRingAssociations(
-  KeyframeVector& keyframes,
-  KeyframeAssociationVector& associations)
-{
-  printf("Calculating RANSAC associations using ring topology...\n");  
-
-  // params
-  double max_eucl_dist    = 0.05;
-  double max_desc_dist    = 10.0;
-  double min_inlier_ratio = 0.75;
-  double min_inliers      = 20;
-  bool   save             = true;
-  int    n_ring_neighbors = 1;      // each keyframe gets matched to n neighbors
-  
-  double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
-
-  for (unsigned int kf_idx_a = 0; kf_idx_a < keyframes.size(); ++kf_idx_a)
-  for (int n = 1; n <= n_ring_neighbors; ++n)
-  {   
-    // determine second index, with wrap-around
-    int kf_idx_b = kf_idx_a + n;
-    if (kf_idx_b >= (int)keyframes.size()) 
-      kf_idx_b -= (int)keyframes.size(); 
-
-    // set up the two keyframe references
-    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
-    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
-
-    // if time consecutive, just use vo odometry 
-
-    if (kf_idx_b - kf_idx_a == 1)
-    {
-      // create an association object
-      KeyframeAssociation association;
-      association.kf_idx_a = kf_idx_a;
-      association.kf_idx_b = kf_idx_b;
-      //association.matches  = inlier_matches;  // TODO
-      association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;
-      associations.push_back(association);
-    }
-    else
-    {
-      // perform ransac matching, b onto a
-      std::vector<cv::DMatch> all_matches, inlier_matches;
-      Eigen::Matrix4f transformation;
-
-      pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
-        max_eucl_dist_sq, max_desc_dist, min_inlier_ratio,
-        all_matches, inlier_matches, transformation);
-
-      if (inlier_matches.size() >= min_inliers)
-      {
-        printf("[RANSAC %d -> %d] OK   (%d / %d)\n", 
-          kf_idx_a, kf_idx_b,
-          (int)inlier_matches.size(), (int)all_matches.size());
-
-        // create an association object
-        KeyframeAssociation association;
-        association.kf_idx_a = kf_idx_a;
-        association.kf_idx_b = kf_idx_b;
-        association.matches  = inlier_matches;
-        association.a2b = tfFromEigen(transformation);
-        associations.push_back(association);
-    
-        // save image
-        if (save)
-        {
-          cv::Mat img_matches;
-          cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
-                          keyframe_a.rgb_img, keyframe_a.keypoints, 
-                          inlier_matches, img_matches);
-          std::stringstream ss1;
-          ss1 << kf_idx_a << "_to_" << kf_idx_b;
-          cv::imwrite("/home/idryanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
-        }
-      }
-      else
-      {
-        printf("[RANSAC %d -> %d] FAIL (%d / %d)\n", 
-          kf_idx_a, kf_idx_b,
-          (int)inlier_matches.size(), (int)all_matches.size());
-   
-        // save image
-        if (save)
-        {
-          cv::Mat img_matches;
-          cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
-                          keyframe_a.rgb_img, keyframe_a.keypoints, 
-                          all_matches, img_matches);
-          std::stringstream ss1;
-          ss1 << kf_idx_a << "_xx_" << kf_idx_b;
-          cv::imwrite("/home/idryanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
-        }
-      }
-    }
-  }
-}
-
-void KeyframeGraphDetector::ringAssociations(
-  KeyframeVector& keyframes,
-  KeyframeAssociationVector& associations)
-{
-  printf("Calculating RANSAC associations using ring topology...\n");  
-
-  // params
-  double max_eucl_dist    = 0.10;
-  double max_desc_dist    = 10.0;
-  double min_inlier_ratio = 0.75;
-  double min_inliers      = 20;
-  bool   save             = true;
-  int    n_ring_neighbors = 3;      // each keyframe gets matched to n neighbors
-  
-  double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
-
-  for (unsigned int kf_idx_a = 0; kf_idx_a < keyframes.size(); ++kf_idx_a)
-  for (int n = 1; n <= n_ring_neighbors; ++n)
-  {   
-    // determine second index, with wrap-around
-    int kf_idx_b = kf_idx_a + n;
-    if (kf_idx_b >= (int)keyframes.size()) 
-      kf_idx_b -= (int)keyframes.size(); 
-    
-    // set up the two keyframe references
-    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
-    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
-
-    // perform ransac matching, b onto a
-    std::vector<cv::DMatch> all_matches, inlier_matches;
-    Eigen::Matrix4f transformation;
-
-    pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
-      max_eucl_dist_sq, max_desc_dist, min_inlier_ratio,
-      all_matches, inlier_matches, transformation);
-
-    if (inlier_matches.size() >= min_inliers)
-    {
-      printf("[RANSAC %d -> %d] OK   (%d / %d)\n", 
-        kf_idx_a, kf_idx_b,
-        (int)inlier_matches.size(), (int)all_matches.size());
-
-      // create an association object
-      KeyframeAssociation association;
-      association.kf_idx_a = kf_idx_a;
-      association.kf_idx_b = kf_idx_b;
-      association.matches  = inlier_matches;
-      association.a2b = tfFromEigen(transformation);
-      associations.push_back(association);
-  
-      // save image
-      if (save)
-      {
-        cv::Mat img_matches;
-        cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
-                        keyframe_a.rgb_img, keyframe_a.keypoints, 
-                        inlier_matches, img_matches);
-        std::stringstream ss1;
-        ss1 << kf_idx_a << "_to_" << kf_idx_b;
-        cv::imwrite("/home/idryanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
-      }
-    }
-    else
-    {
-      printf("[RANSAC %d -> %d] FAIL (%d / %d)\n", 
-        kf_idx_a, kf_idx_b,
-        (int)inlier_matches.size(), (int)all_matches.size());
- 
-      // save image
-      if (save)
-      {
-        cv::Mat img_matches;
-        cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
-                        keyframe_a.rgb_img, keyframe_a.keypoints, 
-                        all_matches, img_matches);
-        std::stringstream ss1;
-        ss1 << kf_idx_a << "_xx_" << kf_idx_b;
-        cv::imwrite("/home/idryanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
-      }
     }
   }
 }
@@ -523,6 +325,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
 }
 
 
+
 void KeyframeGraphDetector::treeAssociations(
   KeyframeVector& keyframes,
   KeyframeAssociationVector& associations)
@@ -541,65 +344,6 @@ void KeyframeGraphDetector::treeAssociations(
   
   double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
   
-  // **********************
-  // insert consecutive
-  
-  for (unsigned int kf_idx_a = 0; kf_idx_a < keyframes.size()-1; ++kf_idx_a)
-  {
-    // determine second index, NO wrap-around
-    int kf_idx_b = kf_idx_a + 1;
-    if (kf_idx_b == keyframes.size()) kf_idx_b = 0;
-
-    // set up the two keyframe references
-    RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
-    RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
-
-    // create an association object
-    KeyframeAssociation association;
-    association.kf_idx_a = kf_idx_a;
-    association.kf_idx_b = kf_idx_b;
-    association.a2b = keyframe_a.pose.inverse() * keyframe_b.pose;
-
-    // **** inliers? determine them by simply checking NN
-    PointCloudFeature::Ptr cloud_a(new PointCloudFeature());
-    PointCloudFeature::Ptr cloud_b(new PointCloudFeature());
-       
-    pointCloudFromMeans(keyframe_a.kp_means, *cloud_a);
-    pointCloudFromMeans(keyframe_b.kp_means, *cloud_b);
-    
-    pcl::transformPointCloud(*cloud_a, *cloud_a, eigenFromTf(keyframe_a.pose));
-    pcl::transformPointCloud(*cloud_b, *cloud_b, eigenFromTf(keyframe_b.pose));   
-    
-    pcl::KdTreeFLANN<PointFeature> tree;
-    tree.setInputCloud(cloud_a);
-    
-    for (unsigned int idx_b = 0; idx_b < cloud_b->size(); ++idx_b)
-    {
-      const PointFeature& point_b = cloud_b->points[idx_b];    
-      
-      if (isnan(point_b.z)) continue;
-      
-      IntVector indices;
-      FloatVector dist_sq;  
-      indices.resize(1);
-      dist_sq.resize(1);
-      
-      int n_retrieved = tree.nearestKSearch(point_b, 1, indices, dist_sq);
-      
-      if (n_retrieved > 0 && dist_sq[0] < 0.10 * 0.10)
-      {
-        int idx_a = indices[0];
-        cv::DMatch match;
-        
-        match.queryIdx = idx_b;
-        match.trainIdx = idx_a;
-        match.distance = 0.0;
-        association.matches.push_back(match);
-      }
-    }
-    
-    associations.push_back(association);
-  }
 
   // *********************** 
   // insert tree matches
@@ -623,11 +367,11 @@ void KeyframeGraphDetector::treeAssociations(
   matcher.train();
 
   // **** lookup per frame
-  printf("Frame lookups...\n");
+  printf("Keyframe lookups...\n");
 
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
   {
-    printf("\tFrame %d of %d: \n", (int)kf_idx, (int)keyframes.size());
+    printf("[KF %d of %d]:\n", (int)kf_idx, (int)keyframes.size());
     RGBDFrame& keyframe = keyframes[kf_idx];
 
     // find k nearest matches for each feature in the keyframe
@@ -654,14 +398,14 @@ void KeyframeGraphDetector::treeAssociations(
     std::sort(bins.begin(), bins.end(), std::greater<std::pair<int, int> >());
 
     // output results
-    printf("\t\tbest matches: ");
+    printf(" - best matches: ");
     for (int b = 0; b < n_ransac_tests; ++b)
       printf("[%d(%d)] ", bins[b].second, bins[b].first);
     printf("\n");
 
     // **** find top X candidates
     
-    printf("\t\tcandidate matches: ");
+    printf(" - candidate matches: ");
     std::vector<int> ransac_candidates;
     int n_ransac_candidates_found = 0;
     for (unsigned int b = 0; b < bins.size(); ++b)
@@ -671,9 +415,8 @@ void KeyframeGraphDetector::treeAssociations(
       int corresp_count = bins[b].first;
 
       // test for order consistence
-      // (+1 to ignore consec. frames)
       // and for minimum number of keypoints
-      if (index_b > index_a + 1 && 
+      if (index_b > index_a && 
           corresp_count >= min_corresp_for_ransac_test)
       {
         ransac_candidates.push_back(index_b);
@@ -719,10 +462,11 @@ void KeyframeGraphDetector::treeAssociations(
           cv::imwrite("/home/idyanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
         }
 
-        printf("RANSAC %d -> %d: PASS\n", kf_idx_a, kf_idx_b);
+        printf(" - RANSAC %d -> %d: PASS\n", kf_idx_a, kf_idx_b);
 
         // create an association object
         KeyframeAssociation association;
+        association.type = KeyframeAssociation::RANSAC;
         association.kf_idx_a = kf_idx_a;
         association.kf_idx_b = kf_idx_b;
         association.matches  = inlier_matches;
@@ -730,8 +474,34 @@ void KeyframeGraphDetector::treeAssociations(
         associations.push_back(association);      
       }
       else  
-        printf("RANSAC %d -> %d: FAIL\n", kf_idx_a, kf_idx_b);
+        printf(" - RANSAC %d -> %d: FAIL\n", kf_idx_a, kf_idx_b);
     }
+  }
+}
+
+// produces k random numbers in the range [0, n).
+void KeyframeGraphDetector::getRandomIndices(
+  int k, int n, std::vector<int>& output)
+{
+  // TODO: This is Monte-Carlo based random sampling, maybe
+  //       not the best way to do this
+
+  while ((int)output.size() < k)
+  {
+    int random_number = rand() % n;
+    bool duplicate = false;    
+
+    for (unsigned int i = 0; i < output.size(); ++i)
+    {
+      if (output[i] == random_number)
+      {
+        duplicate = true;
+        break;
+      }
+    }
+
+    if (!duplicate)
+      output.push_back(random_number);
   }
 }
 

@@ -40,20 +40,19 @@ void KeyframeGraphSolverG2O::solve(
     const KeyframeAssociation& association = associations[as_idx];
     int from_idx = association.kf_idx_a;
     int to_idx   = association.kf_idx_b;
-    
-    int matches = association.matches.size();
-    
+        
     Eigen::Matrix<double,6,6> inf = Eigen::Matrix<double,6,6>::Identity();
     
-    if (matches == 0)
+    if (association.type == KeyframeAssociation::VO)
     {
-      // this is an odometry edge 
+      // this is a visual odometry edge 
       inf = inf * 100.0;
     }
-    else
+    else if (association.type == KeyframeAssociation::RANSAC)
     {
       // this is an SURF+RANSAC edge 
-      inf = inf * matches;
+      int n_matches = association.matches.size();
+      inf = inf * n_matches;
     }
     
     addEdge(from_idx, to_idx, eigenFromTf(association.a2b), inf);

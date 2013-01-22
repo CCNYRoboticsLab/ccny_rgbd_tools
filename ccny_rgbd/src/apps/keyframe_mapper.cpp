@@ -26,15 +26,13 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     kf_angle_eps_  = 10.0 * M_PI / 180.0;
   
   // **** publishers
-    
-  associations_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_associations", 1);
+
   keyframes_pub_ = nh_.advertise<PointCloudT>(
     "keyframes", 1);
   poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_poses", 1);
-  edges_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_edges", 1);
+  kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
+    "keyframe_associations", 1);
   
   // **** services
 
@@ -152,7 +150,7 @@ bool KeyframeMapper::publishKeyframeSrvCallback(
   
   if (kf_idx >= 0 && kf_idx < (int)keyframes_.size())
   {
-    ROS_INFO("Publishing keyframe %d\n", kf_idx);
+    ROS_INFO("Publishing keyframe %d", kf_idx);
     publishKeyframeData(kf_idx);
     publishKeyframePose(kf_idx);
     return true;
@@ -168,23 +166,25 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   PublishKeyframes::Request& request,
   PublishKeyframes::Response& response)
 {
+  // regex matching - try match the request string against each
+  // keyframe index
+  
   bool found_match = false;
+
+  boost::regex expression(request.re);
   
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     std::stringstream ss;
     ss << kf_idx;
     std::string kf_idx_string = ss.str();
-   
-    // regex matching
-    
-    boost::regex expression(request.re);
+      
     boost::smatch match;
     
     if(boost::regex_match(kf_idx_string, match, expression))
     {
       found_match = true;
-      ROS_INFO("Publishing keyframe %d\n", kf_idx);
+      ROS_INFO("Publishing keyframe %d", kf_idx);
       publishKeyframeData(kf_idx);
       publishKeyframePose(kf_idx);
       usleep(25000);
@@ -208,35 +208,70 @@ void KeyframeMapper::publishKeyframeData(int i)
   keyframes_pub_.publish(keyframe_data_ff);
 }
 
-void KeyframeMapper::publishEdges()
+void KeyframeMapper::publishKeyframeAssociations()
 {
-  visualization_msgs::Marker marker_edge;
-  marker_edge.header.stamp = ros::Time::now();
-  marker_edge.header.frame_id = fixed_frame_;
-  marker_edge.ns = "consecutive";
-  marker_edge.id = 0;
-  marker_edge.type = visualization_msgs::Marker::LINE_STRIP;
-  marker_edge.action = visualization_msgs::Marker::ADD;
+  visualization_msgs::Marker marker;
+  marker.header.stamp = ros::Time::now();
+  marker.header.frame_id = fixed_frame_;
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
 
-  marker_edge.points.resize(keyframes_.size());
-  marker_edge.scale.x = 0.001;
+  marker.points.resize(associations_.size() * 2);
+  
+  marker.color.a = 1.0;
 
-  marker_edge.color.a = 1.0;
-  marker_edge.color.r = 1.0;
-  marker_edge.color.g = 1.0;
-  marker_edge.color.b = 0.0;
-
-  for (unsigned int i = 0; i < keyframes_.size(); ++i)
+  for (unsigned int as_idx = 0; as_idx < associations_.size(); ++as_idx)
   {
-    RGBDKeyframe& keyframe = keyframes_[i];
+    // set up shortcut references
+    const KeyframeAssociation& association = associations_[as_idx];
+    int kf_idx_a = association.kf_idx_a;
+    int kf_idx_b = association.kf_idx_b;
+    RGBDKeyframe& keyframe_a = keyframes_[kf_idx_a];
+    RGBDKeyframe& keyframe_b = keyframes_[kf_idx_b];
+
+    int idx_start = as_idx*2;
+    int idx_end   = as_idx*2 + 1;
 
     // start point for the edge
-    marker_edge.points[i].x = keyframe.pose.getOrigin().getX();  
-    marker_edge.points[i].y = keyframe.pose.getOrigin().getY();
-    marker_edge.points[i].z = keyframe.pose.getOrigin().getZ();
-  }
+    marker.points[idx_start].x = keyframe_a.pose.getOrigin().getX();  
+    marker.points[idx_start].y = keyframe_a.pose.getOrigin().getY();
+    marker.points[idx_start].z = keyframe_a.pose.getOrigin().getZ();
 
-  edges_pub_.publish(marker_edge);
+    // end point for the edge
+    marker.points[idx_end].x = keyframe_b.pose.getOrigin().getX();  
+    marker.points[idx_end].y = keyframe_b.pose.getOrigin().getY();
+    marker.points[idx_end].z = keyframe_b.pose.getOrigin().getZ();
+
+    if (association.type == KeyframeAssociation::VO)
+    {
+      marker.ns = "VO";
+      marker.scale.x = 0.002;
+
+      marker.color.r = 0.0;
+      marker.color.g = 1.0;
+      marker.color.b = 0.0;
+    }
+    else if (association.type == KeyframeAssociation::RANSAC)
+    {
+      marker.ns = "RANSAC";
+      marker.scale.x = 0.002;
+      
+      marker.color.r = 1.0;
+      marker.color.g = 1.0;
+      marker.color.b = 0.0;
+    }
+
+    kf_assoc_pub_.publish(marker);
+  }
+}
+
+void KeyframeMapper::publishKeyframePoses()
+{
+  for(unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    publishKeyframePose(kf_idx);
+  }
 }
 
 void KeyframeMapper::publishKeyframePose(int i)
@@ -393,6 +428,7 @@ bool KeyframeMapper::generateGraphSrvCallback(
   associations_.clear();
   graph_detector_.generateKeyframeAssociations(keyframes_, associations_);
 
+  publishKeyframePoses();
   publishKeyframeAssociations();
 
   return true;
@@ -404,53 +440,11 @@ bool KeyframeMapper::solveGraphSrvCallback(
 {
   graph_solver_->solve(keyframes_, associations_);
 
+  publishKeyframePoses();
   publishKeyframeAssociations();
 
   return true;
 }
 
-void KeyframeMapper::publishKeyframeAssociations()
-{
-  visualization_msgs::Marker marker;
-  marker.header.stamp = ros::Time::now();
-  marker.header.frame_id = fixed_frame_;
-  marker.ns = "RANSAC";
-  marker.id = 0;
-  marker.type = visualization_msgs::Marker::LINE_LIST;
-  marker.action = visualization_msgs::Marker::ADD;
-
-  marker.points.resize(associations_.size() * 2);
-  marker.scale.x = 0.001;
-
-  marker.color.a = 1.0;
-  marker.color.r = 0.0;
-  marker.color.g = 1.0;
-  marker.color.b = 0.0;
-
-  for (unsigned int as_idx = 0; as_idx < associations_.size(); ++as_idx)
-  {
-    // set up shortcut references
-    const KeyframeAssociation& association = associations_[as_idx];
-    int kf_idx_a = association.kf_idx_a;
-    int kf_idx_b = association.kf_idx_b;
-    RGBDKeyframe& keyframe_a = keyframes_[kf_idx_a];
-    RGBDKeyframe& keyframe_b = keyframes_[kf_idx_b];
-
-    int idx_start = as_idx*2;
-    int idx_end   = as_idx*2 + 1;
-
-    // start point for the edge
-    marker.points[idx_start].x = keyframe_a.pose.getOrigin().getX();  
-    marker.points[idx_start].y = keyframe_a.pose.getOrigin().getY();
-    marker.points[idx_start].z = keyframe_a.pose.getOrigin().getZ();
-
-    // end point for the edge
-    marker.points[idx_end].x = keyframe_b.pose.getOrigin().getX();  
-    marker.points[idx_end].y = keyframe_b.pose.getOrigin().getY();
-    marker.points[idx_end].z = keyframe_b.pose.getOrigin().getZ();
-  }
-
-  associations_pub_.publish(marker);
-}
 
 } // namespace ccny_rgbd

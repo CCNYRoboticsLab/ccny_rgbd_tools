@@ -37,6 +37,10 @@ class KeyframeGraphDetector
 
     void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
 
+    void visualOdometryAssociations(
+      KeyframeVector& keyframes,
+      KeyframeAssociationVector& associations);
+    
     void treeAssociations(
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);

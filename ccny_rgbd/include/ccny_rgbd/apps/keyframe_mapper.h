@@ -88,8 +88,7 @@ class KeyframeMapper
 
     ros::Publisher keyframes_pub_;
     ros::Publisher poses_pub_;
-    ros::Publisher edges_pub_;
-    ros::Publisher associations_pub_;
+    ros::Publisher kf_assoc_pub_;
     
     ros::ServiceServer generate_graph_service_;
     ros::ServiceServer solve_graph_service_;   
@@ -130,8 +129,9 @@ class KeyframeMapper
     void publishMatchEdge(int i, int j);
     void publishKeyframeData(int i);
     void publishKeyframePose(int i);
-    void publishEdges();  
+    
     void publishKeyframeAssociations();
+    void publishKeyframePoses();
     
     bool saveFullMap(const std::string& path);
 };
