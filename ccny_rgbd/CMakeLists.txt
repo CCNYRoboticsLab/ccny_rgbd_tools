@@ -63,6 +63,9 @@ rosbuild_add_library (ccny_rgbd_util
 )
 
 target_link_libraries(ccny_rgbd_mapping
+  boost_regex)
+
+target_link_libraries(ccny_rgbd_mapping
   cholmod
   g2o_core
   g2o_solver_cholmod

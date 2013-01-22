@@ -38,10 +38,10 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   
   // **** services
 
-  pub_frame_service_ = nh_.advertiseService(
+  pub_keyframe_service_ = nh_.advertiseService(
     "publish_keyframe", &KeyframeMapper::publishKeyframeSrvCallback, this);
-  pub_frames_service_ = nh_.advertiseService(
-    "publish_keyframes", &KeyframeMapper::publishAllKeyframesSrvCallback, this);
+  pub_keyframes_service_ = nh_.advertiseService(
+    "publish_keyframes", &KeyframeMapper::publishKeyframesSrvCallback, this);
   save_kf_service_ = nh_.advertiseService(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
   save_kf_ff_service_ = nh_.advertiseService(
@@ -144,44 +144,54 @@ void KeyframeMapper::addKeyframe(
   keyframes_.push_back(keyframe);
 }
 
-
 bool KeyframeMapper::publishKeyframeSrvCallback(
   PublishKeyframe::Request& request,
   PublishKeyframe::Response& response)
 {
-  if (request.id < 0 || request.id >= (int)keyframes_.size())
+  int kf_idx = request.id;
+  
+  if (kf_idx >= 0 && kf_idx < (int)keyframes_.size())
   {
-    ROS_ERROR("request.id %d out of bounds (%d keyframes)", (int)request.id, (int)keyframes_.size());
-    return false;
+    ROS_INFO("Publishing keyframe %d\n", kf_idx);
+    publishKeyframeData(kf_idx);
+    publishKeyframePose(kf_idx);
+    return true;
   }
-
-  publishKeyframeData(request.id);
-  publishKeyframePose(request.id);
-  usleep(25000);
-
-  return true;
+  else
+  {
+    ROS_ERROR("Index out of range");
+    return false;  
+  }
 }
 
-bool KeyframeMapper::publishAllKeyframesSrvCallback(
-  PublishAllKeyframes::Request&  request,
-  PublishAllKeyframes::Response& response)
+bool KeyframeMapper::publishKeyframesSrvCallback(
+  PublishKeyframes::Request& request,
+  PublishKeyframes::Response& response)
 {
-  if (request.step <= 0)
+  bool found_match = false;
+  
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
-    ROS_ERROR("request.step has to be >= 1");
-    return false;
+    std::stringstream ss;
+    ss << kf_idx;
+    std::string kf_idx_string = ss.str();
+   
+    // regex matching
+    
+    boost::regex expression(request.re);
+    boost::smatch match;
+    
+    if(boost::regex_match(kf_idx_string, match, expression))
+    {
+      found_match = true;
+      ROS_INFO("Publishing keyframe %d\n", kf_idx);
+      publishKeyframeData(kf_idx);
+      publishKeyframePose(kf_idx);
+      usleep(25000);
+    }
   }
 
-  for (int i = 0; i < (int)keyframes_.size(); i += request.step)
-  {
-    publishKeyframeData(i);
-    publishKeyframePose(i);
-    usleep(25000);
-  }
-
-  publishEdges();
-
-  return true;
+  return found_match;
 }
 
 void KeyframeMapper::publishKeyframeData(int i)

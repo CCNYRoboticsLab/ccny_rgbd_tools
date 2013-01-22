@@ -8,6 +8,7 @@
 #include <pcl_ros/transforms.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
+#include <boost/regex.hpp>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
@@ -19,7 +20,7 @@
 #include "ccny_rgbd/SolveGraph.h"
 #include "ccny_rgbd/AddManualKeyframe.h"
 #include "ccny_rgbd/PublishKeyframe.h"
-#include "ccny_rgbd/PublishAllKeyframes.h"
+#include "ccny_rgbd/PublishKeyframes.h"
 #include "ccny_rgbd/Save.h"
 #include "ccny_rgbd/Load.h"
 
@@ -33,9 +34,9 @@ class KeyframeMapper
     KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~KeyframeMapper();
 
-    bool publishAllKeyframesSrvCallback(
-      PublishAllKeyframes::Request& request,
-      PublishAllKeyframes::Response& response);
+    bool publishKeyframesSrvCallback(
+      PublishKeyframes::Request& request,
+      PublishKeyframes::Response& response);
 
     bool publishKeyframeSrvCallback(
       PublishKeyframe::Request& request,
@@ -92,8 +93,8 @@ class KeyframeMapper
     
     ros::ServiceServer generate_graph_service_;
     ros::ServiceServer solve_graph_service_;   
-    ros::ServiceServer pub_frames_service_;
-    ros::ServiceServer pub_frame_service_;
+    ros::ServiceServer pub_keyframe_service_;
+    ros::ServiceServer pub_keyframes_service_;
     ros::ServiceServer save_kf_service_;
     ros::ServiceServer save_full_service_;
     ros::ServiceServer load_kf_service_;
