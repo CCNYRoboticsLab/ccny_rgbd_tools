@@ -36,6 +36,7 @@
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
+#include "ccny_rgbd/registration/motion_estimation_klt_prob_model.h"
 
 namespace ccny_rgbd
 {
