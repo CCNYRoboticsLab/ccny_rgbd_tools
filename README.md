@@ -1,17 +1,18 @@
 CCNY RGB-D tools 
 ===================================
 
-Ivan Dryanovski  
-CCNY Robotics Lab 2011  
-ivan.dryanovski@gmail.com  
-http://robotics.ccny.cuny.edu/  
+Copyright (C) 2013, City University of New York
+Ivan Dryanovski <ivan.dryanovski@gmail.com>
+
+CCNY Robotics Lab
+http://robotics.ccny.cuny.edu/
 
 Overview
 -----------------------------------
 
 The stack contains a tools for visual odometry and mapping using RGB-D cameras. 
 
-This code is at an experimental stage. 
+This code is at an experimental stage, and licensed under the GPLv3 license.
 
 Installing
 -----------------------------------
