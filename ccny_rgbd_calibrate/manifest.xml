@@ -9,7 +9,6 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd_calibrate</url>
   <depend package="ccny_rgbd"/>
-  <depend package="rgbd_image_proc"/>
   <depend package="roscpp"/>
   <depend package="sensor_msgs"/>
 

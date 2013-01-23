@@ -50,6 +50,9 @@ rosbuild_add_library (ccny_rgbd_features
   src/features/star_detector.cpp
 )
 
+target_link_libraries(ccny_rgbd_features
+  ${OPENCV_LIBRARIES})
+
 rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation.cpp
   src/registration/motion_estimation_icp.cpp
@@ -67,10 +70,12 @@ rosbuild_add_library (ccny_rgbd_util
   src/rgbd_util.cpp
 )
 
-target_link_libraries(ccny_rgbd_mapping
-  boost_regex)
+rosbuild_add_library (ccny_rgbd_proc_util
+  src/proc_util.cpp
+)
 
 target_link_libraries(ccny_rgbd_mapping
+  boost_regex
   cholmod
   g2o_core
   g2o_solver_cholmod
@@ -89,9 +94,7 @@ target_link_libraries (visual_odometry_node
   ccny_rgbd_structures
   ccny_rgbd_features
   ccny_rgbd_registration
-  ccny_rgbd_mapping
   ccny_rgbd_util
-  ${OPENCV_LIBRARIES}
   boost_signals 
   boost_system
 )
@@ -134,16 +137,15 @@ target_link_libraries (octree_mapper_node
 
 rosbuild_add_executable(rgbd_image_proc_node 
   src/node/rgbd_image_proc_node.cpp
-  src/apps/rgbd_image_proc.cpp
-  src/proc_util.cpp)
+  src/apps/rgbd_image_proc.cpp)
 
 rosbuild_add_library(rgbd_image_proc_nodelet
   src/nodelet/rgbd_image_proc_nodelet.cpp
-  src/apps/rgbd_image_proc.cpp
-  src/proc_util.cpp)
+  src/apps/rgbd_image_proc.cpp)
   
 target_link_libraries (rgbd_image_proc_node
   ccny_rgbd_util
+  ccny_rgbd_proc_util
   boost_signals 
   boost_system
   boost_filesystem
