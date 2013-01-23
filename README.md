@@ -1,12 +1,13 @@
 CCNY RGB-D tools 
 ===================================
 
-Copyright (C) 2013, City University of New York
-Ivan Dryanovski <ivan.dryanovski@gmail.com>
+Copyright (C) 2013, City University of New York  
+Ivan Dryanovski  
+ivan.dryanovski@gmail.com  
 
-CCNY Robotics Lab
-http://robotics.ccny.cuny.edu/
-
+CCNY Robotics Lab  
+http://robotics.ccny.cuny.edu/  
+ 
 Overview
 -----------------------------------
 
@@ -20,9 +21,9 @@ Installing
 ### From source ###
 
 Create a directory where you want the package downloaded (ex. `~/ros`), 
-and add it to `$ROS_PACKAGE_PATH`.
+and make sure it's added to your`$ROS_PACKAGE_PATH`.
 
-Make sure you have git installed:
+If you don't have git installed, do so:
 
     sudo apt-get install git-core
 
