@@ -1,6 +1,0 @@
-\subsubsection parameters ROS parameters
-
-Reads and maintains the following parameters on the ROS server
-
-- \b "~scale" : \b [double] Resampling scale min: 0.05, default: 0.5, max: 1.0
-
