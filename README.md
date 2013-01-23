@@ -43,7 +43,7 @@ Compile the stack:
 
     rosmake ccny_rgbd_tools
 
-If you get an error compiling ccny_g2o, it might be because of an incompatible g2o installation. Try removing libg2o:
+If you get an error compiling `ccny_g2o`, it might be because of an incompatible `g2o` installation. Try removing `libg2o`:
     
     sudo apt-get remove ros-fuerte-libg2o
 
