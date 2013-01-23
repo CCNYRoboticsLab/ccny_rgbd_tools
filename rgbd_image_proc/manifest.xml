@@ -9,13 +9,13 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/rgbd_image_proc</url>
   <depend package="roscpp"/>
-  <depend package="ccny_rgbd_calibrate"/>
   <depend package="ccny_rgbd"/>
   <depend package="nodelet"/>
   <depend package="message_filters"/>
   <depend package="dynamic_reconfigure" />
 
   <export>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -Wl"/> 
     <nodelet plugin="${prefix}/rgbd_image_proc_nodelet.xml" />
   </export>
   

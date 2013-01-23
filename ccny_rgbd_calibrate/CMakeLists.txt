@@ -45,6 +45,7 @@ target_link_libraries (depth_calibrator_node
   ${GSL_LIBRARIES}
   ccny_rgbd_util
   ccny_rgbd_calibrate
+  ccny_rgbd_proc_util
   boost_signals 
   boost_system
   boost_filesystem)

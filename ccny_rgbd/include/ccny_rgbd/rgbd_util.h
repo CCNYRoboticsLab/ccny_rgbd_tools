@@ -120,6 +120,40 @@ void pointCloudFromMeans(
   const Vector3fVector& means,
   PointCloudFeature& cloud);
 
+/* reprojects a depth image to another depth image,
+ * registered in the rgb camera's frame. Both images 
+ * need to be rectified first. ir2rgb is a matrix such that 
+ * for any point P_IR in the depth camera frame
+ * P_RGB = ir2rgb * P
+ */
+void buildRegisteredDepthImage(
+  const cv::Mat& intr_rect_ir,
+  const cv::Mat& intr_rect_rgb,
+  const cv::Mat& ir2rgb,
+  const cv::Mat& depth_img_rect,
+  cv::Mat& depth_img_rect_reg);
+
+/* Constructs a point cloud, given:
+ *  - a depth image (uint16_t, mm) which has been undistorted
+ *  - the intinsic matrix of the depth image after rectification
+ */
+void buildPointCloud(
+  const cv::Mat& depth_img_rect,
+  const cv::Mat& intr_rect_ir,
+  PointCloudT& cloud);
+
+/* Constructs a point cloud with color, given: 
+ *  - a depth image (uint16_t, mm) which has been undistorted 
+ *    and registeredin the rgb frame, 
+ *  - an an rgb image which has been undistorted
+ *  - the intinsic matrix of the RGB image after rectification
+ */
+void buildPointCloud(
+  const cv::Mat& depth_img_rect_reg,
+  const cv::Mat& rgb_img_rect,
+  const cv::Mat& intr_rect_rgb,
+  PointCloudT& cloud);
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_UTIL_H

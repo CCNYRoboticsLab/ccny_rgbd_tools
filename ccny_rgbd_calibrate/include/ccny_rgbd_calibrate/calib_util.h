@@ -10,52 +10,11 @@
 
 namespace ccny_rgbd {
     
-enum DepthFitMode { 
-  DEPTH_FIT_LINEAR,
-  DEPTH_FIT_LINEAR_ZERO,
-  DEPTH_FIT_QUADRATIC,
-  DEPTH_FIT_QUADRATIC_ZERO
-};
-
 cv::Mat m4(const cv::Mat& m3);
 
 cv::Mat matrixFromRT(const cv::Mat& rmat, const cv::Mat& tvec);
 
 cv::Mat matrixFromRvecTvec(const cv::Mat& rvec, const cv::Mat& tvec);
-
-/* reprojects a depth image to another depth image,
- * registered in the rgb camera's frame. Both images 
- * need to be rectified first. ir2rgb is a matrix such that 
- * for any point P_IR in the depth camera frame
- * P_RGB = ir2rgb * P
- */
-void buildRegisteredDepthImage(
-  const cv::Mat& intr_rect_ir,
-  const cv::Mat& intr_rect_rgb,
-  const cv::Mat& ir2rgb,
-  const cv::Mat& depth_img_rect,
-  cv::Mat& depth_img_rect_reg);
-
-/* Constructs a point cloud, given:
- *  - a depth image (uint16_t, mm) which has been undistorted
- *  - the intinsic matrix of the depth image after rectification
- */
-void buildPointCloud(
-  const cv::Mat& depth_img_rect,
-  const cv::Mat& intr_rect_ir,
-  PointCloudT& cloud);
-
-/* Constructs a point cloud with color, given: 
- *  - a depth image (uint16_t, mm) which has been undistorted 
- *    and registeredin the rgb frame, 
- *  - an an rgb image which has been undistorted
- *  - the intinsic matrix of the RGB image after rectification
- */
-void buildPointCloud(
-  const cv::Mat& depth_img_rect_reg,
-  const cv::Mat& rgb_img_rect,
-  const cv::Mat& intr_rect_rgb,
-  PointCloudT& cloud);
   
 /* overlays an RGB and depth image, used for 
  * testing registration
@@ -117,17 +76,6 @@ void buildCheckerboardDepthImage(
   const cv::Mat& intr_rect_depth,
   cv::Mat& depth_img);
 
-/* given a depth image, uwarps it according to a polynomial model
- * d = c0 + c1*d + c2*d^2
- */
-void unwarpDepthImage(
-  cv::Mat& depth_img_in,
-  const cv::Mat& coeff0,
-  const cv::Mat& coeff1,
-  const cv::Mat& coeff2,
-  int fit_mode=DEPTH_FIT_QUADRATIC);
-
 } // namespace ccny_rgbd
-
 
 #endif // CCNY_RGBD_CALIBRATE_CALIB_UTIL_H

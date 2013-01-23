@@ -31,6 +31,9 @@ link_directories(${OPENCV_LIBRARY_DIRS})
 # boost
 rosbuild_add_boost_directories()
 
+rosbuild_add_library(ccny_rgbd_proc_util
+  src/proc_util.cpp)
+
 rosbuild_add_executable(rgbd_image_proc_node 
   src/rgbd_image_proc_node.cpp
   src/rgbd_image_proc.cpp)
@@ -41,7 +44,7 @@ rosbuild_add_library(rgbd_image_proc_nodelet
   
 target_link_libraries (rgbd_image_proc_node
   ccny_rgbd_util
-  ccny_rgbd_calibrate
+  ccny_rgbd_proc_util
   boost_signals 
   boost_system
   boost_filesystem
@@ -50,7 +53,7 @@ target_link_libraries (rgbd_image_proc_node
 
 target_link_libraries (rgbd_image_proc_nodelet
   ccny_rgbd_util
-  ccny_rgbd_calibrate
+  ccny_rgbd_proc_util
   boost_signals 
   boost_system
   boost_filesystem

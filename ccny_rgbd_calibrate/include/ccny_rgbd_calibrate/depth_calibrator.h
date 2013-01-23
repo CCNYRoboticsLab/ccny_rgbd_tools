@@ -14,6 +14,8 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 
+
+#include <rgbd_image_proc/proc_util.h>
 #include "ccny_rgbd_calibrate/calib_util.h"
 
 namespace ccny_rgbd
