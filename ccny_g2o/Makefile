@@ -6,6 +6,7 @@ TOP_DIR = $(PWD)
 
 SVN_URL =  https://svn.openslam.org/data/svn/g2o/trunk
 SVN_REVISION = -r 30
+SVN_CMDLINE = svn --no-auth-cache --trust-server-cert --non-interactive
 
 #patch changes #include <cholmod.h> to <suitesparse/cholmod.h>
 SVN_PATCH = ./patch_suitesparse 

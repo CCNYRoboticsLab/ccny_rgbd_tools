@@ -31,14 +31,53 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
 {
   ROS_INFO("Starting RGBD Visual Odometry");
 
-  // **** init parameters
-
+  // **** initialize ROS parameters
+  
   initParams();
 
-  // **** init variables
-
+  // **** inititialize state variables
+  
   f2b_.setIdentity();
 
+  // **** publishers
+
+  odom_publisher_ = nh_.advertise<OdomMsg>(
+    "odom", 5);
+
+  // **** subscribers
+
+  image_transport::ImageTransport rgb_it(nh_);
+  image_transport::ImageTransport depth_it(nh_);
+
+  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
+  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
+  sub_info_.subscribe(nh_, "/rgbd/info", 1);
+
+  // Synchronize inputs.
+  int queue_size = 5;
+  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
+  sync_->registerCallback(boost::bind(&VisualOdometry::imageCb, this, _1, _2, _3));  
+}
+
+VisualOdometry::~VisualOdometry()
+{
+  ROS_INFO("Destroying RGBD Visual Odometry"); 
+
+  delete feature_detector_;
+}
+
+void VisualOdometry::initParams()
+{
+  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
+    fixed_frame_ = "/odom";
+  if (!nh_private_.getParam ("base_frame", base_frame_))
+    base_frame_ = "/camera_link";
+
+  if (!nh_private_.getParam ("feature/detector_type", detector_type_))
+    detector_type_ = "GFT";
+  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
+    reg_type_ = "ICP";
+  
   // feature params
   if      (detector_type_ == "ORB")
     feature_detector_ = new OrbDetector(nh_, nh_private_);
@@ -58,47 +97,6 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
-
-  // **** publishers
-
-  odom_publisher_ = nh_.advertise<OdomMsg>(
-    "odom", 5);
-
-  // **** subscribers
-
-  image_transport::ImageTransport rgb_it(nh_);
-  image_transport::ImageTransport depth_it(nh_);
-
-  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
-  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
-  sub_info_.subscribe(nh_, "/rgbd/info", 1);
-
-  // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  int queue_size = 5;
-  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
-  sync_->registerCallback(boost::bind(&VisualOdometry::imageCb, this, _1, _2, _3));  
-}
-
-VisualOdometry::~VisualOdometry()
-{
-  ROS_INFO("Destroying RGBD Visual Odometry"); 
-
-  delete feature_detector_;
-}
-
-void VisualOdometry::initParams()
-{
-  // **** frames
-
-  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
-    fixed_frame_ = "/odom";
-  if (!nh_private_.getParam ("base_frame", base_frame_))
-    base_frame_ = "/camera_link";
-
-  if (!nh_private_.getParam ("feature/detector_type", detector_type_))
-    detector_type_ = "GFT";
-  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
-    reg_type_ = "ICP";
 }
 
 void VisualOdometry::imageCb(
@@ -154,14 +152,7 @@ void VisualOdometry::imageCb(
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
-  float time = (rgb_msg->header.stamp - init_time_).toSec();
-  int model_size = motion_estimation_->getModelSize();
-
-  double pos_x = f2b_.getOrigin().getX();
-  double pos_y = f2b_.getOrigin().getY();
-  double pos_z = f2b_.getOrigin().getZ();
-
-  printf("[%d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
+  printf("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
     frame_count_,
     d_frame, 
     detector_type_.c_str(), n_features, n_valid_features, d_features, 
@@ -169,14 +160,24 @@ void VisualOdometry::imageCb(
     d_total);
 
 /*
-  // for time and model size profiling
+  // **** for time and model size profiling
+  
+  float time = (rgb_msg->header.stamp - init_time_).toSec();
+  int model_size = motion_estimation_->getModelSize();
+  
   printf("%d\t%.2f\t%2.1f\t%2.1f\t%2.1f\t%d\t%d\n",
     frame_count_, time, 
     d_frame, d_features, d_reg, 
     n_features, model_size);
 */
+
 /*
-  // for position profiling
+  // **** for position profiling
+
+  double pos_x = f2b_.getOrigin().getX();
+  double pos_y = f2b_.getOrigin().getY();
+  double pos_z = f2b_.getOrigin().getZ();
+
   printf("%d \t %.2f \t %.3f \t %.3f \t %.3f \n",
     frame_count_, time, 
     pos_x, pos_y, pos_z);
