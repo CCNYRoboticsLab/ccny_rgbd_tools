@@ -1,0 +1,1 @@
+rosrun ccny_rgbd avg_logger_node _n_depth:=300 _id:=1 

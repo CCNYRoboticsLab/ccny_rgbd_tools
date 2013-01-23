@@ -20,8 +20,8 @@
 #include <dynamic_reconfigure/server.h>
 
 #include <ccny_rgbd/rgbd_util.h>
-#include <ccny_rgbd_calibrate/calib_util.h>
 
+#include "rgbd_image_proc/proc_util.h"
 #include "rgbd_image_proc/RGBDImageProcConfig.h"
 
 namespace ccny_rgbd
