@@ -1,0 +1,21 @@
+<package>
+  <description brief="ccny_rgbd_calibrate">
+
+     ccny_rgbd_calibrate
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_rgbd_calibrate</url>
+  <depend package="ccny_rgbd"/>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -Wl"/>
+  </export>
+  
+</package>
+
+
