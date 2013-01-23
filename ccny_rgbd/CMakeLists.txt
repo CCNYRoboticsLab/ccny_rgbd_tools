@@ -16,8 +16,13 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
-# services
+# Generate services
 rosbuild_gensrv()
+
+# Generate dynamic parameters
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()
 
 # opencv
 pkg_check_modules(OPENCV REQUIRED opencv)
@@ -123,6 +128,26 @@ target_link_libraries (octree_mapper_node
   boost_system
 )
 
+################################################################
+# Build image proc application
+################################################################
 
+rosbuild_add_executable(rgbd_image_proc_node 
+  src/node/rgbd_image_proc_node.cpp
+  src/apps/rgbd_image_proc.cpp
+  src/proc_util.cpp)
+
+rosbuild_add_library(rgbd_image_proc_nodelet
+  src/nodelet/rgbd_image_proc_nodelet.cpp
+  src/apps/rgbd_image_proc.cpp
+  src/proc_util.cpp)
+  
+target_link_libraries (rgbd_image_proc_node
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
 
 

@@ -1,5 +1,5 @@
-#ifndef RGBD_IMAGE_PROC_RGBD_IMAGE_PROC_H
-#define RGBD_IMAGE_PROC_RGBD_IMAGE_PROC_H
+#ifndef CCNY_RGBD_RGBD_IMAGE_PROC_H
+#define CCNY_RGBD_RGBD_IMAGE_PROC_H
 
 #include <ros/ros.h>
 #include <boost/filesystem.hpp>
@@ -19,10 +19,9 @@
 #include <pcl_ros/point_cloud.h>
 #include <dynamic_reconfigure/server.h>
 
-#include <ccny_rgbd/rgbd_util.h>
-
-#include "rgbd_image_proc/proc_util.h"
-#include "rgbd_image_proc/RGBDImageProcConfig.h"
+#include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/proc_util.h"
+#include "ccny_rgbd/RGBDImageProcConfig.h"
 
 namespace ccny_rgbd
 {
@@ -41,7 +40,7 @@ typedef message_filters::Synchronizer<RGBDSyncPolicy> RGBDSynchronizer;
   
 typedef image_transport::Publisher ImagePublisher;
 
-typedef rgbd_image_proc::RGBDImageProcConfig ProcConfig;
+typedef RGBDImageProcConfig ProcConfig;
 typedef dynamic_reconfigure::Server<ProcConfig> ProcConfigServer;
 
 class RGBDImageProc 
@@ -132,4 +131,4 @@ class RGBDImageProc
 
 } //namespace ccny_rgbd
 
-#endif // RGBD_IMAGE_PROC_RGBD_IMAGE_PROC_H
+#endif // CCNY_RGBD_RGBD_IMAGE_PROC_H

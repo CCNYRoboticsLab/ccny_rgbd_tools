@@ -1,4 +1,4 @@
-#include "rgbd_image_proc/rgbd_image_proc.h"
+#include "ccny_rgbd/apps/rgbd_image_proc.h"
 
 namespace ccny_rgbd {
 

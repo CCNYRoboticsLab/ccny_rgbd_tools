@@ -26,6 +26,7 @@
 
   <export>
     <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib/"/>
+    <nodelet plugin="${prefix}/nodelets/rgbd_image_proc_nodelet.xml" />
   </export>
 
 </package>

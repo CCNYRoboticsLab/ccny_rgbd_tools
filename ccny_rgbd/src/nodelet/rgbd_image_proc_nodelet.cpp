@@ -1,8 +1,8 @@
-#include "rgbd_image_proc/rgbd_image_proc_nodelet.h"
+#include "ccny_rgbd/nodelet/rgbd_image_proc_nodelet.h"
 
 namespace ccny_rgbd {
 
-PLUGINLIB_DECLARE_CLASS(rgbd_image_proc, RGBDImageProcNodelet, RGBDImageProcNodelet, nodelet::Nodelet);
+PLUGINLIB_DECLARE_CLASS(ccny_rgbd, RGBDImageProcNodelet, RGBDImageProcNodelet, nodelet::Nodelet);
 
 void RGBDImageProcNodelet::onInit()
 {
