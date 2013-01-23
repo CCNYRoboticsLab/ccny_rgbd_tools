@@ -1,4 +1,4 @@
-#include "ccny_rgbd/apps/avg_logger.h"
+#include "ccny_rgbd_calibrate/avg_logger.h"
 
 int main(int argc, char** argv)
 {

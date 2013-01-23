@@ -57,3 +57,33 @@ target_link_libraries (extrinsics_calibrator_node
   boost_signals 
   boost_system
   boost_filesystem)
+
+################################################################
+# Build logger applications
+################################################################
+
+rosbuild_add_executable(logger_node 
+  src/logger_node.cpp
+  src/logger.cpp)
+
+target_link_libraries (logger_node
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
+
+rosbuild_add_executable(avg_logger_node 
+  src/avg_logger_node.cpp
+  src/avg_logger.cpp)
+
+target_link_libraries (avg_logger_node
+  ccny_rgbd_structures 
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)

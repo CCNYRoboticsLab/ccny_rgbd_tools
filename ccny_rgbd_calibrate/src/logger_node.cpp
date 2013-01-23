@@ -1,4 +1,4 @@
-#include "ccny_rgbd/apps/logger.h"
+#include "ccny_rgbd_calibrate/logger.h"
 
 int main(int argc, char** argv)
 {

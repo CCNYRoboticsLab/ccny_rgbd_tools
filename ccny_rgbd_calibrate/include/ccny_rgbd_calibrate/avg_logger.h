@@ -1,12 +1,12 @@
-#ifndef CCNY_RGBD_AVG_LOGGER_H
-#define CCNY_RGBD_AVG_LOGGER_H
+#ifndef CCNY_RGBD_CALIBRATE_AVG_LOGGER_H
+#define CCNY_RGBD_CALIBRATE_AVG_LOGGER_H
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
 
-#include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/types.h"
+#include <ccny_rgbd/structures/rgbd_frame.h>
+#include <ccny_rgbd/types.h>
 
 namespace ccny_rgbd
 {
@@ -61,4 +61,4 @@ class AvgLogger
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_AVG_LOGGER_H
+#endif // CCNY_RGBD_CALIBRATE_AVG_LOGGER_H
