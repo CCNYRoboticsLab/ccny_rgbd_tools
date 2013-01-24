@@ -83,7 +83,7 @@ References
 If you use this system in your reasearch, please cite the following paper:
 
 Ivan Dryanovski, Roberto G. Valenti, Jizhong Xiao, 
-**Fast Visual Odometry and Mapping from RGB-D Data**, 
+*Fast Visual Odometry and Mapping from RGB-D Data*, 
 2013 International Conference on Robotics and Automation (ICRA2013).
 
 More info
