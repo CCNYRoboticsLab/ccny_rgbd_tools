@@ -35,11 +35,19 @@ Install any dependencies using rosdep.
 
     rosdep install ccny_rgbd_tools
 
+Alternatively, you can manually install the dependencies by
+
+    sudo apt-get install libsuitesparse-dev
+
 Compile the stack:
 
     rosmake ccny_rgbd_tools
 
-Usage
+If you get an error compiling `ccny_g2o`, it might be because of an incompatible `g2o` installation. Try removing `libg2o`:
+    
+    sudo apt-get remove ros-fuerte-libg2o
+
+Quick usage
 -----------------------------------
 
 Connect your RGB-D camera and launch the Openni device. 
