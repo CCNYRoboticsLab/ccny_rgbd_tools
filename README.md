@@ -1,12 +1,10 @@
 CCNY RGB-D tools 
 ===================================
 
-Copyright (C) 2013, City University of New York  
-Ivan Dryanovski  
-ivan.dryanovski@gmail.com  
+Ivan Dryanovski <ivan.dryanovski@gmail.comm>
 
-CCNY Robotics Lab  
-http://robotics.ccny.cuny.edu/  
+Copyright (C) 2013, City University of New York
+CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  
 Overview
 -----------------------------------
