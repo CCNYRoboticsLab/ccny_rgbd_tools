@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file motion_estimation.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -21,15 +24,15 @@
 
 #include "ccny_rgbd/registration/motion_estimation.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-MotionEstimation::MotionEstimation(ros::NodeHandle nh, ros::NodeHandle nh_private):
+MotionEstimation::MotionEstimation(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private)
 {
   // params
-
   if (!nh_private_.getParam ("reg/min_feature_count", min_feature_count_))
     min_feature_count_ = 15;
   if (!nh_private_.getParam ("reg/motion_constraint", motion_constraint_ ))
@@ -43,8 +46,10 @@ MotionEstimation::~MotionEstimation()
 
 tf::Transform MotionEstimation::getMotionEstimation(RGBDFrame& frame)
 {
+  ///@todo this should return a covariance
+  
   // motion prediction 
-  /// @todo: motion prediction disabled for now
+  /// @todo motion prediction disabled for now
   tf::Transform prediction;
   prediction.setIdentity();
 
@@ -92,7 +97,6 @@ void MotionEstimation::constrainMotion(tf::Transform& motion)
     motion.setOrigin(p);
     motion.setRotation(q); 
   }
-
 }
 
 void MotionEstimation::setBaseToCameraTf(const tf::Transform& b2c)

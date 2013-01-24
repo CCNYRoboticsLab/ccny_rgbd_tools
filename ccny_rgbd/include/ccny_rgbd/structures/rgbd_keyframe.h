@@ -90,7 +90,7 @@ class RGBDKeyframe: public RGBDFrame
     * 
     * Saves the RGBDFrame, as well as the additional keyframe info as .yml
     * 
-    * @param frame Reference to the keyframe being saved
+    * @param keyframe Reference to the keyframe being saved
     * @param path The path to the folder where everything will be stored
     *  
     * @retval true  Successfully saved the data
@@ -103,7 +103,7 @@ class RGBDKeyframe: public RGBDFrame
     * 
     * Loads the RGBDFrame, as well as the additional keyframe info as .yml
     * 
-    * @param frame Reference to the keyframe being saved
+    * @param keyframe Reference to the keyframe being saved
     * @param path The path to the folder where everything will be stored
     *  
     * @retval true  Successfully loaded the data
