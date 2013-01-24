@@ -32,8 +32,6 @@ MotionEstimation::MotionEstimation(
   nh_private_(nh_private)
 {
   // params
-  if (!nh_private_.getParam ("reg/min_feature_count", min_feature_count_))
-    min_feature_count_ = 15;
   if (!nh_private_.getParam ("reg/motion_constraint", motion_constraint_ ))
     motion_constraint_  = 0;
 }
@@ -55,10 +53,9 @@ tf::Transform MotionEstimation::getMotionEstimation(RGBDFrame& frame)
   tf::Transform motion;
   bool result;
 
-  if (frame.n_valid_keypoints < min_feature_count_)
+  if (frame.n_valid_keypoints == 0)
   {
-    ROS_WARN("Not enough features (%d detected, min is %d)", 
-      frame.n_valid_keypoints, min_feature_count_);
+    ROS_WARN("No features detected.");
     result = false;
   }
   else
@@ -68,7 +65,7 @@ tf::Transform MotionEstimation::getMotionEstimation(RGBDFrame& frame)
 
   if (!result)
   {
-    ROS_WARN("Could not estimate motion from RGBD data, using Identity transform");
+    ROS_WARN("Could not estimate motion from RGBD data, using Identity transform.");
     motion.setIdentity();
   }
 

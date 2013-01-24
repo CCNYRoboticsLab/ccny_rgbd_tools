@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file motion_estimation_icp_prob_model.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,8 +23,7 @@
 
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
 MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, ros::NodeHandle nh_private):
   MotionEstimation(nh, nh_private),

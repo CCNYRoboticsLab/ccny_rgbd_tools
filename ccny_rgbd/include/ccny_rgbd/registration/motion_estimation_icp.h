@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file motion_estimation_icp.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,8 +32,7 @@
 #include "ccny_rgbd/structures/feature_history.h"
 #include "ccny_rgbd/registration/motion_estimation.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
 class MotionEstimationICP: public MotionEstimation
 {

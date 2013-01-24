@@ -78,13 +78,12 @@ class MotionEstimation
 
   protected:
   
-    ros::NodeHandle nh_;          ///< the public nodehandle
-    ros::NodeHandle nh_private_;  ///< the private nodehandle
+    ros::NodeHandle nh_;          ///< The public nodehandle
+    ros::NodeHandle nh_private_;  ///< The private nodehandle
 
     tf::Transform b2c_; ///< Base (moving) frame to Camera-optical frame
 
-    int min_feature_count_;   ///< minimum number of features required
-    int motion_constraint_;   ///< the motion constraint type
+    int motion_constraint_;   ///< The motion constraint type
 
     /** @brief Implementation of the motion estimation algorithm.
      * @param frame the current RGBD frame
