@@ -63,9 +63,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframes", &KeyframeMapper::publishKeyframesSrvCallback, this);
   save_kf_service_ = nh_.advertiseService(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
-  save_kf_ff_service_ = nh_.advertiseService(
-    "save_keyframes_ff", &KeyframeMapper::saveKeyframesFFSrvCallback, this);
- load_kf_service_ = nh_.advertiseService(
+  load_kf_service_ = nh_.advertiseService(
     "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
   save_full_service_ = nh_.advertiseService(
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
@@ -371,15 +369,6 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
   ROS_INFO("Saving keyframes...");
   std::string path = request.filename;
   return saveKeyframes(keyframes_, path);
-}
-
-bool KeyframeMapper::saveKeyframesFFSrvCallback(
-  Save::Request& request,
-  Save::Response& response)
-{
-  ROS_INFO("Saving keyframes (in fixed frame)...");
-  std::string path = request.filename;
-  return saveKeyframes(keyframes_, path, true);
 }
 
 bool KeyframeMapper::loadKeyframesSrvCallback(

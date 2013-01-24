@@ -71,10 +71,6 @@ class KeyframeMapper
       Save::Request& request,
       Save::Response& response);
 
-    bool saveKeyframesFFSrvCallback(
-      Save::Request& request,
-      Save::Response& response);
-
     bool loadKeyframesSrvCallback(
       Load::Request& request,
       Load::Response& response);
@@ -118,7 +114,6 @@ class KeyframeMapper
     ros::ServiceServer save_kf_service_;
     ros::ServiceServer save_full_service_;
     ros::ServiceServer load_kf_service_;
-    ros::ServiceServer save_kf_ff_service_;
     ros::ServiceServer add_manual_keyframe_service_;
 
     tf::TransformListener tf_listener_;
@@ -140,7 +135,7 @@ class KeyframeMapper
     bool manual_add_;
 
     KeyframeGraphDetector graph_detector_;
-    KeyframeGraphSolver   * graph_solver_;
+    KeyframeGraphSolver * graph_solver_;
 
     KeyframeAssociationVector associations_;
     

@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file feature_history.hpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -19,24 +22,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+namespace ccny_rgbd {
+  
 template <typename PointT>
-ccny_rgbd::FeatureHistory<PointT>::FeatureHistory():
+FeatureHistory<PointT>::FeatureHistory():
   index_(0),
   capacity_(5)
 {
 
-
 }
 
 template <typename PointT>
-ccny_rgbd::FeatureHistory<PointT>::~FeatureHistory()
-{
-
-
-}
-
-template <typename PointT>
-void ccny_rgbd::FeatureHistory<PointT>::add(const PointCloudT& cloud)
+void FeatureHistory<PointT>::add(const PointCloudT& cloud)
 {
   if (history_.size() < capacity_)
   {
@@ -55,15 +52,17 @@ void ccny_rgbd::FeatureHistory<PointT>::add(const PointCloudT& cloud)
 }
 
 template <typename PointT>
-void ccny_rgbd::FeatureHistory<PointT>::getAll(PointCloudT& cloud)
+void FeatureHistory<PointT>::getAll(PointCloudT& cloud)
 {
   for (unsigned int i=0; i < history_.size(); ++i)
     cloud += history_[i];
 }
 
 template <typename PointT>
-void ccny_rgbd::FeatureHistory<PointT>::reset()
+void FeatureHistory<PointT>::reset()
 {
   history_.clear();
   index_ = 0;
 }
+
+} // namespace ccny_rgbd

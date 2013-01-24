@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file motion_estimaton.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -28,17 +31,16 @@
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief Base class from visual odometry motion estimation methods
+ */  
 class MotionEstimation
 {
-  typedef nav_msgs::Odometry OdomMsg;
-
-  enum MotionConstraint {NONE = 0, ROLL_PITCH = 1, ROLL_PITCH_Z = 2};
-
   public:
 
+    enum MotionConstraint {NONE = 0, ROLL_PITCH = 1, ROLL_PITCH_Z = 2};
+    
     MotionEstimation(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~MotionEstimation();
 
@@ -53,7 +55,7 @@ class MotionEstimation
     ros::NodeHandle nh_;
     ros::NodeHandle nh_private_;
 
-    tf::Transform b2c_; // Base (moving) frame to Camera-optical frame
+    tf::Transform b2c_; ///< Base (moving) frame to Camera-optical frame
 
     int min_feature_count_;
     int motion_constraint_;
@@ -64,9 +66,6 @@ class MotionEstimation
       tf::Transform& motion) = 0;
 
     void constrainMotion(tf::Transform& motion);
-
-  private:
-
 };
 
 } //namespace ccny_rgbd

@@ -43,7 +43,8 @@ MotionEstimation::~MotionEstimation()
 
 tf::Transform MotionEstimation::getMotionEstimation(RGBDFrame& frame)
 {
-  // motion prediction // TODO: disable for now
+  // motion prediction 
+  /// @todo: motion prediction disabled for now
   tf::Transform prediction;
   prediction.setIdentity();
 

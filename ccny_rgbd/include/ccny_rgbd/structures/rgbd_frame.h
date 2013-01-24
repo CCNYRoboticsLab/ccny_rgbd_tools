@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file rgbd_frame.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -34,78 +37,152 @@
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-// Khoshelham, K.; Elberink, S.O. Accuracy and Resolution of Kinect 
-// Depth Data for Indoor Mapping Applications. Sensors 2012, 12, 1437-1454.
-const double Z_STDEV_CONSTANT = 0.001425;
-
+/** @brief Auxiliarry class that holds together rgb and depth images.
+ * 
+ * The class also holds the detected keypoints and their 3D distributions
+ * Keypoints, descriptos, and kp_* are index the same way and may include 
+ * invalid points. An invalid keypoint occurs when:
+ *  - no z data 
+ *  - z > threshold
+ *  - var_z > threshold
+ */
 class RGBDFrame
 {
   public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+    /** @brief Default (empty) constructor.
+     */
     RGBDFrame();
 
-    RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
-              const sensor_msgs::ImageConstPtr& depth_msg,
-              const sensor_msgs::CameraInfoConstPtr& info_msg);
-    
-    // header taken from rgb_msg
-    std_msgs::Header header;
+    /** @brief Constructor from ROS messages
+     * @param rgb_msg 8UC3 ROS image message
+     * @param depth_msg 16UC1 ROS depth message (in mm, 0 = invalid data)
+     * @param info_msg ROS camera info message, assumed no distortion, applies to both images
+     */
+    RGBDFrame(const ImageMsg::ConstPtr& rgb_msg,
+              const ImageMsg::ConstPtr& depth_msg,
+              const CameraInfoMsg::ConstPtr& info_msg);
+        
+    std_msgs::Header header; ///< Header taken from rgb_msg
+    cv::Mat rgb_img;         ///< RGB image (8UC3)
+    cv::Mat depth_img;       ///< Depth image in mm (16UC1). 0 = invalid data
 
-    // RGB image (8UC3)
-    cv::Mat rgb_img;
-  
-    // Depth image in mm (16UC1). 0 = invalid data
-    cv::Mat depth_img;
-
-    // the intrinsic matrix which applies to both images. 
-    // it's assumed that the images are already
-    // rectified and in the same camera frame(RGB)
+    /** @brief The intrinsic matrix which applies to both images. 
+     * 
+     * It's assumed that the images are already
+     * rectified and in the same camera frame(RGB)
+     */
     image_geometry::PinholeCameraModel model;
     
-    // keypoints, descriptos, and kp_* are index the same way
-    // and may inculude invalid points
-    // invalid point: no z data, or var_z > threshold
+    KeypointVector keypoints;         ///< 2D keypoint locations
+    cv::Mat        descriptors;       ///< Feature descriptor vectors
 
-    KeypointVector keypoints;         // 2D keypoint locations
-    cv::Mat        descriptors;       // feature descriptor vectors
+    BoolVector     kp_valid;          ///< Is the z data valid?
+    Vector3fVector kp_means;          ///< 1x3 mat of 3D locations
+    Matrix3fVector kp_covariances;    ///< 3x3 mat of covariances
 
-    BoolVector     kp_valid;          // is the z data valid?
-    Vector3fVector kp_means;          // 1x3 mat of 3D locations
-    Matrix3fVector kp_covariances;    // 3x3 mat of covariances
+    int n_valid_keypoints;            ///< How many keypoints have usable 3D data
 
-    int n_valid_keypoints;            // how many keypoints have usable 3D data
-
-    // PCL points, invalid kp's removed
-    // TODO: remove this from class
-    PointCloudFeature kp_cloud;
-
-    /* computes the 3D means and covariances for all the detected
-     * keypoints, and determines if tehy are valid or not
-     * TODO: do we want default values? 
+    /** @brief Computes the 3D means and covariances for all the detected keypoints.
+     *  
+     * Some features will be marked as invalid.
+     * @todo do we want default values? 
+     * @param max_z [m] features with z bigger than this will be marked as invalid
+     * @param max_stdev_z [m] features with std_dev(z) bigger than this 
+     *        will be marked as invalid
      */
     void computeDistributions(
       double max_z = 5.5,
       double max_stdev_z = 0.03);    
 
-   void constructFeaturePointCloud(PointCloudFeature& cloud);
+    /** @brief Computes the 3D means and covariances for all the valid detected keypoints.
+     * @param cloud Reference to the point cloud to be constructed
+     */  
+    void constructFeaturePointCloud(PointCloudFeature& cloud);
 
+    /** @brief Saves the RGBD frame to disk. 
+    * 
+    * Saves the RGB and depth images as png, and the header and intrinsic matrix
+    * as .yml files. Parent directory must exist prior to calling this function, or
+    * function will fail. 
+    * 
+    * @param frame Reference to the frame being saved
+    * @param path The path to the folder where everything will be stored
+    *  
+    * @retval true  Successfully saved the data
+    * @retval false Saving failed - for example, cannot create directory
+    */
+    static bool save(const RGBDFrame& frame, const std::string& path);
+
+    /** @brief Loads the RGBD frame from disk. 
+    * 
+    * Loands the RGB and depth images from png, and the header and intrinsic matrix
+    * from .yml files.  
+    * 
+    * @param frame Reference to the frame being loaded
+    * @param path The path to the folder where everything was saved.
+    *  
+    * @retval true  Successfully loaded the data
+    * @retval false Loading failed - for example, directory not found
+    */
+    static bool load(RGBDFrame& frame, const std::string& path);
+    
   protected:
 
+    /** @brief Constant for calculating std_dev(z) 
+    * 
+    * Khoshelham, K.; Elberink, S.O. Accuracy and Resolution of Kinect 
+    * Depth Data for Indoor Mapping Applications. Sensors 2012, 12, 1437-1454.
+    */
+    static const double Z_STDEV_CONSTANT = 0.001425;
+    
+    /** @brief Calculates the var(z) from z
+     * @param z the z depth, in meters
+     * @return the variance in z, in meters^2
+     */
     double getVarZ(double z);
+    
+    /** @brief Calculates the std_dev(z) from z
+     * @param z the z depth, in meters
+     * @return the standard deviation in z, in meters
+     */
     double getStdDevZ(double z);
 
+    /** @brief Calculates the z distribution (mean and variance) for a given pixel
+     * 
+     * Calculation is based on the standard quadratic model. See:
+     *
+     * Khoshelham, K.; Elberink, S.O. Accuracy and Resolution of Kinect 
+     * Depth Data for Indoor Mapping Applications. Sensors 2012, 12, 1437-1454.
+     * 
+     * @param u the pixel u-coordinate
+     * @param v the pixel v-coordinate
+     * @param z_mean the mean of the distribution (will be the same az the z of the pixel), in meters
+     * @param z_var var(z), will a quadratic function of the mean, in meters^2
+     */    
     void getGaussianDistribution(int u, int v, double& z_mean, double& z_var);
+    
+    /** @brief Calculates the GMM z distribution (mean and variance) for a given pixel
+     * 
+     * Calculation is based on a Gaussian Mixture Model on top of
+     * the standard quadratic model. The neigboring pixels contribute different
+     * wights to the mixture. See:
+     * 
+     * Dryanovski et al ICRA2013 papaer
+     * 
+     * @todo reference for the paper
+     * 
+     * @param u the pixel u-coordinate
+     * @param v the pixel v-coordinate
+     * @param z_mean the mean of the distribution (will be the same az the z of the pixel), in meters
+     * @param z_var var(z), will a quadratic function of the mean, in meters^2
+     */   
     void getGaussianMixtureDistribution(int u, int v, double& z_mean, double& z_var);
 };
-
-bool saveFrame(const RGBDFrame&, const std::string& path);
-
-bool loadFrame(RGBDFrame&, const std::string& path);
 
 } // namespace ccny_rgbd
 

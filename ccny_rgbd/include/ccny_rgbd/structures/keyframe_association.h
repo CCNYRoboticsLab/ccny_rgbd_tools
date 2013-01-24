@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file keyframe_association.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -25,25 +28,44 @@
 #include <Eigen/StdVector>
 #include <opencv2/features2d/features2d.hpp>
 
-namespace ccny_rgbd
-{
-
-enum KeyframeAssociationType {VO, RANSAC, ODOMETRY};  
+namespace ccny_rgbd {
+ 
+/** @brief Class representing an association between two keyframes,
+ * used for graph-based pose alignement.
+ * 
+ * Association types:
+ *  - VO: from visual odometry
+ *  - RANSAC: from RANSAC-based sparse feature matching
+ *  - ODOMETRY: from classical odometry sources
+ */
   
 class KeyframeAssociation
 {
   public:
  
+    /** @brief Association types
+     * 
+     *  - VO: from visual odometry
+     *  - RANSAC: from RANSAC-based sparse feature matching
+     *  - ODOMETRY: from classical odometry sources
+     */
     enum Type {VO, RANSAC, ODOMETRY};  
     
-    int kf_idx_a;                    // index of keyframe A
-    int kf_idx_b;                    // index of keyframe B
+    int kf_idx_a; ///< index of keyframe A
+    int kf_idx_b; ///< index of keyframe B
     
-    Type type;    // source of the association
+    Type type;    ///< source of the association
     
-    std::vector<cv::DMatch> matches; // for type=RANSAC, vector of RANSAC inliers
+    std::vector<cv::DMatch> matches; ///< for type=RANSAC, vector of RANSAC inliers mtaches
     
-    tf::Transform a2b;               // ???
+    /** @brief Transform between the two keyframe poses
+     * 
+     * The transform is expressed in A's coordinate frame.
+     * A and B's poses are expressed in the fixed frame.
+     * 
+     * B.pose = A.pose * a2b
+     */
+    tf::Transform a2b;               
 };
 
 typedef Eigen::aligned_allocator<KeyframeAssociation> KeyframeAssociationAllocator;

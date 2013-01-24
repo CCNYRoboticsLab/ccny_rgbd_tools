@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file rgbd_frame.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -21,17 +24,17 @@
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
 RGBDFrame::RGBDFrame()
 {
 
 }
 
-RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
-                     const sensor_msgs::ImageConstPtr& depth_msg,
-                     const sensor_msgs::CameraInfoConstPtr& info_msg)
+RGBDFrame::RGBDFrame(
+  const ImageMsg::ConstPtr& rgb_msg,
+  const ImageMsg::ConstPtr& depth_msg,
+  const CameraInfoMsg::ConstPtr& info_msg)
 {
   rgb_img   = cv_bridge::toCvShare(rgb_msg)->image;
   depth_img = cv_bridge::toCvShare(depth_msg)->image;
@@ -41,15 +44,11 @@ RGBDFrame::RGBDFrame(const sensor_msgs::ImageConstPtr& rgb_msg,
   model.fromCameraInfo(info_msg);
 }
 
-// input - z [meters]
-// output - std. dev of z  [meters] according to calibration paper
 double RGBDFrame::getStdDevZ(double z)
 {
   return Z_STDEV_CONSTANT * z * z;
 }
 
-// input - z [meters]
-// output - variance of z [meters] according to calibration paper
 double RGBDFrame::getVarZ(double z)
 {
   double std_dev_z = getStdDevZ(z);
@@ -72,7 +71,7 @@ void RGBDFrame::getGaussianDistribution(
 void RGBDFrame::getGaussianMixtureDistribution(
   int u, int v, double& z_mean, double& z_var)
 {
-  // TODO: different window sizes? based on sigma_u, sigma_v?
+  /// @todo Different window sizes? based on sigma_u, sigma_v?
   int w = 1;
 
   int u_start = std::max(u - w, 0);
@@ -120,6 +119,7 @@ void RGBDFrame::computeDistributions(
 {
   double max_var_z = max_stdev_z * max_stdev_z; // maximum allowed z variance
 
+  /// @todo These should be arguments or const static members
   double s_u = 1.0;            // uncertainty in pixels
   double s_v = 1.0;            // uncertainty in pixels
 
@@ -238,7 +238,7 @@ void RGBDFrame::constructFeaturePointCloud(
   cloud.header = header;    
 }
 
-bool saveFrame(const RGBDFrame& frame, const std::string& path)
+bool RGBDFrame::save(const RGBDFrame& frame, const std::string& path)
 {
   // set the filenames
   std::string rgb_filename    = path + "/rgb.png";
@@ -274,7 +274,7 @@ bool saveFrame(const RGBDFrame& frame, const std::string& path)
   return true;
 }
 
-bool loadFrame(RGBDFrame& frame, const std::string& path)
+bool RGBDFrame::load(RGBDFrame& frame, const std::string& path)
 {
   // set the filenames
   std::string rgb_filename    = path + "/rgb.png";

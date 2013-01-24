@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file feature_history.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -26,9 +29,13 @@
 
 #include "ccny_rgbd/rgbd_util.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief Auxiliary class for the frame-to-frame ICP class. 
+* 
+* The class implements a ring buffer of PointClouds
+*/
+  
 template <typename PointT>
 class FeatureHistory
 {
@@ -36,28 +43,53 @@ class FeatureHistory
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    typedef pcl::PointCloud<PointT>   PointCloudT;
+    typedef pcl::PointCloud<PointT> PointCloudT;
+    typedef Eigen::aligned_allocator<PointCloudT> PointCloudTAllocator;
 
+    /** @brief default constructor
+     */
     FeatureHistory();
-    ~FeatureHistory();
 
+    /** @brief Adds a feature cloud to the buffer
+     * @param cloud the cloud to be added
+     */
     void add(const PointCloudT& cloud);
+    
+    /** @brief Clears the buffer
+     */
     void reset();
 
+    /** @brief Checks if the buffer is mepty
+     *
+     * @retval true  Buffer is empty
+     * @retval false Buffer is not empty
+     */
     inline bool isEmpty() const { return history_.empty(); }
 
+    /** @brief Sets the capacity of the buffer
+     *
+     * @param capacity the desired capacity
+     */
     inline void setCapacity(unsigned int capacity) { capacity_  = capacity; }
 
+    /** @brief Get the current number of items in the buffer
+     *
+     * @return The current number of items in the buffer
+     */
     inline int getSize() const { return history_.size(); }
 
+    /** @brief Get all the buffer point clouds as a single aggregated point cloud
+     *
+     * @param cloud Reference to the PointCloud which will hold the aggregated history
+     */
     void getAll(PointCloudT& cloud);
 
   private:
 
-    unsigned int index_;
-    unsigned int capacity_;
-    std::vector<PointCloudT, Eigen::aligned_allocator<PointCloudT> > history_;
-
+    unsigned int index_;    ///< the current index in the buffer
+    unsigned int capacity_; ///< buffer capacity
+    
+    std::vector<PointCloudT, PointCloudTAllocator> history_; ///< the buffer of point clouds
 };
 
 } //namespace ccny_rgbd

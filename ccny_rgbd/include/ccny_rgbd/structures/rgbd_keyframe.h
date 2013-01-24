@@ -1,7 +1,10 @@
-/*
+/**
+ *  @file rgbd_keyframe.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
  *  CCNY Robotics Lab
  *  http://robotics.ccny.cuny.edu
  *
@@ -29,54 +32,112 @@
 
 #include "ccny_rgbd/structures/rgbd_frame.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief Extension of an RGBDFrame, which has a pose, and a 3D point cloud
+ * 
+ * The class is used for keyframe-based graph alignment, as well as dense
+ * mapping.
+ */
+  
 class RGBDKeyframe: public RGBDFrame
 {
   public:
-
+   
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+    /** @brief Default (empty) constructor.
+     */
     RGBDKeyframe();
   
+    /** @brief Copy constructor from a RGBDFrame
+     * @param frame reference to the frame which is being used to create a keyframe
+     */
     RGBDKeyframe(const RGBDFrame& frame);
   
-    tf::Transform pose;
-    PointCloudT   cloud;
+    tf::Transform pose; ///< pose of the camera, in some fixed frame
+    
+    /** @brief Dense point cloud from RGBD data.
+     * 
+     * Note that the data is epxressed in the camera frame.
+     */
+    PointCloudT cloud; 
 
-    bool manually_added;
+    bool manually_added; ///< Whether the frame was added manually by the user
 
-    double path_length_linear;
+    /** @brief path length, in meters, of the camera trajectory at the moment 
+     * of adding the keyframe
+     */ 
+    double path_length_linear; 
+    
+    /** @brief path length, in radians, of the camera trajectory at the 
+     * moment of adding the keyframe
+     */ 
     double path_length_angular;
 
-    void constructDensePointCloud(
-      double max_z = 5.5,
-      double max_stdev_z = 0.03);
+    /** @brief constructs the point cloud from the RGB and depth images
+     * @param max_z [m] points with z bigger than this will be marked as NaN
+     * @param max_stdev_z [m] points with std_dev(z) bigger than this 
+     *        will be marked as NaN
+     * 
+     * @todo do we want default values? or ROS parameters here)
+     * 
+     */ 
+    void constructDensePointCloud(double max_z = 5.5,
+                                  double max_stdev_z = 0.03);
+    
+    /** @brief Saves the RGBD keyframe to disk. 
+    * 
+    * Saves the RGBDFrame, as well as the additional keyframe info as .yml
+    * 
+    * @param frame Reference to the keyframe being saved
+    * @param path The path to the folder where everything will be stored
+    *  
+    * @retval true  Successfully saved the data
+    * @retval false Saving failed - for example, cannot create directory
+    */
+    static bool save(const RGBDKeyframe& keyframe, 
+                     const std::string& path);
+    
+    /** @brief Loads the RGBD keyframe to disk. 
+    * 
+    * Loads the RGBDFrame, as well as the additional keyframe info as .yml
+    * 
+    * @param frame Reference to the keyframe being saved
+    * @param path The path to the folder where everything will be stored
+    *  
+    * @retval true  Successfully loaded the data
+    * @retval false Loading failed - for example, directory not found
+    */
+    static bool load(RGBDKeyframe& keyframe, 
+                     const std::string& path);
 };
 
 typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
 typedef std::vector<RGBDKeyframe, KeyframeAllocator> KeyframeVector;
 
-bool saveKeyframe(
-  const RGBDKeyframe& keyframe, 
-  const std::string& path,
-  bool in_fixed_frame);
+/** @brief Saves a vector of RGBD keyframes to disk. 
+* 
+* @param keyframes Reference to the keyframe being saved
+* @param path The path to the folder where everything will be stored
+*  
+* @retval true  Successfully saved the data
+* @retval false Saving failed - for example, cannot create directory
+*/
+bool saveKeyframes(const KeyframeVector& keyframes, 
+                   const std::string& path);
 
-bool loadKeyframe(
-  RGBDKeyframe& keyframe, 
-  const std::string& path);
-
-bool saveKeyframes(
-  const KeyframeVector& keyframes, 
-  const std::string& path,
-  bool in_fixed_frame = false);
-
-bool loadKeyframes(
-  KeyframeVector& keyframes, 
-  const std::string& path);
+/** @brief Loads a vector of RGBD keyframes to disk. 
+*  
+* @param keyframes Reference to the keyframe being saved
+* @param path The path to the folder where everything will be stored
+*  
+* @retval true  Successfully saved the data
+* @retval false Saving failed - for example, cannot create directory
+*/
+bool loadKeyframes(KeyframeVector& keyframes, 
+                   const std::string& path);
 
 } //namespace ccny_rgbd
-
 
 #endif // CCNY_RGBD_RGBD_KEYFRAME_H
