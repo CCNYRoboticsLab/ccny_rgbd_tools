@@ -137,7 +137,7 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   const tf::Transform& prediction,
   tf::Transform& motion)
 {
-  //TODO: currently ignores prediction
+  /// @todo: currently ignores prediction
 
   bool result;
   Vector3fVector data_means;

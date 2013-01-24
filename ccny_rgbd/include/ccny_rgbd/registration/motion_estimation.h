@@ -5,8 +5,7 @@
  *  @section LICENSE
  * 
  *  Copyright (C) 2013, City University of New York
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -63,10 +62,6 @@ class MotionEstimation
      * @return incremental motion transform
      */    
     tf::Transform getMotionEstimation(RGBDFrame& frame);
-
-    /** @brief Default destructor
-     */    
-    virtual ~MotionEstimation();
 
     /** @brief Set the transformation between the base and camera frames.
      * @param b2c The transform from the base frame to the camera frame,
