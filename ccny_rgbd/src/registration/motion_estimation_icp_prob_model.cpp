@@ -25,7 +25,9 @@
 
 namespace ccny_rgbd {
 
-MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, ros::NodeHandle nh_private):
+MotionEstimationICPProbModel::MotionEstimationICPProbModel(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   MotionEstimation(nh, nh_private),
   model_idx_(0),
   model_size_(0)
@@ -50,8 +52,6 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
   
   if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist_eucl", max_corresp_dist_eucl_))
     max_corresp_dist_eucl_ = 0.15;
-  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist_mah", max_corresp_dist_mah_))
-    max_corresp_dist_mah_ = 10.0;
   if (!nh_private_.getParam ("reg/ICPProbModel/max_assoc_dist_mah", max_assoc_dist_mah_))
     max_assoc_dist_mah_ = 10.0;
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
@@ -66,7 +66,6 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(ros::NodeHandle nh, r
 
   // derived params
   max_corresp_dist_eucl_sq_ = max_corresp_dist_eucl_ * max_corresp_dist_eucl_;
-  max_corresp_dist_mah_sq_ =  max_corresp_dist_mah_ *  max_corresp_dist_mah_;
   max_assoc_dist_mah_sq_ = max_assoc_dist_mah_ * max_assoc_dist_mah_;
   
   model_ptr_.reset(new PointCloudFeature());
@@ -165,7 +164,6 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   {
     // align using icp 
     result = alignICPEuclidean(data_means, motion);
-    //result = alignICPMahalanobis(data_means, data_covariances, motion);
 
     if (!result) return false;
 
@@ -182,80 +180,17 @@ bool MotionEstimationICPProbModel::getMotionEstimationImpl(
   // update the model tree
   model_tree_.setInputCloud(model_ptr_);
 
+  // update the model timestamp and auxiliary info
+  model_ptr_->header.stamp = frame.header.stamp;
+  model_ptr_->width = model_ptr_->points.size();
+
+  // publish data for visualization
   if (publish_model_)
-  {
-    // update model pointcloud and publish
-    model_ptr_->header.stamp = frame.header.stamp;
-    model_ptr_->width = model_ptr_->points.size();
     model_publisher_.publish(model_ptr_);
-  }
   if (publish_model_cov_)
     publishCovariances();
 
   return result;
-}
-
-bool MotionEstimationICPProbModel::alignICPMahalanobis(
-  const Vector3fVector& data_means_in,
-  const Matrix3fVector& data_covariances_in,
-  tf::Transform& correction)
-{
-  pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
-
-  Vector3fVector data_means(data_means_in);
-  Matrix3fVector data_covariances(data_covariances_in);
-
-  // initialize the result transform
-  Eigen::Matrix4f final_transformation; 
-  final_transformation.setIdentity();
-  
-  // create a point cloud from the means
-  PointCloudFeature data_cloud;
-  pointCloudFromMeans(data_means, data_cloud);
-
-  for (int iteration = 0; iteration < max_iterations_; ++iteration)
-  {    
-    // get corespondences
-    IntVector data_indices, model_indices;
-    getCorrespMahalanobis(data_means, data_covariances, data_indices, model_indices);
-   
-    if ((int)data_indices.size() <  min_correspondences_)
-    {
-      ROS_WARN("[ICP] Not enough correspondences (%d of %d minimum). Leacing ICP loop",
-        (int)data_indices.size(),  min_correspondences_);
-      return false;
-    }
-
-    // estimae transformation
-    Eigen::Matrix4f transformation; 
-    svd.estimateRigidTransformation (data_cloud, data_indices,
-                                     *model_ptr_, model_indices,
-                                     transformation);
-    
-    // rotate   
-    pcl::transformPointCloud(data_cloud, data_cloud, transformation);
-    
-    // transform distributions to world frame
-    transformDistributions(data_means, data_covariances, tfFromEigen(transformation));
-       
-    // accumulate incremental tf
-    final_transformation = transformation * final_transformation;
-
-    // check for convergence
-    double linear, angular;
-    getTfDifference(
-      tfFromEigen(transformation), linear, angular);
-    if (linear  < tf_epsilon_linear_ &&
-        angular < tf_epsilon_angular_)
-    {
-      //printf("(%f %f) conv. at [%d] leaving loop\n", 
-      //  linear*1000.0, angular*10.0*180.0/3.14, iteration);
-      break; 
-    }
-  }
-  
-  correction = tfFromEigen(final_transformation);
-  return true;
 }
 
 bool MotionEstimationICPProbModel::alignICPEuclidean(
@@ -312,37 +247,6 @@ bool MotionEstimationICPProbModel::alignICPEuclidean(
   
   correction = tfFromEigen(final_transformation);
   return true;
-}
-
-void MotionEstimationICPProbModel::getCorrespMahalanobis(
-  const Vector3fVector& data_means,
-  const Matrix3fVector& data_covariances,
-  IntVector& data_indices,
-  IntVector& model_indices)
-{
-  IntVector indices;
-  FloatVector dists_sq;
-
-  indices.resize(n_nearest_neighbors_);
-  dists_sq.resize(n_nearest_neighbors_);
-
-  for (unsigned int data_idx = 0; data_idx < data_means.size(); ++data_idx)
-  {
-    const Vector3f data_mean = data_means[data_idx];
-    const Matrix3f data_cov  = data_covariances[data_idx];
-    
-    int mah_nn_idx;
-    double mah_dist_sq;
-    
-    bool nn_result = getNNMahalanobis(
-      data_mean, data_cov, mah_nn_idx, mah_dist_sq, indices, dists_sq);
-
-    if (nn_result && mah_dist_sq < max_corresp_dist_mah_sq_)
-    {
-      data_indices.push_back(data_idx);
-      model_indices.push_back(mah_nn_idx);
-    }
-  }  
 }
 
 void MotionEstimationICPProbModel::getCorrespEuclidean(
@@ -513,7 +417,7 @@ void MotionEstimationICPProbModel::publishCovariances()
   // create markers
   visualization_msgs::Marker marker;
   marker.header.frame_id = fixed_frame_;
-  marker.header.stamp = ros::Time::now(); //FIXME - correct timestamp
+  marker.header.stamp = model_ptr_->header.stamp;
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.color.r = 1.0;
   marker.color.g = 1.0;
@@ -606,7 +510,7 @@ bool MotionEstimationICPProbModel::loadSrvCallback(
 
 bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
 {
-// FIXME - load and save eigen
+  /// @todo save means and covariances 
 /*
   // save as OpenCV yml matrix
   std::string filename_yml = filename + ".yml";
@@ -623,13 +527,13 @@ bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
   pcl::PCDWriter writer;
   int result_pcd = writer.writeBinary<PointFeature>(filename_pcd, *model_ptr_);
 
-  return (result_pcd == 0); // TODO: also OpenCV result
+  return (result_pcd == 0); 
 }
 
 bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
 {
-// FIXME - load and save eigen
-/*
+  /// @todo load means and covariances 
+  /*
   // load OpenCV yml matrix
   std::string filename_yml = filename + ".yml";
 
@@ -638,7 +542,7 @@ bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
   fs["covariances"] >> covariances_;
   fs["model_idx"] >> model_idx_;
   fs["model_size"] >> model_size_;
-*/
+  */
 
   // load pcd
   std::string filename_pcd = filename + ".pcd";
@@ -649,7 +553,7 @@ bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
   // update the model tree
   model_tree_.setInputCloud(model_ptr_);
 
-  return (result_pcd == 0); // TODO: also OpenCV result
+  return (result_pcd == 0);
 }
 
 } // namespace ccny_rgbd

@@ -23,10 +23,11 @@
 
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-MotionEstimationICP::MotionEstimationICP(ros::NodeHandle nh, ros::NodeHandle nh_private):
+MotionEstimationICP::MotionEstimationICP(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   MotionEstimation(nh, nh_private)
 {
   // *** init params  
@@ -85,7 +86,7 @@ bool MotionEstimationICP::getMotionEstimationImpl(
   const tf::Transform& prediction,
   tf::Transform& motion)
 {
-  // TODO: ignores prediction
+  /// @todo ignores prediction
   bool result;
  
   // **** create a data cloud from the means

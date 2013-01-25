@@ -24,6 +24,7 @@
 
 #include <Eigen/Core>
 #include <pcl/point_types.h>
+#include <pcl/kdtree/kdtree_flann.h>
 #include <sensor_msgs/image_encodings.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
@@ -61,6 +62,8 @@ typedef image_transport::SubscriberFilter ImageSubFilter;
 typedef message_filters::Subscriber<CameraInfoMsg> CameraInfoSubFilter;
 typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg> SyncPolicy;
 typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
+
+typedef pcl::KdTreeFLANN<PointFeature> KdTree;
 
 } // namespace ccny_rgbd
 

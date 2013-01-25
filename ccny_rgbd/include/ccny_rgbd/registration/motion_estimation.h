@@ -89,7 +89,6 @@ class MotionEstimation
      * @param frame the current RGBD frame
      * @param prediction the motion prediction (currently ignored)
      * @param motion the output motion
-     * 
      * @retval true the motion estimation was successful
      * @retval false the motion estimation failed
      */

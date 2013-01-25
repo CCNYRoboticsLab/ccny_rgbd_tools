@@ -32,33 +32,63 @@
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <visualization_msgs/Marker.h>
 
+#include "ccny_rgbd/types.h"
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/Save.h"
 #include "ccny_rgbd/Load.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
 class MotionEstimationICPProbModel: public MotionEstimation
 {
-  typedef pcl::KdTreeFLANN<PointFeature> KdTree;
-
   public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    MotionEstimationICPProbModel(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    /** @brief Constructor from ROS noehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private notehandle
+     */
+    MotionEstimationICPProbModel(
+      const ros::NodeHandle& nh, 
+      const ros::NodeHandle& nh_private);
+    
+    /** @brief Default destructor
+     */    
     virtual ~MotionEstimationICPProbModel();
 
+    /** @brief Main method for estimating the motion given an RGBD frame
+     * @param frame the current RGBD frame
+     * @param prediction the predicted motion (currently ignored)
+     * @param motion the (output) incremental motion, wrt the fixed frame
+     * @retval true the motion estimation was successful
+     * @retval false the motion estimation failed
+     */
     bool getMotionEstimationImpl(
       RGBDFrame& frame,
       const tf::Transform& prediction,
       tf::Transform& motion);
   
+    /** @brief Returns the number of points in the model built from the feature buffer
+     * @returns number of points in model
+     */
     int getModelSize() const { return model_size_; }
 
+    /** @brief ROS service to save model to a file
+     * @param request ROS service request
+     * @param response ROS service response
+     * @retval true saved succesfully
+     * @retval false saving failed
+     */
     bool saveSrvCallback(ccny_rgbd::Save::Request& request,
                          ccny_rgbd::Save::Response& response);
+    
+    /** @brief ROS service to load model to a file
+     * @param request ROS service request
+     * @param response ROS service response
+     * @retval true loaded succesfully
+     * @retval false loading failed
+     */
     bool loadSrvCallback(ccny_rgbd::Save::Request& request,
                          ccny_rgbd::Save::Response& response);
 
@@ -66,95 +96,185 @@ class MotionEstimationICPProbModel: public MotionEstimation
 
     // **** ros
 
-    ros::Publisher model_publisher_;
-    ros::Publisher covariances_publisher_;
-    ros::ServiceServer save_service_;
-    ros::ServiceServer load_service_;
+    ros::Publisher model_publisher_;        ///< The publisher for the model point cloud
+    ros::Publisher covariances_publisher_;  ///< The publisher for the covariance markers
+    ros::ServiceServer save_service_;       ///< Service to save the model to file
+    ros::ServiceServer load_service_;       ///< Service to load the model from file
 
     // **** params
 
-    std::string fixed_frame_; 
-    std::string base_frame_;
+    std::string fixed_frame_;     ///< The fixed frame (usually odom)
+    std::string base_frame_;      ///< The moving frame (usually camera_link or base_link)
 
-    int max_iterations_;
-    int min_correspondences_;
-    int n_nearest_neighbors_; // for searching for mah NN
-    int max_model_size_;      // bound for how many features to store in the model
-
-    double tf_epsilon_linear_;   
-    double tf_epsilon_angular_;
-
-    double max_assoc_dist_mah_;
-    double max_corresp_dist_mah_;
-    double max_corresp_dist_eucl_;
+    int max_iterations_;        ///< Maximum number of ICP iterations
+    int min_correspondences_;   ///< Minimum number of correspondences for ICP to contuinue
     
-    bool publish_model_;      // for visualization
-    bool publish_model_cov_;  // for visualization
+    /** @brief How many euclidean neighbors to go through, in a brute force
+     * search of the closest Mahalanobis neighbor.
+     */
+    int n_nearest_neighbors_;  
+    
+    /** @brief Upper bound for how many features to store in the model.
+     * 
+     * New features added beyond thi spoint will overwrite old features
+     */
+    int max_model_size_;
 
-    // derived
-    double max_assoc_dist_mah_sq_;
-    double max_corresp_dist_mah_sq_;
+    double tf_epsilon_linear_;     ///< Linear convergence criteria for ICP
+    double tf_epsilon_angular_;    ///< Angular convergence criteria for ICP
+
+    /** @brief Maximum Mahalanobis distance for associating points
+     * between the data and the model
+     */
+    double max_assoc_dist_mah_;    
+
+    /** @brief Maximum Euclidean correspondce distance for ICP
+     */
+    double max_corresp_dist_eucl_; 
+    
+    /** @brief If true, model point cloud will be published for visualization.
+     * 
+     * Note that this might slow down performance
+     */
+    bool publish_model_;
+    
+    /** @brief If true, covariance markers will be published for visualization.
+     * 
+     * Note that this might slow down performance
+     */
+    bool publish_model_cov_;
+
+    /** @brief Maximum squared Mahalanobis distance for associating points
+     * between the data and the model, derived.
+     */
+    double max_assoc_dist_mah_sq_;    
+    
+    /** @brief Maximum Euclidean correspondce distance for ICP, derived
+     */
     double max_corresp_dist_eucl_sq_;
 
     // **** variables
 
-    PointCloudFeature::Ptr model_ptr_;   
-    int model_idx_;         // current intex in the ring buffer
-    int model_size_;        // current model size
-    Vector3fVector means_;
-    Matrix3fVector covariances_;
+    PointCloudFeature::Ptr model_ptr_; ///< The model point cloud
+    int model_idx_;         ///< Current intex in the ring buffer
+    int model_size_;        ///< Current model size
+    Vector3fVector means_;  ///< Vector of model feature mean
+    Matrix3fVector covariances_; ///< Vector of model feature covariances
 
-    KdTree model_tree_;
+    KdTree model_tree_;     ///< Kdtree of model_ptr_
 
-    Matrix3f I_;
+    Matrix3f I_;            ///< 3x3 Identity matrix
     
-    tf::Transform f2b_; // Fixed frame to Base (moving) frame
+    tf::Transform f2b_; ///< Transform from fixed to moving frame
     
     // ***** funtions
   
+    /** @brief Performs ICP alignment using the Euclidean distance for corresopndences
+     * @param data_means a vector of 3x1 matrices, repesenting the 3D positions of the features
+     * @param correction reference to the resulting transformation
+     * @retval true the motion estimation was successful
+     * @retval false the motion estimation failed
+     */
     bool alignICPEuclidean(
       const Vector3fVector& data_means,
       tf::Transform& correction);
 
-    bool alignICPMahalanobis(
-      const Vector3fVector& data_means_in,
-      const Matrix3fVector& data_covariances_in,
-      tf::Transform& correction);
-
+    /** @brief Performs ICP alignment using the Euclidean distance for corresopndences
+     * @param data_cloud a pointcloud of the 3D positions of the features
+     * @param data_indices reference to a vector containting the resulting data indices
+     * @param model_indices reference to a vector containting the resulting model indices
+     */
     void getCorrespEuclidean(
       const PointCloudFeature& data_cloud,
       IntVector& data_indices,
-      IntVector& model_indices);
-    
-    void getCorrespMahalanobis(
-      const Vector3fVector& data_means,
-      const Matrix3fVector& data_covariances,
-      IntVector& data_indices,
-      IntVector& model_indices);
+      IntVector& model_indices); 
  
+    /** @brief Finds the nearest Euclidean neighbor
+     * @param data_point the query 3D data point
+     * @param eucl_nn_idx reference to the resulting nearest neigbor index in the model
+     * @param eucl_dist_sq reference to the resulting squared distance
+     * @retval true a neighbor was found
+     * @retval false a neighbor was not found
+     */
     bool getNNEuclidean(
       const PointFeature& data_point,
       int& eucl_nn_idx, double& eucl_dist_sq);
 
+    /** @brief Finds the nearest Mahalanobis neighbor
+     * 
+     * Requests the K nearest Euclidean neighbors (K = n_nearest_neighbors_)
+     * using a kdtree, and performs a brute force search for the closest
+     * Mahalanobis nighbor. Reasonable values for K are 4 or 8.
+     * 
+     * @param data_mean 3x1 matrix of the query 3D data point mean
+     * @param data_cov 3x3 matrix of the query 3D data point covariance
+     * @param mah_nn_idx reference to the resulting nearest neigbor index in the model
+     * @param mah_dist_sq reference to the resulting squared Mahalanobis distance
+     * @param indices cache vector, pre-allocated with n_nearest_neighbors_ size
+     * @param indices cache vector, pre-allocated with n_nearest_neighbors_ size
+     * @retval true a neighbor was found
+     * @retval false a neighbor was not found
+     */
     bool getNNMahalanobis(
       const Vector3f& data_mean, const Matrix3f& data_cov,
       int& mah_nn_idx, double& mah_dist_sq,
       IntVector& indices, FloatVector& dists_sq);
 
-    void updateModelFromData(const Vector3fVector& data_means,
-                             const Matrix3fVector& data_covariances);
-  
+    /** @brief Initializes the (empty) model from a set of data means and
+     * covariances
+     * @param data_means vector of 3x1 data point means
+     * @param data_covariances vector of 3x3 data point covariances
+     */
     void initializeModelFromData(
       const Vector3fVector& data_means,
       const Matrix3fVector& data_covariances);
-
+    
+    /** @brief Updates the (non-empty) model from a set of data means and
+     * covariances
+     * 
+     * Any data points which have a Mahalanobis neighbor in the model
+     * under a certain threshold distance get updated using a Kalman filter. 
+     * 
+     * Any data points without a Mahalanobis neighbor get insterted as new 
+     * model points.
+     * 
+     * @param data_means vector of 3x1 data point means
+     * @param data_covariances vector of 3x3 data point covariances
+     */
+    void updateModelFromData(const Vector3fVector& data_means,
+                             const Matrix3fVector& data_covariances);
+  
+    /** @brief Adds a new point to the model
+     * 
+     * The model is implemented using a rign buffer. If the number of 
+     * points in the model has reached the maximum, the new point will 
+     * overwrite the oldest model point
+     * 
+     * @param data_mean 3x1 data point means
+     * @param data_covariance 3x3 data point covariances
+     */
     void addToModel(
       const Vector3f& data_mean,
       const Matrix3f& data_cov);
 
+    /** @brief Publish covariance markers of the mdoel for visualization
+     */
     void publishCovariances();
     
+    /** @brief ROS service to save model to a file
+     * @todo this is only saving the point cloud, not the actual distributions
+     * @param filename filename to save mdoel to
+     * @retval true saved succesfully
+     * @retval false saving failed
+     */
     bool saveModel(const std::string& filename);
+    
+    /** @brief ROS service to load model from a file
+     * @todo this is only saving the point cloud, not the actual distributions
+     * @param filename ifilename to load model from
+     * @retval true loaded succesfully
+     * @retval false loading failed
+     */
     bool loadModel(const std::string& filename);
 };
 
