@@ -1,6 +1,6 @@
 /**
  *  @file feature_history.h
- *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
  * 

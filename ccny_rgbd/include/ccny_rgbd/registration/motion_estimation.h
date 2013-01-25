@@ -1,6 +1,6 @@
 /**
  *  @file motion_estimation.h
- *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
  * 
@@ -32,7 +32,7 @@
 
 namespace ccny_rgbd {
 
-/** @brief Base class from visual odometry motion estimation methods
+/** @brief Base class for visual odometry motion estimation methods
  * 
  * The motion is estimated in increments of the change of pose
  * of the base frame. The increments are expressed wrt fixed frame.
@@ -44,6 +44,8 @@ class MotionEstimation
     enum MotionConstraint {NONE = 0, ROLL_PITCH = 1, ROLL_PITCH_Z = 2};
     
     /** @brief Constructor from ROS nodehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private nodehandle
      */    
     MotionEstimation(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private);
     

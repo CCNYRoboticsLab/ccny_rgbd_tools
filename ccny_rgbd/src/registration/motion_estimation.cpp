@@ -1,6 +1,6 @@
 /**
  *  @file motion_estimation.cpp
- *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
  * 

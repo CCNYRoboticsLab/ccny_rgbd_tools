@@ -1,6 +1,6 @@
 /**
  *  @file rgbd_frame.cpp
- *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
  * 

@@ -1,6 +1,6 @@
 /**
  *  @file motion_estimation_icp_prob_model.cpp
- *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
  * 

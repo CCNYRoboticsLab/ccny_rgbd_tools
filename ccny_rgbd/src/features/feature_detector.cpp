@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file feature_detector.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +23,11 @@
 
 #include "ccny_rgbd/features/feature_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-FeatureDetector::FeatureDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
+FeatureDetector::FeatureDetector(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), nh_private_(nh_private)
 {
   if (!nh_private_.getParam ("feature/compute_descriptors", compute_descriptors_))
@@ -51,7 +54,7 @@ FeatureDetector::FeatureDetector(ros::NodeHandle nh, ros::NodeHandle nh_private)
   if (publish_covariances_)
   {
     covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
-      "/covariances", 1);
+      "covariances", 1);
   }
 }
 
@@ -200,5 +203,35 @@ double FeatureDetector::getMaxStDev() const
 {
   return max_stdev_;
 } 
+
+bool FeatureDetector::getShowKeypoints() const
+{
+  return show_keypoints_;
+}
+
+bool FeatureDetector::getPublishFeatures() const
+{
+  return publish_features_;  
+}
+
+bool FeatureDetector::getPublishCovariances() const
+{
+  return publish_covariances_;
+}
+
+void FeatureDetector::setShowKeypoints(bool show_keypoints)
+{
+  show_keypoints_ = show_keypoints;
+}
+
+void FeatureDetector::setPublishFeatures(bool publish_features)
+{
+  publish_features_ = publish_features;
+}
+
+void FeatureDetector::setPublishCovariances(bool publish_covariances)
+{
+  publish_covariances_ = publish_covariances;
+}
 
 } //namespace

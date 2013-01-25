@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file gft_detector.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,36 +25,45 @@
 #define CCNY_RGBD_GFT_DETECTOR_H
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/video/tracking.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-#include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/features/feature_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief GoodFeaturesToTrack detector
+ */  
 class GftDetector: public FeatureDetector
 {
   public:
 
-    GftDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    /** @brief Constructor from ROS nodehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private nodehandle
+     */    
+    GftDetector(const ros::NodeHandle& nh, 
+                const ros::NodeHandle& nh_private);
+    
+    /** @brief Default destructor
+     */    
     ~GftDetector();
 
+    /** @brief Implementation of the feature detector.
+     * @param frame the input frame
+     * @param input_img the image for feature detection, derived from the
+     *        RGB image of the frame after (optional) blurring
+     */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
   private:
 
-    int n_features_;
-    double min_distance_;
-    int grid_cells_;
+    int n_features_;      ///< the number of desired features
+    double min_distance_; ///< the minimum distance (in pixels) between the features
 
-    cv::GoodFeaturesToTrackDetector * gft_detector_;
-    cv::GridAdaptedFeatureDetector * grid_detector_;
+    cv::GoodFeaturesToTrackDetector * gft_detector_; ///< OpenCV GTF detector object
 };
 
 } //namespace ccny_rgbd
-
-
 
 #endif // CCNY_RGBD_GFT_DETECTOR_H

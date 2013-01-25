@@ -1,6 +1,6 @@
 /**
  *  @file motion_estimation_icp_prob_model.h
- *  @author Ivan Dryanovski <ivan.dryanovski@gmail.comm>
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
  * 
@@ -211,7 +211,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
      * @param mah_nn_idx reference to the resulting nearest neigbor index in the model
      * @param mah_dist_sq reference to the resulting squared Mahalanobis distance
      * @param indices cache vector, pre-allocated with n_nearest_neighbors_ size
-     * @param indices cache vector, pre-allocated with n_nearest_neighbors_ size
+     * @param dists_sq cache vector, pre-allocated with n_nearest_neighbors_ size
      * @retval true a neighbor was found
      * @retval false a neighbor was not found
      */
@@ -251,7 +251,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
      * overwrite the oldest model point
      * 
      * @param data_mean 3x1 data point means
-     * @param data_covariance 3x3 data point covariances
+     * @param data_cov 3x3 data point covariances
      */
     void addToModel(
       const Vector3f& data_mean,
