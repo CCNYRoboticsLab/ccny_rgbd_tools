@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file star_detector.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,14 +23,20 @@
 
 #include "ccny_rgbd/features/star_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-StarDetector::StarDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
+StarDetector::StarDetector(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   FeatureDetector(nh, nh_private)
 {
+  if (!nh_private_.getParam ("feature/STAR/threshold", threshold_))
+    threshold_ = 15;
+  if (!nh_private_.getParam ("feature/STAR/min_distance", min_distance_))
+    min_distance_ = 1.0;
+    
   star_detector_ = new cv::StarFeatureDetector(
-    16, 15, 10, 8, 3);
+    16, threshold_, 10, 8, min_distance_);
 }
 
 StarDetector::~StarDetector()
@@ -38,6 +46,8 @@ StarDetector::~StarDetector()
 
 void StarDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 {
+  boost::mutex::scoped_lock(mutex_);
+  
   cv::Mat mask(frame.depth_img.size(), CV_8UC1);
   frame.depth_img.convertTo(mask, CV_8U);
 

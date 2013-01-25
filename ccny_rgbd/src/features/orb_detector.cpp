@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file orb_detector.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,19 +23,20 @@
 
 #include "ccny_rgbd/features/orb_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-OrbDetector::OrbDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
+OrbDetector::OrbDetector(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   FeatureDetector(nh, nh_private)
 {
   if (!nh_private_.getParam ("feature/ORB/n_features", n_features_))
     n_features_ = 200;
-  if (!nh_private_.getParam ("feature/ORB/edge_threshold", edge_threshold_))
-    edge_threshold_ = 31.0;
+  if (!nh_private_.getParam ("feature/ORB/threshold", threshold_))
+    threshold_ = 31.0;
 
   orb_detector_ = new cv::OrbFeatureDetector(
-	  n_features_, 1.2f, 8, edge_threshold_, 0, 2, 0, 31);
+    n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31);
 }
 
 OrbDetector::~OrbDetector()
@@ -43,6 +46,8 @@ OrbDetector::~OrbDetector()
 
 void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 {
+  boost::mutex::scoped_lock(mutex_);
+  
   cv::Mat mask(frame.depth_img.size(), CV_8UC1);
   frame.depth_img.convertTo(mask, CV_8U);
 
@@ -55,30 +60,34 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 
 void OrbDetector::setThreshold(int threshold)
 {
-  edge_threshold_ = threshold;
+  boost::mutex::scoped_lock(mutex_);
+  
+  threshold_ = threshold;
 
   delete orb_detector_;
 
   orb_detector_ = new cv::OrbFeatureDetector(
-	  n_features_, 1.2f, 8, edge_threshold_, 0, 2,0, 31);
+    n_features_, 1.2f, 8, threshold_, 0, 2,0, 31);
 }
 
-int OrbDetector::getThreshold() const
+void OrbDetector::setNFeatures(int n_features)
 {
-  return edge_threshold_;
-}
-
-void OrbDetector::setNFeatures(unsigned int n_features)
-{
+  boost::mutex::scoped_lock(mutex_);
+  
   n_features_ = n_features;
 
   delete orb_detector_;
 
   orb_detector_ = new cv::OrbFeatureDetector(
-	  n_features_, 1.2f, 8, edge_threshold_, 0, 2,0, 31);
+    n_features_, 1.2f, 8, threshold_, 0, 2,0, 31);
 }
 
-unsigned int OrbDetector::getNFeatures() const
+int OrbDetector::getThreshold() const
+{
+  return threshold_;
+}
+
+int OrbDetector::getNFeatures() const
 {
   return n_features_;
 }

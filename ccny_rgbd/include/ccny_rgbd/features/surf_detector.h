@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file surf_detector.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,32 +26,43 @@
 
 #include <opencv2/nonfree/features2d.hpp>
 
-#include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/features/feature_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief SURF detector
+*/  
 class SurfDetector: public FeatureDetector
 {
   public:
 
-    SurfDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    /** @brief Constructor from ROS nodehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private nodehandle
+     */    
+    SurfDetector(const ros::NodeHandle& nh, 
+                 const ros::NodeHandle& nh_private);
+        
+    /** @brief Default destructor
+     */   
     ~SurfDetector();
 
+    /** @brief Implementation of the feature detector.
+     * @param frame the input frame
+     * @param input_img the image for feature detection, derived from the
+     *        RGB image of the frame after (optional) blurring
+     */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
   private:
 
-    double hessian_threshold_;
-    bool upright_;
+    double threshold_;    ///< threshold for detection
 
-    cv::SurfDescriptorExtractor surf_descriptor_;
-    cv::SurfFeatureDetector * surf_detector_;
+    cv::SurfFeatureDetector * surf_detector_;     ///< OpenCV feature detector object
+    cv::SurfDescriptorExtractor surf_descriptor_; ///< OpenCV descriptor extractor object
 };
 
 } //namespace ccny_rgbd
-
-
 
 #endif // CCNY_RGBD_SURF_DETECTOR_H

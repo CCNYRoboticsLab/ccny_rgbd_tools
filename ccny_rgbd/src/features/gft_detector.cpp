@@ -23,8 +23,7 @@
 
 #include "ccny_rgbd/features/gft_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
 GftDetector::GftDetector(
   const ros::NodeHandle& nh, 

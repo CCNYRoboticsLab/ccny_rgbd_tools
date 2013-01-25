@@ -153,7 +153,7 @@ bool MotionEstimationICP::alignICPEuclidean(
   const Vector3fVector& data_means,
   tf::Transform& correction)
 {
-  pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
+  TransformationEstimationSVD svd;
 
   // create a point cloud from the means
   PointCloudFeature data_cloud;

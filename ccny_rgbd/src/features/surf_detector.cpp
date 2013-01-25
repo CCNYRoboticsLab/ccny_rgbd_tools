@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file surf_detector.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,19 +23,18 @@
 
 #include "ccny_rgbd/features/surf_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-SurfDetector::SurfDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
+SurfDetector::SurfDetector(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   FeatureDetector(nh, nh_private)
 {
-  if (!nh_private_.getParam ("feature/SURF/hessian_threshold", hessian_threshold_))
-    hessian_threshold_ = 400.0;
-  if (!nh_private_.getParam ("feature/SURF/upright", upright_))
-    upright_ = false;
+  if (!nh_private_.getParam ("feature/SURF/threshold", threshold_))
+    threshold_ = 400.0;
 
   surf_detector_ = new cv::SurfFeatureDetector(
-    hessian_threshold_, 4, 2, true, upright_);
+    threshold_, 4, 2, true, false);
 }
 
 SurfDetector::~SurfDetector()

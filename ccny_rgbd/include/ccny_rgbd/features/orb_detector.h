@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file orb_detector.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,37 +24,65 @@
 #ifndef CCNY_RGBD_ORB_DETECTOR_H
 #define CCNY_RGBD_ORB_DETECTOR_H
 
-#include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/features/feature_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief ORB detector
+*/  
 class OrbDetector: public FeatureDetector
 {
   public:
 
-    OrbDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    /** @brief Constructor from ROS nodehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private nodehandle
+     */    
+    OrbDetector(const ros::NodeHandle& nh, 
+                const ros::NodeHandle& nh_private);
+  
+    /** @brief Default destructor
+     */    
     ~OrbDetector();
 
-    void setThreshold(int threshold);
-    int getThreshold() const;
-    void setNFeatures(unsigned int n_features);
-    unsigned int getNFeatures() const;
-
+    /** @brief Implementation of the feature detector.
+     * @param frame the input frame
+     * @param input_img the image for feature detection, derived from the
+     *        RGB image of the frame after (optional) blurring
+     */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
+    
+    /** @brief Sets the detection threshold
+     * @param threshold the detection threshold
+     */
+    void setThreshold(int threshold);
+    
+    /** @brief Sets the number of desired features
+     * @param n_features number of desired features
+     */
+    void setNFeatures(int n_features);
+    
+    /** @brief Returns the detection threshold
+     * @return the detection threshold
+     */
+    inline int getNFeatures() const;
+    
+    /** @brief Returns the number of desired features
+     * @return the number of desired features
+     */
+    inline int getThreshold() const;
 
   private:
 
-    int n_features_;
-    double edge_threshold_;
+    boost::mutex mutex_;    ///< mutex to lock detector during async calls
+    int n_features_;        ///< number of desired features
+    double threshold_;      ///< threshold for detection
     
-    cv::OrbDescriptorExtractor orb_descriptor_;
-    cv::OrbFeatureDetector * orb_detector_;
+    cv::OrbDescriptorExtractor orb_descriptor_; ///< OpenCV feature detector object
+    cv::OrbFeatureDetector * orb_detector_;     ///< OpenCV descriptor extractor object
 };
 
 } //namespace ccny_rgbd
-
-
 
 #endif // CCNY_RGBD_ORB_DETECTOR_H

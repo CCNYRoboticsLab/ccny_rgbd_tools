@@ -25,6 +25,7 @@
 #include <Eigen/Core>
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 #include <sensor_msgs/image_encodings.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
@@ -64,6 +65,7 @@ typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, Came
 typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
 
 typedef pcl::KdTreeFLANN<PointFeature> KdTree;
+typedef pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> TransformationEstimationSVD; 
 
 } // namespace ccny_rgbd
 

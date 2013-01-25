@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file keyframe_grapph_detector.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +23,11 @@
 
 #include "ccny_rgbd/mapping/keyframe_graph_detector.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-KeyframeGraphDetector::KeyframeGraphDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
+KeyframeGraphDetector::KeyframeGraphDetector(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private)
 {
@@ -33,6 +36,10 @@ KeyframeGraphDetector::KeyframeGraphDetector(ros::NodeHandle nh, ros::NodeHandle
   // params
   if (!nh_private_.getParam ("graph/max_ransac_iterations", max_ransac_iterations_))
     max_ransac_iterations_ = 2000;
+  if (!nh_private_.getParam ("graph/save_ransac_results", save_ransac_results_))
+    save_ransac_results_ = false;
+  if (!nh_private_.getParam ("graph/ransac_results_path", ransac_results_path_))
+    ransac_results_path_ = std::getenv("HOME");
 }
 
 KeyframeGraphDetector::~KeyframeGraphDetector()
@@ -59,7 +66,6 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
   double init_surf_threshold = 400.0;
   double min_surf_threshold = 25;
   int desired_keypoints = 200;
-  bool save = true;
 
   printf("preparing SURF features for RANSAC associations...\n");  
 
@@ -86,13 +92,13 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
       else break;
     }
 
-    if (save)
+    if (save_ransac_results_)
     {
       cv::Mat kp_img;
       cv::drawKeypoints(keyframe.rgb_img, keyframe.keypoints, kp_img);
       std::stringstream ss1;
       ss1 << "kp_" << kf_idx;
-      cv::imwrite("/home/idryanov/ros/images/ransac/" + ss1.str() + ".png", kp_img);
+      cv::imwrite(ransac_results_path_ + "/" + ss1.str() + ".png", kp_img);
     }
 
     // TODO: not sure what's best here, reuse frame members, or make new ones
@@ -345,8 +351,6 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
   //printf("\tInlier matches: %d\n", best_n_inliers);
 }
 
-
-
 void KeyframeGraphDetector::treeAssociations(
   KeyframeVector& keyframes,
   KeyframeAssociationVector& associations)
@@ -356,7 +360,6 @@ void KeyframeGraphDetector::treeAssociations(
   double max_desc_dist    = 1.0;
   double min_inlier_ratio = 1.0;
   double min_inliers      = 30;
-  bool   save             = true;
  
   // tree matching params
   int k_nn = 15;                        // look for X nearest neighbors
@@ -365,7 +368,6 @@ void KeyframeGraphDetector::treeAssociations(
   
   double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
   
-
   // *********************** 
   // insert tree matches
   
@@ -471,7 +473,7 @@ void KeyframeGraphDetector::treeAssociations(
 
       if (inlier_matches.size() >= min_inliers)
       {
-        if (save)
+        if (save_ransac_results_)
         {
           cv::Mat img_matches;
           cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
@@ -480,7 +482,7 @@ void KeyframeGraphDetector::treeAssociations(
 
           std::stringstream ss1;
           ss1 << kf_idx_a << "_to_" << kf_idx_b;
-          cv::imwrite("/home/idyanov/ros/images/ransac/" + ss1.str() + ".png", img_matches);
+          cv::imwrite(ransac_results_path_ + "/" + ss1.str() + ".png", img_matches);
         }
 
         printf(" - RANSAC %d -> %d: PASS\n", kf_idx_a, kf_idx_b);

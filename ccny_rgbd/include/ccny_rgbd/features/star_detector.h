@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file star_detector.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,31 +27,39 @@
 #include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/rgbd_util.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief STAR detector
+*/  
 class StarDetector: public FeatureDetector
 {
   public:
 
-    StarDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    /** @brief Constructor from ROS nodehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private nodehandle
+     */    
+    StarDetector(const ros::NodeHandle& nh, 
+                 const ros::NodeHandle& nh_private);
+    
+    /** @brief Default destructor
+     */   
     ~StarDetector();
 
-    /*
-    void setThreshold(int threshold);
-    int getThreshold() const;
-    void setNFeatures(unsigned int n_features);
-    unsigned int getNFeatures() const;
-    */
-
+    /** @brief Implementation of the feature detector.
+     * @param frame the input frame
+     * @param input_img the image for feature detection, derived from the
+     *        RGB image of the frame after (optional) blurring
+     */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
   private:
 
-    //int n_features_;
-    //double edge_threshold_; 
-
-    cv::FeatureDetector * star_detector_;
+    boost::mutex mutex_;  ///< mutex to lock detector during async calls   
+    double min_distance_; ///< the minimum distance (in pixels) between the features
+    double threshold_;    ///< threshold for detection
+    
+    cv::FeatureDetector * star_detector_; ///< OpenCV detector class
 };
 
 } //namespace ccny_rgbd

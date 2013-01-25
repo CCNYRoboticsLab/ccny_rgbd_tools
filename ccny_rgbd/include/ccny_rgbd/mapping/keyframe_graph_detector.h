@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file keyframe_grapph_detector.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,24 +24,24 @@
 #ifndef CCNY_RGBD_KEYFRAME_GRAPH_DETECTOR_H
 #define CCNY_RGBD_KEYFRAME_GRAPH_DETECTOR_H
 
-#include <tf/transform_datatypes.h>
 #include <boost/thread/mutex.hpp>
+#include <tf/transform_datatypes.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <opencv2/nonfree/features2d.hpp>
 
+#include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/structures/keyframe_association.h"
 
-namespace ccny_rgbd
-{
-
-typedef pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> TransformationEstimationSVD; 
+namespace ccny_rgbd {
 
 class KeyframeGraphDetector
 {
   public:
 
-    KeyframeGraphDetector(ros::NodeHandle nh, ros::NodeHandle nh_private);
+    KeyframeGraphDetector(const ros::NodeHandle& nh, 
+                          const ros::NodeHandle& nh_private);
+    
     virtual ~KeyframeGraphDetector();
 
     void generateKeyframeAssociations(
@@ -55,6 +57,8 @@ class KeyframeGraphDetector
 
     // parameters
     int max_ransac_iterations_;
+    bool save_ransac_results_;
+    std::string ransac_results_path_;
 
     void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
 
@@ -100,8 +104,6 @@ class KeyframeGraphDetector
       std::vector<cv::DMatch>& all_matches,
       std::vector<cv::DMatch>& best_inlier_matches,
       Eigen::Matrix4f& best_transformation);
-
-    //void bruteForceAssociations();
 };
 
 } // namespace ccny_rgbd

@@ -34,7 +34,6 @@
 #include "ccny_rgbd/registration/motion_estimation.h"
 
 namespace ccny_rgbd {
-
   
 /** @brief Frame-to-frame ICP motion estimation
  * 
