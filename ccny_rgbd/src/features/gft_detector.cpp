@@ -26,7 +26,9 @@
 namespace ccny_rgbd
 {
 
-GftDetector::GftDetector(ros::NodeHandle nh, ros::NodeHandle nh_private):
+GftDetector::GftDetector(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   FeatureDetector(nh, nh_private)
 {
   if (!nh_private_.getParam ("feature/GFT/n_features", n_features_))
