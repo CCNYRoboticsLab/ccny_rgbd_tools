@@ -44,7 +44,7 @@ tf::Transform tfFromEigen(Eigen::Matrix4f trans)
             trans(1,0),trans(1,1),trans(1,2),
             trans(2,0),trans(2,1),trans(2,2));
   tf::Transform ret;
-  ret.setOrigin(btVector3(trans(0,3),trans(1,3),trans(2,3)));
+  ret.setOrigin(tf::Vector3(trans(0,3),trans(1,3),trans(2,3)));
   ret.setBasis(btm);
   return ret;
 }
