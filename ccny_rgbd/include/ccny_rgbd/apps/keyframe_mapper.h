@@ -172,10 +172,9 @@ class KeyframeMapper
      * @param rgb_msg RGB message (8UC3)
      * @param info_msg CameraInfo message, applies to both RGB and depth images
      */
-    virtual void RGBDCallback(
-      const ImageMsg::ConstPtr& depth_msg,
-      const ImageMsg::ConstPtr& rgb_msg,
-      const CameraInfoMsg::ConstPtr& info_msg);
+    virtual void RGBDCallback(const ImageMsg::ConstPtr& rgb_msg,
+                              const ImageMsg::ConstPtr& depth_msg,
+                              const CameraInfoMsg::ConstPtr& info_msg);
 
   private:
 

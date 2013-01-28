@@ -54,11 +54,11 @@ KeyframeMapper::KeyframeMapper(
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
-    "keyframes", 1);
+    "keyframes", queue_size_);
   poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_poses", 1);
+    "keyframe_poses", queue_size_);
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_associations", 1);
+    "keyframe_associations", queue_size_);
   
   // **** services
 
@@ -81,18 +81,18 @@ KeyframeMapper::KeyframeMapper(
  
   // **** subscribers
 
-  image_transport::ImageTransport rgb_it(nh_);
-  image_transport::ImageTransport depth_it(nh_);
+  ImageTransport rgb_it(nh_);
+  ImageTransport depth_it(nh_);
 
+  sub_rgb_.subscribe(rgb_it,     "/rgbd/rgb",   queue_size_);
   sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
-  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", queue_size_);
-  sub_info_.subscribe(nh_, "/rgbd/info", queue_size_);
+  sub_info_.subscribe(nh_,       "/rgbd/info",  queue_size_);
 
   // Synchronize inputs.
   sync_.reset(new RGBDSynchronizer3(
                 RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
    
-   sync_->registerCallback(boost::bind(&KeyframeMapper::RGBDCallback, this, _1, _2, _3));  
+  sync_->registerCallback(boost::bind(&KeyframeMapper::RGBDCallback, this, _1, _2, _3));  
 }
 
 KeyframeMapper::~KeyframeMapper()
@@ -101,8 +101,8 @@ KeyframeMapper::~KeyframeMapper()
 }
   
 void KeyframeMapper::RGBDCallback(
-  const ImageMsg::ConstPtr& depth_msg,
   const ImageMsg::ConstPtr& rgb_msg,
+  const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
 {
   tf::StampedTransform transform;

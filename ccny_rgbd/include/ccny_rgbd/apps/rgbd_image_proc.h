@@ -72,11 +72,17 @@ class RGBDImageProc
      */
     virtual ~RGBDImageProc();
 
-    void RGBDCallback(  
-      const ImageMsg::ConstPtr& rgb_msg,
-      const ImageMsg::ConstPtr& depth_msg,
-      const CameraInfoMsg::ConstPtr& rgb_inf_msg,
-      const CameraInfoMsg::ConstPtr& depth_info_msg);
+    /** @brief Main RGBD callback
+     * 
+     * @param rgb_msg RGB message (8UC3)
+     * @param depth_msg Depth message (16UC1, in mm)
+     * @param rgb_info_msg CameraInfo message, applies to RGB image
+     * @param depth_info_msg CameraInfo message, applies to RGB image
+     */
+    void RGBDCallback(const ImageMsg::ConstPtr& rgb_msg,
+                      const ImageMsg::ConstPtr& depth_msg,
+                      const CameraInfoMsg::ConstPtr& rgb_info_msg,
+                      const CameraInfoMsg::ConstPtr& depth_info_msg);
 
   private:
 
