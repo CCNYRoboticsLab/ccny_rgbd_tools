@@ -33,6 +33,8 @@ RGBDImageProc::RGBDImageProc(
   initialized_(false)
 { 
   // parameters 
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
   if (!nh_private_.getParam("scale", scale_))
     scale_ = 1.0;
   if (!nh_private_.getParam("unwarp", unwarp_))

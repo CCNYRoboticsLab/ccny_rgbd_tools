@@ -26,35 +26,18 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/image_encodings.h>
-#include <std_msgs/Time.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/TwistStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
-#include <pcl/point_types.h>
-#include <pcl/io/io.h>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/correspondence_estimation.h>
-#include <pcl/registration/correspondence_rejection_sample_consensus.h>
-#include <pcl_ros/point_cloud.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
-#include <image_geometry/pinhole_camera_model.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
-
 #include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/features/orb_detector.h"
 #include "ccny_rgbd/features/surf_detector.h"
 #include "ccny_rgbd/features/gft_detector.h"
 #include "ccny_rgbd/features/star_detector.h"
-
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"

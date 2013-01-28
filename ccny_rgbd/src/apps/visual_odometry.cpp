@@ -1,5 +1,5 @@
 /**
- *  @file visual_odometry.cpp
+ *  @file rgbd_image_proc.cpp
  *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
@@ -24,8 +24,6 @@
 #include "ccny_rgbd/apps/visual_odometry.h"
 
 namespace ccny_rgbd {
-
-using namespace message_filters::sync_policies;
   
 VisualOdometry::VisualOdometry(
   const ros::NodeHandle& nh, 
