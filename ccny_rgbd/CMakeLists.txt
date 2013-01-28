@@ -136,4 +136,14 @@ target_link_libraries (rgbd_image_proc_node
   ${OPENCV_LIBRARIES}
 )
 
+#supress pcl-1.6 pragma warnings
+rosbuild_add_compile_flags(ccny_rgbd_structures '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_util '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_registration '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_mapping '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_features '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(keyframe_mapper_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(rgbd_image_proc_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(rgbd_image_proc_nodelet '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(visual_odometry_node '-Wno-unknown-pragmas')
 
