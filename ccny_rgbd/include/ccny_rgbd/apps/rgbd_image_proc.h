@@ -86,31 +86,30 @@ class RGBDImageProc
 
   private:
 
-    ros::NodeHandle nh_;
-    ros::NodeHandle nh_private_;
+    ros::NodeHandle nh_;          ///< the public nodehandle
+    ros::NodeHandle nh_private_;  ///< the private nodehandle
 
-    boost::shared_ptr<RGBDSynchronizer4> sync_;
+    boost::shared_ptr<RGBDSynchronizer4> sync_; ///< ROS 4-topic synchronizer
        
-    // image transport for rgb and depth
-    ImageTransport rgb_image_transport_;
-    ImageTransport depth_image_transport_;
+    ImageTransport rgb_image_transport_;    ///< ROS image transport for rgb message
+    ImageTransport depth_image_transport_;  ///< ROS image transport for depth message
     
-    ImageSubFilter      sub_rgb_;
-    ImageSubFilter      sub_depth_;
+    ImageSubFilter sub_rgb_;   ///< ROS subscriber for rgb message
+    ImageSubFilter sub_depth_; ///< ROS subscriber for depth message
 
-    CameraInfoSubFilter sub_rgb_info_;
-    CameraInfoSubFilter sub_depth_info_;
+    CameraInfoSubFilter sub_rgb_info_;   ///< ROS subscriber for rgb camera info
+    CameraInfoSubFilter sub_depth_info_; ///< ROS subscriber for depth camera info
     
-    ImagePublisher rgb_publisher_;
-    ImagePublisher depth_publisher_;
-    ros::Publisher info_publisher_;
-    ros::Publisher cloud_publisher_;
+    ImagePublisher rgb_publisher_;      ///< ROS rgb image publisher
+    ImagePublisher depth_publisher_;    ///< ROS depth image publisher
+    ros::Publisher info_publisher_;     ///< ROS camera info publisher
+    ros::Publisher cloud_publisher_;    ///< ROS PointCloud publisher
     
-    ProcConfigServer config_server_;
+    ProcConfigServer config_server_;    ///< ROS dynamic reconfigure server
     
     // parameters
     
-    int queue_size_;
+    int queue_size_;                    ///< ROS subscriber (and publisher) queue size parameter
     
     std::string calib_path_;
     std::string calib_extr_filename_;
