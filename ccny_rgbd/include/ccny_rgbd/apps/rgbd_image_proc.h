@@ -60,10 +60,16 @@ class RGBDImageProc
   
   public:
 
+    /** @brief Constructor from ROS nodehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private nodehandle
+     */  
     RGBDImageProc(
       const ros::NodeHandle& nh, 
       const ros::NodeHandle& nh_private);
     
+    /** @brief Default destructor
+     */
     virtual ~RGBDImageProc();
 
     void RGBDCallback(  

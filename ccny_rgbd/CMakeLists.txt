@@ -135,5 +135,3 @@ target_link_libraries (rgbd_image_proc_node
   boost_filesystem
   ${OPENCV_LIBRARIES}
 )
-
-
