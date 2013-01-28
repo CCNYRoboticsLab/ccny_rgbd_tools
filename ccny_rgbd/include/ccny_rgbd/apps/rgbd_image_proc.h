@@ -40,37 +40,38 @@
 #include <pcl_ros/point_cloud.h>
 #include <dynamic_reconfigure/server.h>
 
+#include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/proc_util.h"
 #include "ccny_rgbd/RGBDImageProcConfig.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-typedef image_geometry::PinholeCameraModel PinholeCameraModel;
-typedef image_transport::ImageTransport ImageTransport;
-  
-typedef sensor_msgs::Image ImageMsg;
-typedef sensor_msgs::CameraInfo CameraInfoMsg;
-
-typedef image_transport::SubscriberFilter ImageSubFilter;
-typedef message_filters::Subscriber<CameraInfoMsg> CameraInfoSubFilter;
-
-typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg, CameraInfoMsg> RGBDSyncPolicy;
-typedef message_filters::Synchronizer<RGBDSyncPolicy> RGBDSynchronizer;
-  
-typedef image_transport::Publisher ImagePublisher;
-
-typedef RGBDImageProcConfig ProcConfig;
-typedef dynamic_reconfigure::Server<ProcConfig> ProcConfigServer;
-
+/** @brief Processes the raw output of OpenNI sensors to create
+ * a stream of RGB-D images.
+ * 
+ * The RGBDImageProc app subscribes to a stream of rgb and depth messages.
+ * If performs the following operations on the images:
+ *  - Scales the images down by an arbitrary factor (see \ref scale_ param)
+ *  - Undistorts both the RGB and depth image
+ *  - Performs unwarping on the depth image based on some polynomial model
+ *  - Registers the depth image to the RGB image 
+ * 
+ * The app then publishes the resulting pair of RGB and depth images, together
+ * with a camera info which has no distortion, and the optimal new camera matrix
+ * for both images.
+ */    
 class RGBDImageProc 
 {
+  typedef RGBDImageProcConfig ProcConfig;
+  typedef dynamic_reconfigure::Server<ProcConfig> ProcConfigServer;
+  
   public:
 
     RGBDImageProc(
       const ros::NodeHandle& nh, 
       const ros::NodeHandle& nh_private);
+    
     virtual ~RGBDImageProc();
 
     void RGBDCallback(  
@@ -84,7 +85,7 @@ class RGBDImageProc
     ros::NodeHandle nh_;
     ros::NodeHandle nh_private_;
 
-    boost::shared_ptr<RGBDSynchronizer> sync_;
+    boost::shared_ptr<RGBDSynchronizer4> sync_;
        
     // image transport for rgb and depth
     ImageTransport rgb_image_transport_;

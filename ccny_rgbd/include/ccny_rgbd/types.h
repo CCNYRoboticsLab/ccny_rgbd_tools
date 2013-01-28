@@ -27,6 +27,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <sensor_msgs/image_encodings.h>
+#include <nav_msgs/Odometry.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -36,10 +37,12 @@
 
 namespace ccny_rgbd {
 
-// **** typedefs *********************************************
+// Eigen matrix types
 
 typedef Eigen::Matrix3f Matrix3f;
 typedef Eigen::Vector3f Vector3f;
+
+// Vector types
 
 typedef std::vector<int>             IntVector;
 typedef std::vector<float>           FloatVector;
@@ -50,23 +53,35 @@ typedef std::vector<Eigen::Matrix3f> Matrix3fVector;
 typedef std::vector<Eigen::Vector3f> Vector3fVector;
 typedef std::vector<cv::KeyPoint>    KeypointVector;
 
+// PCL types
+
 typedef pcl::PointXYZRGB              PointT;
 typedef pcl::PointCloud<PointT>       PointCloudT;
 
 typedef pcl::PointXYZ                 PointFeature;
 typedef pcl::PointCloud<PointFeature> PointCloudFeature;
 
-typedef sensor_msgs::Image            ImageMsg;
-typedef sensor_msgs::CameraInfo       CameraInfoMsg;
-
-typedef image_transport::SubscriberFilter ImageSubFilter;
-typedef message_filters::Subscriber<CameraInfoMsg> CameraInfoSubFilter;
-typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg> SyncPolicy;
-typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
-
 typedef pcl::KdTreeFLANN<PointFeature> KdTree;
 typedef pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> TransformationEstimationSVD; 
 
+// ROS message types
+
+typedef sensor_msgs::Image            ImageMsg;
+typedef sensor_msgs::CameraInfo       CameraInfoMsg;
+typedef nav_msgs::Odometry            OdomMsg;
+
+// ROS publishers, subscribers, services, etc
+
+typedef image_geometry::PinholeCameraModel PinholeCameraModel;
+typedef image_transport::ImageTransport ImageTransport;  
+typedef image_transport::Publisher ImagePublisher;
+typedef image_transport::SubscriberFilter ImageSubFilter;
+typedef message_filters::Subscriber<CameraInfoMsg> CameraInfoSubFilter;
+
+typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg> RGBDSyncPolicy3;
+typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg, CameraInfoMsg> RGBDSyncPolicy4;
+typedef message_filters::Synchronizer<RGBDSyncPolicy3> RGBDSynchronizer3;
+typedef message_filters::Synchronizer<RGBDSyncPolicy4> RGBDSynchronizer4;
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_TYPES_H

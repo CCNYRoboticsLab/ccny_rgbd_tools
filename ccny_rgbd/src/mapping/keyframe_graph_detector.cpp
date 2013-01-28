@@ -1,5 +1,5 @@
 /**
- *  @file keyframe_grapph_detector.cpp
+ *  @file keyframe_graph_detector.cpp
  *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
@@ -40,6 +40,22 @@ KeyframeGraphDetector::KeyframeGraphDetector(
     save_ransac_results_ = false;
   if (!nh_private_.getParam ("graph/ransac_results_path", ransac_results_path_))
     ransac_results_path_ = std::getenv("HOME");
+  
+  if (!nh_private_.getParam ("graph/n_ransac_candidates", n_ransac_candidates_))
+    n_ransac_candidates_ = 15;
+  if (!nh_private_.getParam ("graph/k_nearest_neighbors", k_nearest_neighbors_))
+    k_nearest_neighbors_ = 15;
+  if (!nh_private_.getParam ("graph/min_ransac_inliers", min_ransac_inliers_))
+    min_ransac_inliers_ = 30;
+  if (!nh_private_.getParam ("graph/max_corresp_dist_desc", max_corresp_dist_desc_))
+    max_corresp_dist_desc_ = 1.0;
+  if (!nh_private_.getParam ("graph/max_corresp_dist_eucl", max_corresp_dist_eucl_))
+    max_corresp_dist_eucl_ = 0.03;
+  if (!nh_private_.getParam ("graph/n_keypoints_", n_keypoints_))
+    n_keypoints_ = 200;
+    
+  // derived params
+  max_corresp_dist_eucl_sq_ = max_corresp_dist_eucl_ * max_corresp_dist_eucl_;
 }
 
 KeyframeGraphDetector::~KeyframeGraphDetector()
@@ -65,7 +81,6 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
 {
   double init_surf_threshold = 400.0;
   double min_surf_threshold = 25;
-  int desired_keypoints = 200;
 
   printf("preparing SURF features for RANSAC associations...\n");  
 
@@ -87,7 +102,7 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
         (int)kf_idx, (int)keyframes.size(), 
         (int)keyframe.keypoints.size(), surf_threshold); 
 
-      if ((int)keyframe.keypoints.size() < desired_keypoints)
+      if ((int)keyframe.keypoints.size() < n_keypoints_)
         surf_threshold /= 2.0;
       else break;
     }
@@ -101,14 +116,8 @@ void KeyframeGraphDetector::prepareFeaturesForRANSAC(
       cv::imwrite(ransac_results_path_ + "/" + ss1.str() + ".png", kp_img);
     }
 
-    // TODO: not sure what's best here, reuse frame members, or make new ones
-
-    //printf("[%d] computing descriptors\n", kf_idx);  
     extractor.compute(keyframe.rgb_img, keyframe.keypoints, keyframe.descriptors);
- 
-    //printf("[%d] computing distributions\n", kf_idx);  
     keyframe.computeDistributions();
-    //keyframe.kp_cloud.clear();
   }
 }
 
@@ -218,16 +227,14 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
   // constants
   int min_sample_size = 3;
 
-  cv::FlannBasedMatcher matcher_;          // for SURF
-  TransformationEstimationSVD svd_;
+  cv::FlannBasedMatcher matcher;          // for SURF
+  TransformationEstimationSVD svd;
 
   // **** build candidate matches ***********************************
 
   // assumes detectors and distributions are computed
   // establish all matches from b to a
-  matcher_.match(frame_b.descriptors, frame_a.descriptors, all_matches);
-
-  //printf("\tAll matches: %d\n", (int)all_matches.size());
+  matcher.match(frame_b.descriptors, frame_a.descriptors, all_matches);
 
   // remove bad matches - too far away in descriptor space,
   //                    - nan, too far, or cov. too big
@@ -247,7 +254,6 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
   }
 
   int size = candidate_matches.size();
-  //printf("\tCandidate matches: %d\n", size);
 
   // **** build 3D features for SVD ********************************
 
@@ -281,11 +287,11 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
   for (int iteration = 0; iteration < max_ransac_iterations_; ++iteration)
   {
     // generate random indices
-    std::vector<int> sample_idx;
+    IntVector sample_idx;
     getRandomIndices(min_sample_size, size, sample_idx);
 
     // build initial inliers from random indices
-    std::vector<int> inlier_idx;
+    IntVector inlier_idx;
     std::vector<cv::DMatch> inlier_matches;
 
     for (unsigned int s_idx = 0; s_idx < sample_idx.size(); ++s_idx)
@@ -296,7 +302,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
     } 
 
     // estimate transformation from minimum set of random samples
-    svd_.estimateRigidTransformation(
+    svd.estimateRigidTransformation(
       features_b, inlier_idx,
       features_a, inlier_idx,
       transformation);
@@ -318,7 +324,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
         inlier_matches.push_back(candidate_matches[m_idx]);
 
         // reestimate transformation from all inliers
-        svd_.estimateRigidTransformation(
+        svd.estimateRigidTransformation(
           features_b, inlier_idx,
           features_a, inlier_idx,
           transformation);
@@ -331,7 +337,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
 
     if (n_inliers > best_n_inliers)
     {
-      svd_.estimateRigidTransformation(
+      svd.estimateRigidTransformation(
         features_b, inlier_idx,
         features_a, inlier_idx,
         transformation);
@@ -347,49 +353,38 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
     if (inlier_ratio > sufficient_inlier_ratio)
       break;
   }
+}
 
-  //printf("\tInlier matches: %d\n", best_n_inliers);
+void KeyframeGraphDetector::trainMatcher(
+  const KeyframeVector& keyframes,
+  cv::FlannBasedMatcher& matcher)
+{
+  printf("Building aggregate feature vector...\n"); 
+  std::vector<cv::Mat> descriptors_vector;
+
+  for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes[kf_idx];
+    descriptors_vector.push_back(keyframe.descriptors);
+  }
+  matcher.add(descriptors_vector);
+
+  printf("Training feature matcher...\n");
+  matcher.train();
 }
 
 void KeyframeGraphDetector::treeAssociations(
   KeyframeVector& keyframes,
   KeyframeAssociationVector& associations)
 {
-   // RANSAC params
-  double max_eucl_dist    = 0.03;
-  double max_desc_dist    = 1.0;
-  double min_inlier_ratio = 1.0;
-  double min_inliers      = 30;
- 
-  // tree matching params
-  int k_nn = 15;                        // look for X nearest neighbors
-  int n_ransac_tests = 15;              // consider the first X frames with highest corr. count
-  int min_corresp_for_ransac_test = 30; // if there are fewer corresp. than X, don't bother to RANSAC
+  // extra params
+  double sufficient_ransac_inlier_ratio = 1.0;
   
-  double max_eucl_dist_sq = max_eucl_dist * max_eucl_dist;
-  
-  // *********************** 
-  // insert tree matches
-  
+  // train matcher from all teh features
   cv::FlannBasedMatcher matcher;
-  //cv::BFMatcher matcher(cv::NORM_HAMMING);  // for ORB
-  std::vector<cv::Mat> descriptors_vector;
+  trainMatcher(keyframes, matcher);
 
-  // **** build vector of keypoints matrices
-  printf("Building mat vector...\n");
-
-  for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
-  {
-    RGBDKeyframe& keyframe = keyframes[kf_idx];
-    descriptors_vector.push_back(keyframe.descriptors);
-  }
-  matcher.add(descriptors_vector);
-
-  // **** build vector of keypoints matrices
-  printf("Training...\n");
-  matcher.train();
-
-  // **** lookup per frame
+  // lookup per frame
   printf("Keyframe lookups...\n");
 
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
@@ -399,7 +394,7 @@ void KeyframeGraphDetector::treeAssociations(
 
     // find k nearest matches for each feature in the keyframe
     std::vector<std::vector<cv::DMatch> > matches_vector;
-    matcher.knnMatch(keyframe.descriptors, matches_vector, k_nn);
+    matcher.knnMatch(keyframe.descriptors, matches_vector, k_nearest_neighbors_);
 
     // create empty bins vector of Pairs <count, image_index>
     std::vector<std::pair<int, int> > bins;
@@ -422,14 +417,14 @@ void KeyframeGraphDetector::treeAssociations(
 
     // output results
     printf(" - best matches: ");
-    for (int b = 0; b < n_ransac_tests; ++b)
+    for (int b = 0; b < n_ransac_candidates_; ++b)
       printf("[%d(%d)] ", bins[b].second, bins[b].first);
     printf("\n");
 
     // **** find top X candidates
     
     printf(" - candidate matches: ");
-    std::vector<int> ransac_candidates;
+    IntVector ransac_candidates;
     int n_ransac_candidates_found = 0;
     for (unsigned int b = 0; b < bins.size(); ++b)
     {
@@ -440,14 +435,14 @@ void KeyframeGraphDetector::treeAssociations(
       // test for order consistence
       // and for minimum number of keypoints
       if (index_b > index_a && 
-          corresp_count >= min_corresp_for_ransac_test)
+          corresp_count >= min_ransac_inliers_)
       {
         ransac_candidates.push_back(index_b);
         ++n_ransac_candidates_found;
         printf("[%d(%d)] ", index_b, corresp_count);
       }
 
-      if (n_ransac_candidates_found >= n_ransac_tests) break;
+      if (n_ransac_candidates_found >= n_ransac_candidates_) break;
     }
     printf("\n");
 
@@ -468,10 +463,11 @@ void KeyframeGraphDetector::treeAssociations(
       Eigen::Matrix4f transformation;
 
       pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
-        max_eucl_dist_sq, max_desc_dist, min_inlier_ratio,
+        max_corresp_dist_eucl_sq_, max_corresp_dist_desc_, 
+        sufficient_ransac_inlier_ratio,
         all_matches, inlier_matches, transformation);
 
-      if (inlier_matches.size() >= min_inliers)
+      if ((int)inlier_matches.size() >= min_ransac_inliers_)
       {
         if (save_ransac_results_)
         {
@@ -503,12 +499,10 @@ void KeyframeGraphDetector::treeAssociations(
 }
 
 // produces k random numbers in the range [0, n).
+// Monte-Carlo based random sampling
 void KeyframeGraphDetector::getRandomIndices(
-  int k, int n, std::vector<int>& output)
+  int k, int n, IntVector& output)
 {
-  // TODO: This is Monte-Carlo based random sampling, maybe
-  //       not the best way to do this
-
   while ((int)output.size() < k)
   {
     int random_number = rand() % n;

@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file visual_odometry.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,7 +25,11 @@
 
 namespace ccny_rgbd {
 
-VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
+using namespace message_filters::sync_policies;
+  
+VisualOdometry::VisualOdometry(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private),
   initialized_(false),
@@ -45,17 +51,18 @@ VisualOdometry::VisualOdometry(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "odom", 5);
 
   // **** subscribers
-
+  
   image_transport::ImageTransport rgb_it(nh_);
   image_transport::ImageTransport depth_it(nh_);
 
-  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
-  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
-  sub_info_.subscribe(nh_, "/rgbd/info", 1);
+  sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
+  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", queue_size_);
+  sub_info_.subscribe(nh_, "/rgbd/info", queue_size_);
 
   // Synchronize inputs.
-  int queue_size = 5;
-  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
+  sync_.reset(new RGBDSynchronizer3(
+                RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
+  
   sync_->registerCallback(boost::bind(&VisualOdometry::imageCb, this, _1, _2, _3));  
 }
 
@@ -72,6 +79,8 @@ void VisualOdometry::initParams()
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
     base_frame_ = "/camera_link";
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
 
   if (!nh_private_.getParam ("feature/detector_type", detector_type_))
     detector_type_ = "GFT";

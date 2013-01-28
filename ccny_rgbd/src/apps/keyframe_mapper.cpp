@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file keyframe_mapper.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +23,11 @@
 
 #include "ccny_rgbd/apps/keyframe_mapper.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
+KeyframeMapper::KeyframeMapper(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private),
   graph_detector_(nh_, nh_private_)
@@ -37,6 +40,8 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   
   // **** params
 
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("full_map_res", full_map_res_))
@@ -45,7 +50,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     kf_dist_eps_  = 0.10;
   if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
     kf_angle_eps_  = 10.0 * M_PI / 180.0;
-  
+    
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
@@ -79,14 +84,15 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   image_transport::ImageTransport rgb_it(nh_);
   image_transport::ImageTransport depth_it(nh_);
 
-  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
-  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
-  sub_info_.subscribe(nh_, "/rgbd/info", 1);
+  sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
+  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", queue_size_);
+  sub_info_.subscribe(nh_, "/rgbd/info", queue_size_);
 
-  // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  int queue_size = 5;
-  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
-  sync_->registerCallback(boost::bind(&KeyframeMapper::RGBDCallback, this, _1, _2, _3));  
+  // Synchronize inputs.
+  sync_.reset(new RGBDSynchronizer3(
+                RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
+   
+   sync_->registerCallback(boost::bind(&KeyframeMapper::RGBDCallback, this, _1, _2, _3));  
 }
 
 KeyframeMapper::~KeyframeMapper()

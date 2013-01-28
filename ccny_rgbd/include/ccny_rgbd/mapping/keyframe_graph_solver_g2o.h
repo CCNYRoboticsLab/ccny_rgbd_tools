@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file keyframe_graph_solver_g2o.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,38 +34,58 @@
 
 #include "ccny_rgbd/mapping/keyframe_graph_solver.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
+/** @brief Graph-based global alignement using g2o (generalized 
+ * graph optimizaiton)
+ */
 class KeyframeGraphSolverG2O: public KeyframeGraphSolver
 {
   public:
 
-    KeyframeGraphSolverG2O(ros::NodeHandle nh, ros::NodeHandle nh_private);
-    virtual ~KeyframeGraphSolverG2O();
+    /** @brief Constructor from ROS noehandles
+     * @param nh the public nodehandle
+     * @param nh_private the private notehandle
+     */  
+    KeyframeGraphSolverG2O(const ros::NodeHandle& nh, 
+                           const ros::NodeHandle& nh_private);
+    
+    /** @brief Default destructor
+     */
+    ~KeyframeGraphSolverG2O();
  
+    /** @brief Main method to call to perform graph solving using g2o.
+     * 
+     * @param keyframes vector of keyframes
+     * @param associations vector of input keyframe associations
+     */
     void solve(KeyframeVector& keyframes,
                KeyframeAssociationVector& associations);
 
   private:
 
-    int vertexIdx;
-    g2o::SparseOptimizer optimizer;
-    g2o::BlockSolverX::LinearSolverType * linearSolver;
-    g2o::BlockSolverX * solver_ptr;
+    g2o::SparseOptimizer optimizer_;    ///< g2o optimizer
+    g2o::BlockSolverX * solver_;        ///< g2o solver
         
-    void addVertex(
-      const Eigen::Matrix4f& vertex_pose,
-      int vertex_idx);
+    /** @brief Adds a vertex to the g2o structure
+     */
+    void addVertex(const Eigen::Matrix4f& vertex_pose,
+                   int vertex_idx);
     
-    void addEdge(
-      int from_idx,
-      int to_idx,
-      const Eigen::Matrix4f& relative_pose,
-      const Eigen::Matrix<double,6,6>& information_matrix);
+    /** @brief Adds an edge to the g2o structure
+     */
+    void addEdge(int from_idx,  int to_idx,
+                 const Eigen::Matrix4f& relative_pose,
+                 const Eigen::Matrix<double,6,6>& information_matrix);
     
+    /** @brief runs the optimization
+     */
     void optimizeGraph();
     
+    /** @brief copies the (optimized) poses from the g2o structure into
+     * the keyframe vector
+     * @param keyframes the vector of keyframes to modify the poses
+     */
     void updatePoses(KeyframeVector& keyframes);
 };
 

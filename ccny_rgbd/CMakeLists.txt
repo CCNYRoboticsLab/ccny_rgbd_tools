@@ -116,22 +116,6 @@ target_link_libraries (keyframe_mapper_node
 )
 
 ################################################################
-# Build octree mapper application
-################################################################
-
-rosbuild_add_executable(octree_mapper_node 
-  src/node/octree_mapper_node.cpp
-  src/apps/octree_mapper.cpp)
-
-target_link_libraries (octree_mapper_node
-  ccny_rgbd_structures 
-  ccny_rgbd_mapping
-  ccny_rgbd_util
-  boost_signals 
-  boost_system
-)
-
-################################################################
 # Build image proc application
 ################################################################
 

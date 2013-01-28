@@ -23,7 +23,9 @@
 
 namespace ccny_rgbd {
 
-RGBDImageProc::RGBDImageProc(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private):
+RGBDImageProc::RGBDImageProc(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), nh_private_(nh_private), 
   rgb_image_transport_(nh_),
   depth_image_transport_(nh_), 
@@ -31,7 +33,7 @@ RGBDImageProc::RGBDImageProc(const ros::NodeHandle& nh, const ros::NodeHandle& n
   initialized_(false)
 { 
   // parameters 
-  if (!nh_private_.getParam("scale1", scale_))
+  if (!nh_private_.getParam("scale", scale_))
     scale_ = 1.0;
   if (!nh_private_.getParam("unwarp", unwarp_))
     unwarp_ = true;
@@ -63,17 +65,14 @@ RGBDImageProc::RGBDImageProc(const ros::NodeHandle& nh, const ros::NodeHandle& n
   config_server_.setCallback(f);
   
   // subscribers
-  int queue_size = 5;
-     
-  // TODO: queue size in subscribers?
   sub_rgb_.subscribe  (rgb_image_transport_,   "/camera/rgb/image_color", 1);
   sub_depth_.subscribe(depth_image_transport_, "/camera/depth/image_raw", 1); //16UC1
   
   sub_rgb_info_.subscribe  (nh_, "/camera/rgb/camera_info",   1);
   sub_depth_info_.subscribe(nh_, "/camera/depth/camera_info", 1);
   
-  sync_.reset(new RGBDSynchronizer(
-                RGBDSyncPolicy(queue_size), sub_rgb_, sub_depth_, 
+  sync_.reset(new RGBDSynchronizer4(
+                RGBDSyncPolicy4(queue_size_), sub_rgb_, sub_depth_, 
                 sub_rgb_info_, sub_depth_info_));
   
   sync_->registerCallback(boost::bind(&RGBDImageProc::RGBDCallback, this, _1, _2, _3, _4)); 

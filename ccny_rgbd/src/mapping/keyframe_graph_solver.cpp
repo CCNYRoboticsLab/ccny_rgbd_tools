@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file keyframe_graph_solver.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +23,11 @@
 
 #include "ccny_rgbd/mapping/keyframe_graph_solver.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-KeyframeGraphSolver::KeyframeGraphSolver(ros::NodeHandle nh, ros::NodeHandle nh_private):
+KeyframeGraphSolver::KeyframeGraphSolver(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private)
 {
