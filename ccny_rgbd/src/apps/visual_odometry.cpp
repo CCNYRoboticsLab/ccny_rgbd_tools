@@ -45,23 +45,22 @@ VisualOdometry::VisualOdometry(
 
   // **** publishers
 
-  odom_publisher_ = nh_.advertise<OdomMsg>(
-    "odom", 5);
+  odom_publisher_ = nh_.advertise<OdomMsg>("odom", queue_size_);
 
   // **** subscribers
   
-  image_transport::ImageTransport rgb_it(nh_);
-  image_transport::ImageTransport depth_it(nh_);
+  ImageTransport rgb_it(nh_);
+  ImageTransport depth_it(nh_);
 
+  sub_rgb_.subscribe(rgb_it,     "/rgbd/rgb",   queue_size_);
   sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
-  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", queue_size_);
-  sub_info_.subscribe(nh_, "/rgbd/info", queue_size_);
+  sub_info_.subscribe(nh_,       "/rgbd/info",  queue_size_);
 
   // Synchronize inputs.
   sync_.reset(new RGBDSynchronizer3(
                 RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
   
-  sync_->registerCallback(boost::bind(&VisualOdometry::imageCb, this, _1, _2, _3));  
+  sync_->registerCallback(boost::bind(&VisualOdometry::RGBDCallback, this, _1, _2, _3));  
 }
 
 VisualOdometry::~VisualOdometry()
@@ -106,10 +105,10 @@ void VisualOdometry::initParams()
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 }
 
-void VisualOdometry::imageCb(
-  const sensor_msgs::ImageConstPtr& depth_msg,
-  const sensor_msgs::ImageConstPtr& rgb_msg,
-  const sensor_msgs::CameraInfoConstPtr& info_msg)
+void VisualOdometry::RGBDCallback(
+  const ImageMsg::ConstPtr& rgb_msg,
+  const ImageMsg::ConstPtr& depth_msg,
+  const CameraInfoMsg::ConstPtr& info_msg)
 {
   ros::WallTime start = ros::WallTime::now();
 

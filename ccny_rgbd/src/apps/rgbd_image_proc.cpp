@@ -55,23 +55,31 @@ RGBDImageProc::RGBDImageProc(
   if (unwarp_) loadUnwarpCalibration();
   
   // publishers
-  rgb_publisher_   = rgb_image_transport_.advertise("rgbd/rgb", 1);
-  depth_publisher_ = depth_image_transport_.advertise("rgbd/depth", 1);
-  info_publisher_  = nh_.advertise<CameraInfoMsg>("rgbd/info", 1);
+  rgb_publisher_   = rgb_image_transport_.advertise(
+    "rgbd/rgb", queue_size_);
+  depth_publisher_ = depth_image_transport_.advertise(
+    "rgbd/depth", queue_size_);
+  info_publisher_  = nh_.advertise<CameraInfoMsg>(
+    "rgbd/info", queue_size_);
   
   if (publish_cloud_)
-    cloud_publisher_ = nh_.advertise<PointCloudT>("rgbd/cloud", 1);
+    cloud_publisher_ = nh_.advertise<PointCloudT>(
+      "rgbd/cloud", 1);
 
   // dynamic reconfigure
   ProcConfigServer::CallbackType f = boost::bind(&RGBDImageProc::reconfigCallback, this, _1, _2);
   config_server_.setCallback(f);
   
   // subscribers
-  sub_rgb_.subscribe  (rgb_image_transport_,   "/camera/rgb/image_color", 1);
-  sub_depth_.subscribe(depth_image_transport_, "/camera/depth/image_raw", 1); //16UC1
+  sub_rgb_.subscribe  (rgb_image_transport_,   
+    "/camera/rgb/image_color", queue_size_);
+  sub_depth_.subscribe(depth_image_transport_, 
+    "/camera/depth/image_raw", queue_size_); //16UC1
   
-  sub_rgb_info_.subscribe  (nh_, "/camera/rgb/camera_info",   1);
-  sub_depth_info_.subscribe(nh_, "/camera/depth/camera_info", 1);
+  sub_rgb_info_.subscribe  (nh_, 
+    "/camera/rgb/camera_info", queue_size_);
+  sub_depth_info_.subscribe(nh_, 
+    "/camera/depth/camera_info", queue_size_);
   
   sync_.reset(new RGBDSynchronizer4(
                 RGBDSyncPolicy4(queue_size_), sub_rgb_, sub_depth_, 

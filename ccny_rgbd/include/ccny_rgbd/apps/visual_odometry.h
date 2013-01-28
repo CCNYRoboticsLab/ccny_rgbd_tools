@@ -137,13 +137,13 @@ class VisualOdometry
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages
      * 
-     * @param depth_msg Depth message (16UC1, in mm)
      * @param rgb_msg RGB message (8UC3)
+     * @param depth_msg Depth message (16UC1, in mm)
      * @param info_msg CameraInfo message, applies to both RGB and depth images
      */
-    void imageCb(const ImageMsg::ConstPtr& depth_msg,
-                 const ImageMsg::ConstPtr& rgb_msg,
-                 const CameraInfoMsg::ConstPtr& info_msg);
+    void RGBDCallback(const ImageMsg::ConstPtr& rgb_msg,
+                      const ImageMsg::ConstPtr& depth_msg,
+                      const CameraInfoMsg::ConstPtr& info_msg);
 
     /** @brief Initializes all the parameters from the ROS param server
      */
