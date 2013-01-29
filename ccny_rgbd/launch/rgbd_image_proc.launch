@@ -2,7 +2,7 @@
 <!-- todo: nodelets -->
 <launch>
 
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro/"/> 
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
 
   <!-- Nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="rgbd_proc_manager" args="manager"

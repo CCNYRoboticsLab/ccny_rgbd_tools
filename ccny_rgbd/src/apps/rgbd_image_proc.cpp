@@ -54,7 +54,15 @@ RGBDImageProc::RGBDImageProc(
   
   // load calibration (extrinsics, depth unwarp params) from files
   loadCalibration();
-  if (unwarp_) loadUnwarpCalibration();
+  if (unwarp_)
+  {
+    bool load_result = loadUnwarpCalibration();
+    if (!load_result)
+    {
+      ROS_WARN("Disbaling unwarping due to missing calibration file");
+      unwarp_ = true;
+    }
+  }
   
   // publishers
   rgb_publisher_   = rgb_image_transport_.advertise(
