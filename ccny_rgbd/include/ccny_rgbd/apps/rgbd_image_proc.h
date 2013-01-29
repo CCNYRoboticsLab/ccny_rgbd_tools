@@ -109,50 +109,88 @@ class RGBDImageProc
     
     // parameters
     
-    int queue_size_;                    ///< ROS subscriber (and publisher) queue size parameter
+    int queue_size_;          ///< ROS subscriber (and publisher) queue size parameter
     
-    std::string calib_path_;
+    std::string calib_path_;  ///< Path to folder where calibration files are stored
+    bool unwarp_;             ///< Whetehr to perform depth unwarping based on polynomial model
+    bool publish_cloud_;      ///< Whetehr to calculate and publish the dense PointCloud
+    
+    /** @brief Downasampling scale (0, 1]. For example, 
+     * 2.0 will result in an output image half the size of the input
+     */
+    double scale_;             
+    
+    /** @brief path to extrinsic calibration yaml file, derived
+     * from \ref calib_path_ parameter
+     */
     std::string calib_extr_filename_;
+    
+    /** @brief path to depth unwarp calibration yaml file, derived
+     * from \ref calib_path_ parameter
+     */
     std::string calib_warp_filename_;
-    
-    bool unwarp_;
-    bool publish_cloud_;
-    
-    double scale_;
    
     // **** state variables
     
-    bool initialized_;
-    boost::mutex mutex_;
+    bool initialized_;      ///< whether we have initialized from the first image
+    boost::mutex mutex_;    ///< state mutex
     
     // **** calibration
     
-    int fit_mode_;
+    /** @brief Depth unwwarping mode, based on different polynomial fits
+     * 
+     * See \ref DepthFitMode
+     */
+    int fit_mode_;        
     cv::Size size_in_, size_out_;
     
-    // depth warp polynomial coeff
+    /** @brief depth unwarp polynomial coefficient matrices */
     cv::Mat coeff_0_, coeff_1_, coeff_2_;   
     
-    // depth warp polynomial coeff, after recitfication and resizing
+    /** @brief depth unwarp polynomial coefficient matrices,
+     * after recitfication and resizing
+     */
     cv::Mat coeff_0_rect_, coeff_1_rect_, coeff_2_rect_;  
     
+    /** @brief extrinsic matrix between IR and RGB camera */
     cv::Mat ir2rgb_;    
+   
+    /** @brief optimal intrinsics after rectification */
+    cv::Mat intr_rect_rgb_, intr_rect_depth_;  
     
-    cv::Mat intr_rect_rgb_, intr_rect_depth_;  // optimal intrinsics after rectification
+    /** @brief RGB CameraInfo derived from optimal matrices */
+    CameraInfoMsg rgb_rect_info_msg_;   
     
-    CameraInfoMsg rgb_rect_info_msg_;   // derived from optimal matrices
-    CameraInfoMsg depth_rect_info_msg_; // derived from optimal matrices
-        
-    cv::Mat map_rgb_1_,   map_rgb_2_;         // rectification maps
+    /** @brief Depth CameraInfo derived from optimal matrices */
+    CameraInfoMsg depth_rect_info_msg_; 
+    
+    /** @brief RGB rectification maps */
+    cv::Mat map_rgb_1_,   map_rgb_2_;
+    
+    /** @brief Depth rectification maps */
     cv::Mat map_depth_1_, map_depth_2_;
     
+    /** @brief Initializes the rectification maps from CameraInfo 
+     * messages
+     * 
+     * @param rgb_info_msg input camera info for RGB image
+     * @param depth_info_msg input camera info for depth image
+     */
     void initMaps(
       const CameraInfoMsg::ConstPtr& rgb_info_msg,
       const CameraInfoMsg::ConstPtr& depth_info_msg);
     
+    /** @brief Loads intrinsic and extrinsic calibration 
+     * info from files 
+     */
     bool loadCalibration();   
+    
+    /** @brief Loads depth unwarp  calibration info from files 
+     */
     bool loadUnwarpCalibration();
 
+    /** @brief ROS dynamic reconfigure callback function
+     */
     void reconfigCallback(ProcConfig& config, uint32_t level);
 };
 

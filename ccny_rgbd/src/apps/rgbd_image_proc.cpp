@@ -101,7 +101,7 @@ bool RGBDImageProc::loadCalibration()
   if (!boost::filesystem::exists(calib_extr_filename_))
   {
     ROS_ERROR("Could not open %s", calib_extr_filename_.c_str());
-    // TODO: handle this with default ir2rgb
+    /// @todo handle this with default ir2rgb
     return false;
   }
 
@@ -120,7 +120,7 @@ bool RGBDImageProc::loadUnwarpCalibration()
   if (!boost::filesystem::exists(calib_warp_filename_))
   {
     ROS_ERROR("Could not open %s", calib_warp_filename_.c_str());
-    // TODO: handle this with default warp coeff
+    /// @todo handle this with default warp coeff
     return false;
   }
   
