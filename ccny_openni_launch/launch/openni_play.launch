@@ -1,8 +1,9 @@
 <!-- Play rw OpenNI data from a file and process it-->
 <launch>
 
+  <param name="use_sim_time" value="true"/>
+
   <!-- Parameters -->
-  <arg name="bag_path" />
   <arg name="bag_name" />
   <arg name="manager_name" value="rgbd_manager"/>
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
@@ -12,13 +13,12 @@
         output="screen"/>
 
   <!-- RGBD playback -->
-  <include file="$(find ccny_openni_launch)/launch2/include/play.launch">       
-     <arg name="bag_path" value="$(arg bag_path)" />
+  <include file="$(find ccny_openni_launch)/launch/include/play.launch">       
      <arg name="bag_name" value="$(arg bag_name)" />
   </include>
   
   <!-- RGBD processing -->
-  <include file="$(find ccny_openni_launch)/launch2/include/proc.launch">       
+  <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
      <arg name="manager_name" value="$(arg manager_name)" />
      <arg name="calib_path"   value="$(arg calib_path)" />
   </include>

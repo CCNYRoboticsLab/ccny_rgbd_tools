@@ -2,7 +2,6 @@
 <launch>
 
   <!-- Parameters -->
-  <arg name="bag_path" />
   <arg name="bag_name" />
   <arg name="manager_name" value="rgbd_manager"/>
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
@@ -12,14 +11,13 @@
         output="screen"/>
 
   <!-- Driver nodelet -->      
-  <include file="$(find ccny_openni_launch)/launch2/include/device.launch">       
+  <include file="$(find ccny_openni_launch)/launch/include/device.launch">       
      <arg name="manager_name" value="$(arg manager_name)" />
      <arg name="calib_path"   value="$(arg calib_path)" />
   </include>
             
   <!-- RGBD recording -->
-  <include file="$(find ccny_openni_launch)/launch2/include/record.launch">       
-     <arg name="bag_path" value="$(arg bag_path)" />
+  <include file="$(find ccny_openni_launch)/launch/include/record.launch">       
      <arg name="bag_name" value="$(arg bag_name)" />
   </include>
 

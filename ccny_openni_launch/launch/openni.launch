@@ -10,13 +10,13 @@
         output="screen"/>
 
   <!-- Driver nodelet -->      
-  <include file="$(find ccny_openni_launch)/launch2/include/device.launch">       
+  <include file="$(find ccny_openni_launch)/launch/include/device.launch">       
      <arg name="manager_name" value="$(arg manager_name)" />
      <arg name="calib_path"   value="$(arg calib_path)" />
   </include>
             
   <!-- RGBD processing -->
-  <include file="$(find ccny_openni_launch)/launch2/include/proc.launch">       
+  <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
      <arg name="manager_name" value="$(arg manager_name)" />
      <arg name="calib_path"   value="$(arg calib_path)" />
   </include>
