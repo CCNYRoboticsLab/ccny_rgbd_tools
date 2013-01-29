@@ -2,9 +2,11 @@
 <launch> 
          
   <arg name="manager_name" />      
-  <arg name="rgb_camera_info_url"  />
-  <arg name="depth_camera_info_url"/>
-    
+  <arg name="calib_path" />   
+  
+  <arg name="rgb_camera_info_url"   value="file://$(arg calib_path)/rgb.yml"/>
+  <arg name="depth_camera_info_url" value="file://$(arg calib_path)/depth.yml"/>
+     
   <node pkg="nodelet" type="nodelet" name="openni_driver" 
         args="load openni_camera/driver $(arg manager_name)"
         output="screen">
