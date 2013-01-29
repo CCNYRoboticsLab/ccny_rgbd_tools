@@ -2,6 +2,8 @@
 <!-- todo: nodelets -->
 <launch>
 
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro/"/> 
+
   <!-- Nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="rgbd_proc_manager" args="manager"
         output="screen"/>
@@ -21,7 +23,7 @@
     <param name="scale" value="1.0"/>
     <param name="unwarp" value="true"/>
     <param name="publish_cloud" value="false"/>
-    <param name="calib_path" value="$(env HOME)/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/"/>
+    <param name="calib_path" value="$(arg calib_path)"/>
         
   </node>
   
