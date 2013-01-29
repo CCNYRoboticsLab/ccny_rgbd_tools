@@ -4,5 +4,6 @@
   <license>GPL, LGPLv3</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd</url>
+  <version>0.1.0</version>
   <depend stack="ros" />
 </stack>
