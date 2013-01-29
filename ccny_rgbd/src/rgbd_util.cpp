@@ -70,7 +70,7 @@ Eigen::Matrix4f eigenFromTf(const tf::Transform& tf)
    return out_mat;
 }
 
-void getXYZRPY(
+void tfToXYZRPY(
   const tf::Transform& t,
   double& x,    double& y,     double& z,
   double& roll, double& pitch, double& yaw)
@@ -85,7 +85,6 @@ void getXYZRPY(
 
 bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
 {
-  //TODO: can be optimized for squared length
   double d = tf.getOrigin().length();
   
   if (d >= dist) return true;
