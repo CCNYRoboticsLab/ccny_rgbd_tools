@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file types.h
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -82,6 +84,7 @@ typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, Came
 typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg, CameraInfoMsg> RGBDSyncPolicy4;
 typedef message_filters::Synchronizer<RGBDSyncPolicy3> RGBDSynchronizer3;
 typedef message_filters::Synchronizer<RGBDSyncPolicy4> RGBDSynchronizer4;
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_TYPES_H

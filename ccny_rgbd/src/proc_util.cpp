@@ -1,9 +1,11 @@
-/*
+/**
+ *  @file proc_util.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
  *  Copyright (C) 2013, City University of New York
- *  Ivan Dryanovski <ivan.dryanovski@gmail.com>
- *
- *  CCNY Robotics Lab
- *  http://robotics.ccny.cuny.edu
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,7 +33,7 @@ void unwarpDepthImage(
   int fit_mode)
 {
   /*
-  // TODO: This is faster (5ms vs 4 ms)
+  // NOTE: This is slightly faster (5ms vs 4ms)
   // BUT images need to be passed as CV_64FC1 or CV_32FC1
   // currently the conversion to float messes up 0 <-> nan values
   // Alternatively, coeff0 needs to be 0
