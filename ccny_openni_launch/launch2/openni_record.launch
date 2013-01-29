@@ -1,10 +1,12 @@
-<!-- RGB-D Visual odometry -->
+<!-- Launch OpenNI driver and record the data -->
 <launch>
 
-  <arg name="manager_name" value="rgbd_manager"/>
-  
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="bag_path" />
+  <arg name="bag_name" />
 
+  <!-- Parameters -->
+  <arg name="manager_name" value="rgbd_manager"/>
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   <arg name="rgb_camera_info_url"   value=""/>
   <arg name="depth_camera_info_url" value=""/>
   
@@ -19,13 +21,10 @@
      <arg name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
   </include>
             
-  <!-- RGBD processing -->
-  <include file="$(find ccny_openni_launch)/launch2/include/proc.launch">       
-     <arg name="manager_name" value="$(arg manager_name)" />
-     <arg name="calib_path"   value="$(arg calib_path)" />
+  <!-- RGBD recording -->
+  <include file="$(find ccny_openni_launch)/launch2/include/record.launch">       
+     <arg name="bag_path" value="$(arg bag_path)" />
+     <arg name="bag_name" value="$(arg bag_name)" />
   </include>
-                               
+
 </launch>
-
-
-

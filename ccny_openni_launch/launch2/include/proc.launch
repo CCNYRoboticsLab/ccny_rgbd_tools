@@ -1,0 +1,26 @@
+<!-- Launch the OpenNI device driver -->
+<launch> 
+         
+  <arg name="manager_name" />
+  <arg name="calib_path"   /> 
+  
+  <!-- Debayered images -->
+  <node pkg="nodelet" type="nodelet" name="debayer"
+        args="load image_proc/debayer $(arg manager_name)">    
+    <remap from="image_raw"   to="/camera/rgb/image_raw"/>
+    <remap from="image_color" to="/camera/rgb/image_color"/>
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="rgbd_image_proc"
+        args="load ccny_rgbd/RGBDImageProcNodelet $(arg manager_name)"
+        output="screen">
+    
+    <!-- Resample by a factor of 2-->
+    <param name="scale" value="1.0"/>
+    <param name="unwarp" value="true"/>
+    <param name="publish_cloud" value="false"/>
+    <param name="calib_path" value="$(arg calib_path)"/>
+        
+  </node> 
+
+</launch>

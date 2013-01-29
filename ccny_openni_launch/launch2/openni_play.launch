@@ -1,10 +1,12 @@
-<!-- RGB-D Visual odometry -->
+<!-- Play rw OpenNI data from a file and process it-->
 <launch>
 
-  <arg name="manager_name" value="rgbd_manager"/>
-  
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="bag_path" />
+  <arg name="bag_name" />
 
+  <!-- Parameters -->
+  <arg name="manager_name" value="rgbd_manager"/>
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   <arg name="rgb_camera_info_url"   value=""/>
   <arg name="depth_camera_info_url" value=""/>
   
@@ -12,20 +14,17 @@
   <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager"
         output="screen"/>
 
+  <!-- RGBD playback -->
+  <include file="$(find ccny_openni_launch)/launch2/include/play.launch">       
+     <arg name="bag_path" value="$(arg bag_path)" />
+     <arg name="bag_name" value="$(arg bag_name)" />
+  </include>
+        
   <!-- Driver nodelet -->      
   <include file="$(find ccny_openni_launch)/launch2/include/device.launch">       
      <arg name="manager_name"          value="$(arg manager_name)" />
      <arg name="rgb_camera_info_url"   value="$(arg rgb_camera_info_url)" />
      <arg name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
   </include>
-            
-  <!-- RGBD processing -->
-  <include file="$(find ccny_openni_launch)/launch2/include/proc.launch">       
-     <arg name="manager_name" value="$(arg manager_name)" />
-     <arg name="calib_path"   value="$(arg calib_path)" />
-  </include>
-                               
+           
 </launch>
-
-
-

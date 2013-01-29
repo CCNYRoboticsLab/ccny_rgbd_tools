@@ -1,10 +1,9 @@
-<!-- RGB-D Visual odometry -->
+<!-- Entry point for using OpenNI devices -->
 <launch>
 
+  <!-- Parameters -->
   <arg name="manager_name" value="rgbd_manager"/>
-  
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
-
   <arg name="rgb_camera_info_url"   value=""/>
   <arg name="depth_camera_info_url" value=""/>
   
@@ -24,8 +23,5 @@
      <arg name="manager_name" value="$(arg manager_name)" />
      <arg name="calib_path"   value="$(arg calib_path)" />
   </include>
-                               
+
 </launch>
-
-
-
