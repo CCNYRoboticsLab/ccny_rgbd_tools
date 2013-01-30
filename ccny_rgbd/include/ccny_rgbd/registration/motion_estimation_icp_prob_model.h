@@ -39,6 +39,12 @@
 
 namespace ccny_rgbd {
 
+/** @brief Motion estimation based on aligning sparse features
+ * against a persistent, dynamic model.
+ * 
+ * The model is build from incoming features through a Kalman Filter
+ * update step.
+ */  
 class MotionEstimationICPProbModel: public MotionEstimation
 {
   public:
