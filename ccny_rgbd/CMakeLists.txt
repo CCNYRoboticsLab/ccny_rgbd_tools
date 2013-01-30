@@ -93,6 +93,12 @@ target_link_libraries(ccny_rgbd_mapping
   g2o_solver_csparse
   g2o_types_slam3d)
 
+# TODO: use OpenGL
+# rosbuild_add_library (open_gl
+  # GL 
+  # glut
+# )
+
 ################################################################
 # Build visual odometry application
 ################################################################
@@ -182,6 +188,26 @@ target_link_libraries (mono_vo_node
   boost_signals 
   boost_system
 )
+
+
+################################################################
+# test mesh triangulation
+################################################################
+project(greedy_projection)
+
+find_package(PCL 1.2 REQUIRED)
+
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+add_executable (greedy_projection src/greedy_projection.cpp)
+target_link_libraries (greedy_projection 
+                            ${PCL_LIBRARIES}
+                            ccny_rgbd_util
+                            # open_gl                       
+                        )
+
 
 ################################################################
 # test projection function
