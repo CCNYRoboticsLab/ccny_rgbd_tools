@@ -1,4 +1,4 @@
-<!-- Entry point for using OpenNI devices -->
+<!-- Launch OpenNI driver and process the data -->
 <launch>
 
   <!-- Parameters -->

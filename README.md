@@ -50,16 +50,17 @@ If you get an error compiling `ccny_g2o`, it might be because of an incompatible
 Quick usage
 -----------------------------------
 
-Connect your RGB-D camera and launch the Openni device. 
+Connect your RGB-D camera and launch the Openni device. The openni_launch file will 
+start the driver and the processing nodelets.
 
-    roslaunch openni_launch openni.launch 
+    roslaunch ccny_openni_launch openni.launch 
 
-For best performace, consider using `dynamic reconfigure` to set the 
-resolution to QVGA, especially if using a slower machine.
+For best performace, consider using `dynamic reconfigure` to change the sampling rate of 
+the `rgbd_image_proc` nodelet. For example, setting it to to 0.5 will downsample the images by a factor of 2.
 
 Next, launch the visual odometry:
 
-    roslaunch ccny_rgbd vo+mapping.launch reg_type:=ICPProbModel
+    roslaunch ccny_rgbd vo+mapping.launch
 
 Finally, launch rviz. 
 
