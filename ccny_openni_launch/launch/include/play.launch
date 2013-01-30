@@ -1,4 +1,4 @@
-<!-- Launch file to record unprocessed OpenNI data -->
+<!-- Launch file to play back unprocessed OpenNI data -->
 <launch>
 
   <arg name="bag_name" />
