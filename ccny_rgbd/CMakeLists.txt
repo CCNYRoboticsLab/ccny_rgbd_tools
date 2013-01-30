@@ -119,15 +119,9 @@ target_link_libraries (keyframe_mapper_node
 # Build image proc application
 ################################################################
 
-rosbuild_add_executable(rgbd_image_proc_node 
-  src/node/rgbd_image_proc_node.cpp
-  src/apps/rgbd_image_proc.cpp)
-
-rosbuild_add_library(rgbd_image_proc_nodelet
-  src/nodelet/rgbd_image_proc_nodelet.cpp
-  src/apps/rgbd_image_proc.cpp)
+rosbuild_add_library(rgbd_image_proc_app src/apps/rgbd_image_proc.cpp)
   
-target_link_libraries (rgbd_image_proc_node
+target_link_libraries (rgbd_image_proc_app
   ccny_rgbd_util
   ccny_rgbd_proc_util
   boost_signals 
@@ -135,6 +129,13 @@ target_link_libraries (rgbd_image_proc_node
   boost_filesystem
   ${OPENCV_LIBRARIES}
 )
+  
+rosbuild_add_executable(rgbd_image_proc_node src/node/rgbd_image_proc_node.cpp)
+
+rosbuild_add_library(rgbd_image_proc_nodelet src/nodelet/rgbd_image_proc_nodelet.cpp)
+  
+target_link_libraries(rgbd_image_proc_node    rgbd_image_proc_app)
+target_link_libraries(rgbd_image_proc_nodelet rgbd_image_proc_app)
 
 #supress pcl-1.6 pragma warnings
 rosbuild_add_compile_flags(ccny_rgbd_structures '-Wno-unknown-pragmas')

@@ -1,0 +1,26 @@
+<!-- Launch the OpenNI device driver -->
+<launch> 
+         
+  <arg name="manager_name" />      
+  <arg name="calib_path" />   
+  
+  <arg name="rgb_camera_info_url"   value="file://$(arg calib_path)/rgb.yml"/>
+  <arg name="depth_camera_info_url" value="file://$(arg calib_path)/depth.yml"/>
+     
+  <node pkg="nodelet" type="nodelet" name="openni_driver" 
+        args="load openni_camera/driver $(arg manager_name)"
+        output="screen">
+        
+    <param name="device_id"             value="#1" />
+    <param name="rgb_camera_info_url"   value="$(arg rgb_camera_info_url)" />
+    <param name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
+    <param name="rgb_frame_id"          value="/camera_rgb_optical_frame" />
+    <param name="depth_frame_id"        value="/camera_depth_optical_frame" />
+
+    <remap from="ir"    to="camera/ir" />
+    <remap from="rgb"   to="camera/rgb" />
+    <remap from="depth" to="camera/depth" />
+
+  </node>
+
+</launch>

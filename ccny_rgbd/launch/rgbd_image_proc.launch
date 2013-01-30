@@ -1,32 +1,30 @@
 <!-- RGB-D Visual odometry -->
-<!-- todo: nodelets -->
 <launch>
 
+  <arg name="manager_name" value="rgbd_manager"/>
+  
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
 
+  <arg name="rgb_camera_info_url"   value=""/>
+  <arg name="depth_camera_info_url" value=""/>
+  
   <!-- Nodelet manager -->
-  <node pkg="nodelet" type="nodelet" name="rgbd_proc_manager" args="manager"
+  <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager"
         output="screen"/>
 
-  <!-- Debayered images -->
-  <node pkg="nodelet" type="nodelet" name="debayer"
-        args="load image_proc/debayer rgbd_proc_manager">    
-    <remap from="image_raw"   to="/camera/rgb/image_raw"/>
-    <remap from="image_color" to="/camera/rgb/image_color"/>
-  </node>
-
-  <node pkg="nodelet" type="nodelet" name="rgbd_image_proc"
-        args="load ccny_rgbd/RGBDImageProcNodelet rgbd_proc_manager"
-        output="screen">
-    
-    <!-- Resample by a factor of 2-->
-    <param name="scale" value="1.0"/>
-    <param name="unwarp" value="true"/>
-    <param name="publish_cloud" value="false"/>
-    <param name="calib_path" value="$(arg calib_path)"/>
-        
-  </node>
-  
+  <!-- Driver nodelet -->      
+  <include file="$(find ccny_openni_launch)/launch2/include/device.launch">       
+     <arg name="manager_name"          value="$(arg manager_name)" />
+     <arg name="rgb_camera_info_url"   value="$(arg rgb_camera_info_url)" />
+     <arg name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
+  </include>
+            
+  <!-- RGBD processing -->
+  <include file="$(find ccny_openni_launch)/launch2/include/proc.launch">       
+     <arg name="manager_name" value="$(arg manager_name)" />
+     <arg name="calib_path"   value="$(arg calib_path)" />
+  </include>
+                               
 </launch>
 
 

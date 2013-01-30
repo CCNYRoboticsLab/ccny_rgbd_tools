@@ -71,10 +71,8 @@ RGBDImageProc::RGBDImageProc(
     "rgbd/depth", queue_size_);
   info_publisher_  = nh_.advertise<CameraInfoMsg>(
     "rgbd/info", queue_size_);
-  
-  if (publish_cloud_)
-    cloud_publisher_ = nh_.advertise<PointCloudT>(
-      "rgbd/cloud", 1);
+  cloud_publisher_ = nh_.advertise<PointCloudT>(
+    "rgbd/cloud", queue_size_);
 
   // dynamic reconfigure
   ProcConfigServer::CallbackType f = boost::bind(&RGBDImageProc::reconfigCallback, this, _1, _2);
@@ -128,7 +126,6 @@ bool RGBDImageProc::loadUnwarpCalibration()
   if (!boost::filesystem::exists(calib_warp_filename_))
   {
     ROS_ERROR("Could not open %s", calib_warp_filename_.c_str());
-    /// @todo handle this with default warp coeff
     return false;
   }
   
@@ -301,6 +298,7 @@ void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
 {
   boost::mutex::scoped_lock(mutex_);
   initialized_ = false;
+  publish_cloud_ = config.publish_cloud;
   scale_ = config.scale;
   ROS_INFO("Resampling scale set to %.2f", scale_);
 }
