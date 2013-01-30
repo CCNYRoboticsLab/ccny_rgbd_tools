@@ -45,7 +45,7 @@ main (int argc, char** argv)
   pcl::PointCloud<PointT>::Ptr cloud (new pcl::PointCloud<PointT>);
   pcl::PointCloud<PointT>::Ptr cloud_filtered (new pcl::PointCloud<PointT>);
   pcl::PointCloud<PointT>::Ptr cloud_for_mesh (new pcl::PointCloud<PointT>);
-  pcl::PointCloud<PointT>::Ptr cloud_filtered_twice(new pcl::PointCloud<PointT>);
+//  pcl::PointCloud<PointT>::Ptr cloud_filtered_twice(new pcl::PointCloud<PointT>);
   sensor_msgs::PointCloud2 cloud_blob;
 //  pcl::io::loadPCDFile ("bun0.pcd", cloud_blob);
 
@@ -58,6 +58,7 @@ main (int argc, char** argv)
   sor1.setLeafSize (vgf_res, vgf_res, vgf_res);
   sor1.filter (*cloud_filtered);
 
+  /*
   // Displace cloud by a notch
   tf::Transform tf_for_cloud_filtering;
   tf_for_cloud_filtering.setIdentity();
@@ -73,9 +74,8 @@ main (int argc, char** argv)
   // Displace back the cloud
   tf_for_cloud_filtering.setOrigin(btVector3(-vgf_res/2.0, -vgf_res/2.0, -vgf_res/2.0));
   pcl::transformPointCloud(*cloud_filtered_twice, *cloud_filtered_twice, ccny_rgbd::eigenFromTf(tf_for_cloud_filtering));
-//
-
-  long int number_of_points = cloud_filtered_twice->points.size();
+  */
+  long int number_of_points = cloud_filtered->points.size();
   printf("%d points in the currently filtered cloud\n", number_of_points);
   std::vector<bool> valid_indices(number_of_points, true);
 
@@ -84,7 +84,7 @@ main (int argc, char** argv)
   // create a kd-tree instance
   pcl::KdTreeFLANN<PointT> kdtree_naive;
   // assign a point cloud - this builds the tree
-  kdtree_naive.setInputCloud (cloud_filtered_twice);
+  kdtree_naive.setInputCloud (cloud_filtered);
   std::vector<int> pointIdxRadius;
   std::vector<float> pointsSquaredDistRadius;
   float radius = neighbor_max_proximity;
@@ -96,7 +96,7 @@ main (int argc, char** argv)
     {
       pointIdxRadius.clear();
       pointsSquaredDistRadius.clear();
-      searchPoint = cloud_filtered_twice->points[i];
+      searchPoint = cloud_filtered->points[i];
       int count = kdtree_naive.radiusSearch (searchPoint, radius,
                 pointIdxRadius, pointsSquaredDistRadius);
 
@@ -125,7 +125,7 @@ main (int argc, char** argv)
   {
     if(valid_indices[i])
     {
-      PointT valid_point = cloud_filtered_twice->points[i];
+      PointT valid_point = cloud_filtered->points[i];
       cloud_for_mesh->points[pt] = valid_point;
       pt++;
     }
