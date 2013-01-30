@@ -29,6 +29,8 @@
 
 namespace ccny_rgbd {
 
+/** @brief Nodelet driver for the RGBDImageProc class.
+ */  
 class RGBDImageProcNodelet : public nodelet::Nodelet
 {
   public:
