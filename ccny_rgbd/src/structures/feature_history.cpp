@@ -22,3 +22,44 @@
  */
 
 #include "ccny_rgbd/structures/feature_history.h"
+
+namespace ccny_rgbd {
+  
+FeatureHistory::FeatureHistory():
+  index_(0),
+  capacity_(5)
+{
+
+}
+
+void FeatureHistory::add(const PointCloudFeature& cloud)
+{
+  if (history_.size() < capacity_)
+  {
+   history_.push_back(cloud);
+
+   ++index_;
+   if (index_ >= capacity_) index_ = 0;
+  }
+  else if (capacity_ > 0)
+  {
+   history_[index_] = cloud;
+
+   ++index_;
+   if (index_ >= capacity_) index_ = 0;
+  }
+}
+
+void FeatureHistory::getAll(PointCloudFeature& cloud)
+{
+  for (unsigned int i=0; i < history_.size(); ++i)
+    cloud += history_[i];
+}
+
+void FeatureHistory::reset()
+{
+  history_.clear();
+  index_ = 0;
+}
+
+} // namespace ccny_rgbd

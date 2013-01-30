@@ -33,18 +33,15 @@ namespace ccny_rgbd {
 /** @brief Auxiliary class for the frame-to-frame ICP class. 
 * 
 * The class implements a ring buffer of PointClouds
-*/
-  
-template <typename PointT>
+*/ 
 class FeatureHistory
 {
+  typedef Eigen::aligned_allocator<PointCloudFeature> PointCloudFeatureAllocator;
+  
   public:
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    typedef pcl::PointCloud<PointT> PointCloudT;
-    typedef Eigen::aligned_allocator<PointCloudT> PointCloudTAllocator;
-
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW  
+    
     /** @brief default constructor
      */
     FeatureHistory();
@@ -52,7 +49,7 @@ class FeatureHistory
     /** @brief Adds a feature cloud to the buffer
      * @param cloud the cloud to be added
      */
-    void add(const PointCloudT& cloud);
+    void add(const PointCloudFeature& cloud);
     
     /** @brief Clears the buffer
      */
@@ -81,18 +78,17 @@ class FeatureHistory
      *
      * @param cloud Reference to the PointCloud which will hold the aggregated history
      */
-    void getAll(PointCloudT& cloud);
+    void getAll(PointCloudFeature& cloud);
 
   private:
 
     unsigned int index_;    ///< the current index in the buffer
     unsigned int capacity_; ///< buffer capacity
     
-    std::vector<PointCloudT, PointCloudTAllocator> history_; ///< the buffer of point clouds
+    /** @brief the buffer of point clouds */
+    std::vector<PointCloudFeature, PointCloudFeatureAllocator> history_;
 };
 
-} //namespace ccny_rgbd
-
-#include "ccny_rgbd/structures/feature_history.hpp"
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_FEATURE_HISTORY_H

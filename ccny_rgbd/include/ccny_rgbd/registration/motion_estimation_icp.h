@@ -100,7 +100,7 @@ class MotionEstimationICP: public MotionEstimation
     PointCloudFeature::Ptr model_ptr_; ///< the PointCloud which holds the aggregated history
     KdTree model_tree_;                ///< kdtree of model_ptr_
 
-    FeatureHistory<PointFeature> feature_history_; ///< ring buffer of all the frames
+    FeatureHistory feature_history_; ///< ring buffer of all the frames
 
     tf::Transform f2b_; ///< fixed frame to base (moving) frame
     
