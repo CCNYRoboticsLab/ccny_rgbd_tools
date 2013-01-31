@@ -1,9 +1,9 @@
 <stack>
-  <description brief="ccny_rgbd">ccny_rgbd</description>
+  <description brief="ccny_rgbd_tools">A collection of tools for working with RGB-D camera data developed at the CCNY Robotics Lab</description>
   <author>Maintained by Ivan Dryanovski</author>
   <license>GPL, LGPLv3</license>  
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/ccny_rgbd</url>
+  <url>http://ros.org/wiki/ccny_rgbd_tools</url>
   <version>0.1.0</version>
   <depend stack="ros" />
 </stack>
