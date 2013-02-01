@@ -66,8 +66,6 @@ VisualOdometry::VisualOdometry(
 VisualOdometry::~VisualOdometry()
 {
   ROS_INFO("Destroying RGBD Visual Odometry"); 
-
-  delete feature_detector_;
 }
 
 void VisualOdometry::initParams()
@@ -81,30 +79,107 @@ void VisualOdometry::initParams()
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
 
+  // detector params
+  
   if (!nh_private_.getParam ("feature/detector_type", detector_type_))
     detector_type_ = "GFT";
-  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
-    reg_type_ = "ICP";
   
-  // feature params
-  if      (detector_type_ == "ORB")
-    feature_detector_ = new OrbDetector(nh_, nh_private_);
-  else if (detector_type_ == "SURF")
-    feature_detector_ = new SurfDetector(nh_, nh_private_);
-  else if (detector_type_ == "GFT")
-    feature_detector_ = new GftDetector(nh_, nh_private_);
-  else if (detector_type_ == "STAR")
-    feature_detector_ = new StarDetector(nh_, nh_private_);
-  else
-    ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
-
+  resetDetector();
+  
+  int smooth;
+  double max_range, max_stdev;
+  
+  if (!nh_private_.getParam ("feature/smooth", smooth))
+    smooth = 0;
+  if (!nh_private_.getParam ("feature/max_range", max_range))
+    max_range = 5.5;
+  if (!nh_private_.getParam ("feature/max_stdev", max_stdev))
+    max_stdev = 0.03;
+  
+  feature_detector_->setSmooth(smooth);
+  feature_detector_->setMaxRange(max_range);
+  feature_detector_->setMaxStDev(max_stdev);
+  
   // registration params
+  
+  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
+    reg_type_ = "ICPProbModel";
+  
   if      (reg_type_ == "ICP")
     motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
   else if (reg_type_ == "ICPProbModel")
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
+}
+
+void VisualOdometry::resetDetector()
+{  
+  gft_config_server_.reset();
+  star_config_server_.reset();
+  orb_config_server_.reset();
+  surf_config_server_.reset();
+  
+  if (detector_type_ == "ORB")
+  { 
+    ROS_INFO("Creating ORB detector");
+    feature_detector_.reset(new OrbDetector());
+    orb_config_server_.reset(new 
+      OrbDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/ORB")));
+    
+    // dynamic reconfigure
+    OrbDetectorConfigServer::CallbackType f = boost::bind(
+      &VisualOdometry::orbReconfigCallback, this, _1, _2);
+    orb_config_server_->setCallback(f);
+  }
+  else if (detector_type_ == "SURF")
+  {
+    ROS_INFO("Creating SURF detector");
+    feature_detector_.reset(new SurfDetector());
+    surf_config_server_.reset(new 
+      SurfDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/SURF")));
+    
+    // dynamic reconfigure
+    SurfDetectorConfigServer::CallbackType f = boost::bind(
+      &VisualOdometry::surfReconfigCallback, this, _1, _2);
+    surf_config_server_->setCallback(f);
+  }
+  else if (detector_type_ == "GFT")
+  {
+    ROS_INFO("Creating GFT detector");
+    feature_detector_.reset(new GftDetector());
+    gft_config_server_.reset(new 
+      GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
+    
+    // dynamic reconfigure
+    GftDetectorConfigServer::CallbackType f = boost::bind(
+      &VisualOdometry::gftReconfigCallback, this, _1, _2);
+    gft_config_server_->setCallback(f);
+  }
+  else if (detector_type_ == "STAR")
+  {
+    ROS_INFO("Creating STAR detector");
+    feature_detector_.reset(new StarDetector());
+    star_config_server_.reset(new 
+      StarDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/STAR")));
+    
+    // dynamic reconfigure
+    StarDetectorConfigServer::CallbackType f = boost::bind(
+      &VisualOdometry::starReconfigCallback, this, _1, _2);
+    star_config_server_->setCallback(f);
+  }
+  else
+  {
+    ROS_FATAL("%s is not a valid detector type! Using GFT", detector_type_.c_str());
+    feature_detector_.reset(new GftDetector());
+    gft_config_server_.reset(new 
+      GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
+    
+    // dynamic reconfigure
+    GftDetectorConfigServer::CallbackType f = boost::bind(
+      &VisualOdometry::gftReconfigCallback, this, _1, _2);
+    gft_config_server_->setCallback(f);
+  }
 }
 
 void VisualOdometry::RGBDCallback(
@@ -237,4 +312,39 @@ bool VisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
   return true;
 }
 
-} //namespace ccny_rgbd
+void VisualOdometry::gftReconfigCallback(GftDetectorConfig& config, uint32_t level)
+{
+  GftDetectorPtr gft_detector = 
+    boost::static_pointer_cast<GftDetector>(feature_detector_);
+    
+  gft_detector->setNFeatures(config.n_features);
+  gft_detector->setMinDistance(config.min_distance); 
+}
+
+void VisualOdometry::starReconfigCallback(StarDetectorConfig& config, uint32_t level)
+{
+  StarDetectorPtr star_detector = 
+    boost::static_pointer_cast<StarDetector>(feature_detector_);
+    
+  star_detector->setThreshold(config.threshold);
+  star_detector->setMinDistance(config.min_distance); 
+}
+
+void VisualOdometry::surfReconfigCallback(SurfDetectorConfig& config, uint32_t level)
+{
+  SurfDetectorPtr surf_detector = 
+    boost::static_pointer_cast<SurfDetector>(feature_detector_);
+    
+  surf_detector->setThreshold(config.threshold);
+}
+    
+void VisualOdometry::orbReconfigCallback(OrbDetectorConfig& config, uint32_t level)
+{
+  OrbDetectorPtr orb_detector = 
+    boost::static_pointer_cast<OrbDetector>(feature_detector_);
+    
+  orb_detector->setThreshold(config.threshold);
+  orb_detector->setNFeatures(config.n_features);
+}
+
+} // namespace ccny_rgbd

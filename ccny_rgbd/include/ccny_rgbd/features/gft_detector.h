@@ -35,15 +35,12 @@ namespace ccny_rgbd {
 /** @brief GoodFeaturesToTrack detector
  */  
 class GftDetector: public FeatureDetector
-{
+{ 
   public:
 
-    /** @brief Constructor from ROS nodehandles
-     * @param nh the public nodehandle
-     * @param nh_private the private nodehandle
-     */    
-    GftDetector(const ros::NodeHandle& nh, 
-                const ros::NodeHandle& nh_private);
+    /** @brief Default constructor
+     */     
+    GftDetector();
     
     /** @brief Default destructor
      */    
@@ -56,14 +53,26 @@ class GftDetector: public FeatureDetector
      */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
+    /** @brief Set the desired number of features
+     * @param n_features desired number of features
+     */ 
+    void setNFeatures(int n_features);
+    
+    /** @brief Set the minimum distance (in pixels) between the features
+     * @param n_features minimum distance (in pixels) between the features
+     */ 
+    void setMinDistance(double min_distance);    
+    
   private:
-
+   
     int n_features_;      ///< the number of desired features
     double min_distance_; ///< the minimum distance (in pixels) between the features
 
-    cv::GoodFeaturesToTrackDetector * gft_detector_; ///< OpenCV GTF detector object
+    boost::shared_ptr<cv::GoodFeaturesToTrackDetector> gft_detector_; ///< OpenCV GTF detector object   
 };
 
-} //namespace ccny_rgbd
+typedef boost::shared_ptr<GftDetector> GftDetectorPtr;
+
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_GFT_DETECTOR_H

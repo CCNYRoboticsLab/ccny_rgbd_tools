@@ -25,23 +25,16 @@
 
 namespace ccny_rgbd {
 
-GftDetector::GftDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  FeatureDetector(nh, nh_private)
+GftDetector::GftDetector():
+  FeatureDetector()
 {
-  if (!nh_private_.getParam ("feature/GFT/n_features", n_features_))
-    n_features_ = 200;
-  if (!nh_private_.getParam ("feature/GFT/min_distance", min_distance_))
-    min_distance_ = 1.0;
-
-  gft_detector_ = new cv::GoodFeaturesToTrackDetector(
-    n_features_, 0.01, min_distance_);
+  gft_detector_.reset(
+    new cv::GoodFeaturesToTrackDetector(n_features_, 0.01, min_distance_));
 }
 
 GftDetector::~GftDetector()
 {
-  delete gft_detector_;
+
 }
 
 void GftDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
@@ -52,4 +45,20 @@ void GftDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
   gft_detector_->detect(input_img, frame.keypoints, mask);
 }
 
-} //namespace
+void GftDetector::setNFeatures(int n_features)
+{
+  n_features_ = n_features;
+    
+  gft_detector_.reset(
+    new cv::GoodFeaturesToTrackDetector(n_features_, 0.01, min_distance_));
+}
+    
+void GftDetector::setMinDistance(double min_distance)
+{
+  min_distance_ = min_distance;
+    
+  gft_detector_.reset(
+    new cv::GoodFeaturesToTrackDetector(n_features_, 0.01, min_distance_));
+}
+
+} // namespace ccny_rgbd

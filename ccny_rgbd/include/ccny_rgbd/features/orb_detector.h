@@ -35,12 +35,9 @@ class OrbDetector: public FeatureDetector
 {
   public:
 
-    /** @brief Constructor from ROS nodehandles
-     * @param nh the public nodehandle
-     * @param nh_private the private nodehandle
+    /** @brief Default constructor
      */    
-    OrbDetector(const ros::NodeHandle& nh, 
-                const ros::NodeHandle& nh_private);
+    OrbDetector();
   
     /** @brief Default destructor
      */    
@@ -62,26 +59,17 @@ class OrbDetector: public FeatureDetector
      * @param n_features number of desired features
      */
     void setNFeatures(int n_features);
-    
-    /** @brief Returns the detection threshold
-     * @return the detection threshold
-     */
-    inline int getNFeatures() const;
-    
-    /** @brief Returns the number of desired features
-     * @return the number of desired features
-     */
-    inline int getThreshold() const;
 
   private:
 
-    boost::mutex mutex_;    ///< mutex to lock detector during async calls
     int n_features_;        ///< number of desired features
     double threshold_;      ///< threshold for detection
     
     cv::OrbDescriptorExtractor orb_descriptor_; ///< OpenCV feature detector object
-    cv::OrbFeatureDetector * orb_detector_;     ///< OpenCV descriptor extractor object
+    boost::shared_ptr<cv::OrbFeatureDetector> orb_detector_; ///< OpenCV descriptor extractor object
 };
+
+typedef boost::shared_ptr<OrbDetector> OrbDetectorPtr;
 
 } //namespace ccny_rgbd
 

@@ -26,6 +26,7 @@
 
 #include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/StarDetectorConfig.h"
 
 namespace ccny_rgbd {
 
@@ -35,12 +36,9 @@ class StarDetector: public FeatureDetector
 {
   public:
 
-    /** @brief Constructor from ROS nodehandles
-     * @param nh the public nodehandle
-     * @param nh_private the private nodehandle
-     */    
-    StarDetector(const ros::NodeHandle& nh, 
-                 const ros::NodeHandle& nh_private);
+    /** @brief Default constructor
+     */     
+    StarDetector();
     
     /** @brief Default destructor
      */   
@@ -52,18 +50,27 @@ class StarDetector: public FeatureDetector
      *        RGB image of the frame after (optional) blurring
      */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
+    
+    /** @brief Set the minimum distance (in pixels) between the features
+     * @param n_features minimum distance (in pixels) between the features
+     */ 
+    void setMinDistance(double min_distance);    
+    
+    /** @brief Set the threshold for detection
+     * @param threshold threshold for detection
+     */ 
+    void setThreshold(double threshold);
 
   private:
-
-    boost::mutex mutex_;  ///< mutex to lock detector during async calls   
+    
     double min_distance_; ///< the minimum distance (in pixels) between the features
     double threshold_;    ///< threshold for detection
-    
-    cv::FeatureDetector * star_detector_; ///< OpenCV detector class
+      
+    boost::shared_ptr<cv::FeatureDetector> star_detector_; ///< OpenCV detector class
 };
 
-} //namespace ccny_rgbd
+typedef boost::shared_ptr<StarDetector> StarDetectorPtr;
 
-
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_STAR_DETECTOR_H
