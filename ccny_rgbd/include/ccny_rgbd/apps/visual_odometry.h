@@ -99,7 +99,7 @@ class VisualOdometry
 
     std::string fixed_frame_; ///< Fixed frame parameter
     std::string base_frame_;  ///< Moving frame parameter
-
+    bool publish_tf_;
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -157,6 +157,7 @@ class VisualOdometry
      * @param header header of the incoming message, used to stamp things correctly
      */
     void publishTf(const std_msgs::Header& header);
+    void publishOdom(const std_msgs::Header& header);  
 
     /** @brief Caches the transform from the base frame to the camera frame
      * @param header header of the incoming message, used to stamp things correctly

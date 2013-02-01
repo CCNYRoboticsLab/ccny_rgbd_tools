@@ -72,6 +72,8 @@ VisualOdometry::~VisualOdometry()
 
 void VisualOdometry::initParams()
 {
+  if (!nh_private_.getParam ("publish_tf", publish_tf_))
+    publish_tf_ = true;  
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
@@ -143,8 +145,13 @@ void VisualOdometry::RGBDCallback(
   ros::WallTime end_reg = ros::WallTime::now();
 
   // **** publish motion **********************************************
-
-  publishTf(rgb_msg->header);
+  if (publish_tf_)
+  {
+    publishTf(rgb_msg->header);
+  }
+  // **** publish odometry  *******************************************
+  
+  publishOdom(rgb_msg->header);
 
   // **** print diagnostics *******************************************
 
@@ -197,7 +204,10 @@ void VisualOdometry::publishTf(const std_msgs::Header& header)
   tf::StampedTransform transform_msg(
    f2b_, header.stamp, fixed_frame_, base_frame_);
   tf_broadcaster_.sendTransform (transform_msg);
+}
 
+void VisualOdometry::publishOdom(const std_msgs::Header& header)
+{
   OdomMsg odom;
   odom.header.stamp = header.stamp;
   odom.header.frame_id = fixed_frame_;
