@@ -25,23 +25,15 @@
 
 namespace ccny_rgbd {
 
-StarDetector::StarDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  FeatureDetector(nh, nh_private)
-{
-  if (!nh_private_.getParam ("feature/STAR/threshold", threshold_))
-    threshold_ = 15;
-  if (!nh_private_.getParam ("feature/STAR/min_distance", min_distance_))
-    min_distance_ = 1.0;
-    
-  star_detector_ = new cv::StarFeatureDetector(
-    16, threshold_, 10, 8, min_distance_);
+StarDetector::StarDetector(): FeatureDetector()
+{   
+  star_detector_.reset(
+    new cv::StarFeatureDetector(16, threshold_, 10, 8, min_distance_));
 }
 
 StarDetector::~StarDetector()
 {
-  delete star_detector_;
+
 }
 
 void StarDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
@@ -53,5 +45,21 @@ void StarDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 
   star_detector_->detect(input_img, frame.keypoints, mask);
 }
+    
+void StarDetector::setMinDistance(double min_distance)
+{
+  min_distance_ = min_distance;
+    
+  star_detector_.reset(
+    new cv::StarFeatureDetector(16, threshold_, 10, 8, min_distance_));
+}
 
-} //namespace
+void StarDetector::setThreshold(double threshold)
+{
+  threshold_ = threshold;
+    
+  star_detector_.reset(
+    new cv::StarFeatureDetector(16, threshold_, 10, 8, min_distance_));
+}
+
+} // namespace ccny_rgbd

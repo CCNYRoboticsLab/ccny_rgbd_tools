@@ -1,5 +1,5 @@
 /**
- *  @file rgbd_image_proc_nodelet.h
+ *  @file feature_viewer_node.cpp
  *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
@@ -21,27 +21,14 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CCNY_RGBD_RGBD_IMAGE_PROC_NODELET_H
-#define CCNY_RGBD_RGBD_IMAGE_PROC_NODELET_H
+#include "ccny_rgbd/apps/feature_viewer.h"
 
-#include <nodelet/nodelet.h>
-#include <pluginlib/class_list_macros.h>
-
-#include "ccny_rgbd/apps/rgbd_image_proc.h"
-
-namespace ccny_rgbd {
-
-/** @brief Nodelet driver for the RGBDImageProc class.
- */  
-class RGBDImageProcNodelet : public nodelet::Nodelet
+int main(int argc, char** argv)
 {
-  public:
-    virtual void onInit();
-
-  private:
-    RGBDImageProc * rgbd_image_proc_;  // FIXME: change to smart pointer
-};
-
-} // namespace ccny_rgbd
-
-#endif // CCNY_RGBD_RGBD_IMAGE_PROC_NODELET_H
+  ros::init(argc, argv, "FeatureViewer");  
+  ros::NodeHandle nh;
+  ros::NodeHandle nh_private("~");
+  ccny_rgbd::FeatureViewer fv(nh, nh_private);
+  ros::spin();
+  return 0;
+}
