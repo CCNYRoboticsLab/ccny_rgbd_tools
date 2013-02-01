@@ -111,7 +111,8 @@ class VisualOdometry
 
     std::string fixed_frame_; ///< Fixed frame parameter
     std::string base_frame_;  ///< Moving frame parameter
-    bool publish_tf_;
+    bool publish_tf_;         ///< Parameter whether to publish a ros tf
+    
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -165,14 +166,15 @@ class VisualOdometry
      */
     void resetDetector();
     
-    /** @brief publishes the f2b_ (fixed-to-base) transform under varios
-     * forms (tf, odom)
-     * 
-     * \todo publish also as PoseWithCovariance
-     *
+    /** @brief publishes the f2b_ (fixed-to-base) transform as a tf
      * @param header header of the incoming message, used to stamp things correctly
      */
     void publishTf(const std_msgs::Header& header);
+    
+    /** @brief publishes the f2b_ (fixed-to-base) transform as an Odom message
+     * \todo publish also as PoseWithCovariance
+     * @param header header of the incoming message, used to stamp things correctly
+     */
     void publishOdom(const std_msgs::Header& header);  
 
     /** @brief Caches the transform from the base frame to the camera frame
