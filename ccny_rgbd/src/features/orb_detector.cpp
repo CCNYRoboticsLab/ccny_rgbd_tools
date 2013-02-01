@@ -35,13 +35,13 @@ OrbDetector::OrbDetector(
   if (!nh_private_.getParam ("feature/ORB/threshold", threshold_))
     threshold_ = 31.0;
 
-  orb_detector_ = new cv::OrbFeatureDetector(
-    n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31);
+  orb_detector_.reset(
+    new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
 }
 
 OrbDetector::~OrbDetector()
 {
-  delete orb_detector_;
+
 }
 
 void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
@@ -64,10 +64,8 @@ void OrbDetector::setThreshold(int threshold)
   
   threshold_ = threshold;
 
-  delete orb_detector_;
-
-  orb_detector_ = new cv::OrbFeatureDetector(
-    n_features_, 1.2f, 8, threshold_, 0, 2,0, 31);
+  orb_detector_.reset(
+    new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
 }
 
 void OrbDetector::setNFeatures(int n_features)
@@ -76,10 +74,8 @@ void OrbDetector::setNFeatures(int n_features)
   
   n_features_ = n_features;
 
-  delete orb_detector_;
-
-  orb_detector_ = new cv::OrbFeatureDetector(
-    n_features_, 1.2f, 8, threshold_, 0, 2,0, 31);
+  orb_detector_.reset(
+    new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
 }
 
 int OrbDetector::getThreshold() const

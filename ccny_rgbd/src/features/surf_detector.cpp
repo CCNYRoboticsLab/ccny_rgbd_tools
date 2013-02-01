@@ -33,13 +33,13 @@ SurfDetector::SurfDetector(
   if (!nh_private_.getParam ("feature/SURF/threshold", threshold_))
     threshold_ = 400.0;
 
-  surf_detector_ = new cv::SurfFeatureDetector(
-    threshold_, 4, 2, true, false);
+  surf_detector_.reset(
+    new cv::SurfFeatureDetector(threshold_, 4, 2, true, false));
 }
 
 SurfDetector::~SurfDetector()
 {
-  delete surf_detector_;
+
 }
 
 void SurfDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)

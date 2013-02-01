@@ -66,8 +66,6 @@ VisualOdometry::VisualOdometry(
 VisualOdometry::~VisualOdometry()
 {
   ROS_INFO("Destroying RGBD Visual Odometry"); 
-
-  delete feature_detector_;
 }
 
 void VisualOdometry::initParams()
@@ -79,30 +77,67 @@ void VisualOdometry::initParams()
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
 
+  // detector params
+  
   if (!nh_private_.getParam ("feature/detector_type", detector_type_))
     detector_type_ = "GFT";
-  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
-    reg_type_ = "ICP";
   
-  // feature params
-  if      (detector_type_ == "ORB")
-    feature_detector_ = new OrbDetector(nh_, nh_private_);
-  else if (detector_type_ == "SURF")
-    feature_detector_ = new SurfDetector(nh_, nh_private_);
-  else if (detector_type_ == "GFT")
-    feature_detector_ = new GftDetector(nh_, nh_private_);
-  else if (detector_type_ == "STAR")
-    feature_detector_ = new StarDetector(nh_, nh_private_);
-  else
-    ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
-
+  resetDetector();
+  
+  int smooth;
+  double max_range, max_stdev;
+  
+  if (!nh_private_.getParam ("feature/smooth", smooth))
+    smooth = 0;
+  if (!nh_private_.getParam ("feature/max_range", max_range))
+    max_range = 5.5;
+  if (!nh_private_.getParam ("feature/max_stdev", max_stdev))
+    max_stdev = 0.03;
+  
+  feature_detector_->setSmooth(smooth);
+  feature_detector_->setMaxRange(max_range);
+  feature_detector_->setMaxStDev(max_stdev);
+  
   // registration params
+  
+  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
+    reg_type_ = "ICPProbModel";
+  
   if      (reg_type_ == "ICP")
     motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
   else if (reg_type_ == "ICPProbModel")
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
+}
+
+void VisualOdometry::resetDetector()
+{  
+  if (detector_type_ == "ORB")
+  { 
+    ROS_INFO("Creating ORB detector");
+    feature_detector_.reset(new OrbDetector(nh_, nh_private_));
+  }
+  else if (detector_type_ == "SURF")
+  {
+    ROS_INFO("Creating ORB detector");
+    feature_detector_.reset(new SurfDetector(nh_, nh_private_));
+  }
+  else if (detector_type_ == "GFT")
+  {
+    ROS_INFO("Creating GFT detector");
+    feature_detector_.reset(new GftDetector(nh_, nh_private_));
+  }
+  else if (detector_type_ == "STAR")
+  {
+    ROS_INFO("Creating STAR detector");
+    feature_detector_.reset(new StarDetector(nh_, nh_private_));
+  }
+  else
+  {
+    ROS_FATAL("%s is not a valid detector type! Using GFT", detector_type_.c_str());
+    feature_detector_.reset(new GftDetector(nh_, nh_private_));
+  }
 }
 
 void VisualOdometry::RGBDCallback(

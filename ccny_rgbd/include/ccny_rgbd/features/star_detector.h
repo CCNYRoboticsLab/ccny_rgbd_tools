@@ -24,8 +24,11 @@
 #ifndef CCNY_RGBD_STAR_DETECTOR_H
 #define CCNY_RGBD_STAR_DETECTOR_H
 
+#include <dynamic_reconfigure/server.h>
+
 #include "ccny_rgbd/features/feature_detector.h"
 #include "ccny_rgbd/rgbd_util.h"
+#include "ccny_rgbd/StarDetectorConfig.h"
 
 namespace ccny_rgbd {
 
@@ -33,6 +36,8 @@ namespace ccny_rgbd {
 */  
 class StarDetector: public FeatureDetector
 {
+  typedef dynamic_reconfigure::Server<StarDetectorConfig> StarDetectorConfigServer;
+  
   public:
 
     /** @brief Constructor from ROS nodehandles
@@ -55,11 +60,16 @@ class StarDetector: public FeatureDetector
 
   private:
 
-    boost::mutex mutex_;  ///< mutex to lock detector during async calls   
+    StarDetectorConfigServer config_server_;
+    
     double min_distance_; ///< the minimum distance (in pixels) between the features
     double threshold_;    ///< threshold for detection
     
-    cv::FeatureDetector * star_detector_; ///< OpenCV detector class
+    boost::shared_ptr<cv::FeatureDetector> star_detector_; ///< OpenCV detector class
+    
+    /** @brief ROS dynamic reconfigure callback function
+     */
+    void reconfigCallback(StarDetectorConfig& config, uint32_t level);
 };
 
 } //namespace ccny_rgbd

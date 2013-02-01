@@ -1,5 +1,5 @@
 /**
- *  @file visual_odometry.h
+ *  @file feature_viewer.h
  *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
@@ -21,14 +21,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
-#define CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
+#ifndef CCNY_RGBD_RGBD_FEATURE_VIEWER_H
+#define CCNY_RGBD_RGBD_FEATURE_VIEWER_H
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <tf/transform_listener.h>
-#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
+#include <dynamic_reconfigure/server.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
@@ -38,34 +39,28 @@
 #include "ccny_rgbd/features/surf_detector.h"
 #include "ccny_rgbd/features/gft_detector.h"
 #include "ccny_rgbd/features/star_detector.h"
-#include "ccny_rgbd/registration/motion_estimation.h"
-#include "ccny_rgbd/registration/motion_estimation_icp.h"
-#include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
+#include "ccny_rgbd/FeatureDetectorConfig.h"
 
 namespace ccny_rgbd {
 
-/** @brief Subscribes to incoming RGBD images and outputs 
- * the position of the moving (base) frame wrt some fixed frame.
- * 
- * The class offers a selection of sparse feature detectors (GFT, ORB, SURF, STAR),
- * as well as a selection of registration algorithms. The default registration 
- * method (ICPProbModel) aligns the incoming 3D sparse features against a persistent
- * 3D feature model, which is continuously updated using a Kalman Filer.
+/** @brief ?
  */  
-class VisualOdometry
+class FeatureViewer
 {
+  typedef dynamic_reconfigure::Server<FeatureDetectorConfig> FeatureDetectorConfigServer;
+  
   public:
 
     /** @brief Constructor from ROS nodehandles
      * @param nh the public nodehandle
      * @param nh_private the private nodehandle
      */  
-    VisualOdometry(const ros::NodeHandle& nh, 
+    FeatureViewer(const ros::NodeHandle& nh, 
                    const ros::NodeHandle& nh_private);
     
     /** @brief Default destructor
      */
-    virtual ~VisualOdometry();
+    virtual ~FeatureViewer();
 
   private:
 
@@ -73,10 +68,12 @@ class VisualOdometry
 
     ros::NodeHandle nh_;                ///< the public nodehandle
     ros::NodeHandle nh_private_;        ///< the private nodehandle
-    tf::TransformListener tf_listener_; ///< ROS transform listener
-    tf::TransformBroadcaster tf_broadcaster_; ///< ROS transform broadcaster
-    ros::Publisher odom_publisher_;           ///< ROS Odometry publisher
 
+    ros::Publisher cloud_publisher_;        ///< publisher for feature point cloud
+    ros::Publisher covariances_publisher_;  ///< publisher for feature covariances
+    
+    FeatureDetectorConfigServer config_server_; ///< ROS dynamic reconfigure server
+    
     /** @brief Image transport for RGB message subscription */
     boost::shared_ptr<ImageTransport> rgb_it_;
     
@@ -97,9 +94,6 @@ class VisualOdometry
 
     // **** parameters 
 
-    std::string fixed_frame_; ///< Fixed frame parameter
-    std::string base_frame_;  ///< Moving frame parameter
-
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -109,30 +103,34 @@ class VisualOdometry
      *  - ORB
      */
     std::string detector_type_;
-    
-    /** @brief Motion estimation (registration) type parameter
-     * 
-     * Possible values:
-     * - ICPProbModel (default) 
-     * - ICP
-     */
-    std::string reg_type_;
-
+  
     int queue_size_;  ///< Subscription queue size
+  
+     /** @brief If true, show an OpenCV window with the features
+     * 
+     * Note: this might slightly decrease performance
+     */
+    bool show_keypoints_; 
     
+    /** @brief If true, publish an OpenCV window with the
+     * 
+     * Note: this might slightly decrease performance
+     */
+    bool publish_cloud_; 
+    
+    /** @brief If true, publish the covariance markers
+     * 
+     * Note: this might decrease performance
+     */
+    bool publish_covariances_;
+ 
     // **** variables
 
-    bool initialized_; ///< Whether the init_time and b2c_ variables have been set
+    boost::mutex mutex_; ///< state mutex
     int  frame_count_; ///< RGBD frame counter
-    ros::Time init_time_; ///< Time of first RGBD message
-
-    tf::Transform b2c_;  ///< Transform from the base to the camera frame, wrt base frame
-    tf::Transform f2b_;  ///< Transform from the fixed to the base frame, wrt fixed frame
 
     boost::shared_ptr<FeatureDetector> feature_detector_; ///< The feature detector object
 
-    MotionEstimation * motion_estimation_; ///< The motion estimation object
-  
     // **** private functions
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages
@@ -148,26 +146,34 @@ class VisualOdometry
     /** @brief Initializes all the parameters from the ROS param server
      */
     void initParams();
-
+    
     /** @brief Re-instantiates the feature detector based on the detector type parameter
      */
     void resetDetector();
     
-    /** @brief publishes the f2b_ (fixed-to-base) transform under varios
-     * forms (tf, odom)
+    /** @brief Publish the feautre point cloud
      * 
-     * \todo publish also as PoseWithCovariance
-     *
-     * @param header header of the incoming message, used to stamp things correctly
+     * Note: this might decrease performance
      */
-    void publishTf(const std_msgs::Header& header);
-
-    /** @brief Caches the transform from the base frame to the camera frame
-     * @param header header of the incoming message, used to stamp things correctly
+    void publishFeatureCloud(RGBDFrame& frame);
+    
+    /** @brief Publish the feature covariance markers
+     * 
+     * Note: this might decrease performance
      */
-    bool getBaseToCameraTf(const std_msgs::Header& header);
+    void publishFeatureCovariances(RGBDFrame& frame);
+        
+    /** @brief Show the image with keypoints
+     * 
+     * Note: this might decrease performance
+     */
+    void showKeypointImage(RGBDFrame& frame);
+    
+    /** @brief ROS dynamic reconfigure callback function
+     */
+    void reconfigCallback(FeatureDetectorConfig& config, uint32_t level);
 };
 
 } //namespace ccny_rgbd
 
-#endif // CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H
+#endif // CCNY_RGBD_RGBD_FEATURE_VIEWER_H

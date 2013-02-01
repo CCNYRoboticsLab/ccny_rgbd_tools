@@ -59,7 +59,9 @@ class SurfDetector: public FeatureDetector
 
     double threshold_;    ///< threshold for detection
 
-    cv::SurfFeatureDetector * surf_detector_;     ///< OpenCV feature detector object
+    /** @brief OpenCV feature detector object */
+    boost::shared_ptr<cv::SurfFeatureDetector> surf_detector_;     
+    
     cv::SurfDescriptorExtractor surf_descriptor_; ///< OpenCV descriptor extractor object
 };
 

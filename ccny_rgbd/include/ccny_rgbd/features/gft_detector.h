@@ -26,9 +26,11 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <dynamic_reconfigure/server.h>
 
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/features/feature_detector.h"
+#include "ccny_rgbd/GftDetectorConfig.h"
 
 namespace ccny_rgbd {
 
@@ -36,6 +38,8 @@ namespace ccny_rgbd {
  */  
 class GftDetector: public FeatureDetector
 {
+  typedef dynamic_reconfigure::Server<GftDetectorConfig> GftDetectorConfigServer;
+  
   public:
 
     /** @brief Constructor from ROS nodehandles
@@ -58,10 +62,16 @@ class GftDetector: public FeatureDetector
 
   private:
 
+    GftDetectorConfigServer config_server_;    ///< ROS dynamic reconfigure server
+    
     int n_features_;      ///< the number of desired features
     double min_distance_; ///< the minimum distance (in pixels) between the features
 
-    cv::GoodFeaturesToTrackDetector * gft_detector_; ///< OpenCV GTF detector object
+    boost::shared_ptr<cv::GoodFeaturesToTrackDetector> gft_detector_; ///< OpenCV GTF detector object
+    
+    /** @brief ROS dynamic reconfigure callback function
+     */
+    void reconfigCallback(GftDetectorConfig& config, uint32_t level);
 };
 
 } //namespace ccny_rgbd

@@ -115,6 +115,22 @@ target_link_libraries (keyframe_mapper_node
 )
 
 ################################################################
+# Build feature viewer application
+################################################################
+
+rosbuild_add_executable(feature_viewer_node 
+  src/node/feature_viewer_node.cpp
+  src/apps/feature_viewer.cpp)
+
+target_link_libraries (feature_viewer_node
+  ccny_rgbd_structures 
+  ccny_rgbd_features
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+)
+
+################################################################
 # Build image proc application
 ################################################################
 

@@ -75,12 +75,11 @@ class OrbDetector: public FeatureDetector
 
   private:
 
-    boost::mutex mutex_;    ///< mutex to lock detector during async calls
     int n_features_;        ///< number of desired features
     double threshold_;      ///< threshold for detection
     
     cv::OrbDescriptorExtractor orb_descriptor_; ///< OpenCV feature detector object
-    cv::OrbFeatureDetector * orb_detector_;     ///< OpenCV descriptor extractor object
+    boost::shared_ptr<cv::OrbFeatureDetector> orb_detector_; ///< OpenCV descriptor extractor object
 };
 
 } //namespace ccny_rgbd
