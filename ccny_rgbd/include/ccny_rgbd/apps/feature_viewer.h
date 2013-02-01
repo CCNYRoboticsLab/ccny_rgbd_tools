@@ -39,16 +39,19 @@
 #include "ccny_rgbd/features/surf_detector.h"
 #include "ccny_rgbd/features/gft_detector.h"
 #include "ccny_rgbd/features/star_detector.h"
+
 #include "ccny_rgbd/FeatureDetectorConfig.h"
+#include "ccny_rgbd/GftDetectorConfig.h"
+#include "ccny_rgbd/StarDetectorConfig.h"
+#include "ccny_rgbd/SurfDetectorConfig.h"
+#include "ccny_rgbd/OrbDetectorConfig.h"
 
 namespace ccny_rgbd {
 
 /** @brief ?
  */  
 class FeatureViewer
-{
-  typedef dynamic_reconfigure::Server<FeatureDetectorConfig> FeatureDetectorConfigServer;
-  
+{ 
   public:
 
     /** @brief Constructor from ROS nodehandles
@@ -56,7 +59,7 @@ class FeatureViewer
      * @param nh_private the private nodehandle
      */  
     FeatureViewer(const ros::NodeHandle& nh, 
-                   const ros::NodeHandle& nh_private);
+                  const ros::NodeHandle& nh_private);
     
     /** @brief Default destructor
      */
@@ -73,6 +76,11 @@ class FeatureViewer
     ros::Publisher covariances_publisher_;  ///< publisher for feature covariances
     
     FeatureDetectorConfigServer config_server_; ///< ROS dynamic reconfigure server
+    
+    GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
+    StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
+    SurfDetectorConfigServerPtr surf_config_server_;    ///< ROS dynamic reconfigure server for SURF params
+    OrbDetectorConfigServerPtr orb_config_server_;  ///< ROS dynamic reconfigure server for ORB params
     
     /** @brief Image transport for RGB message subscription */
     boost::shared_ptr<ImageTransport> rgb_it_;
@@ -129,7 +137,7 @@ class FeatureViewer
     boost::mutex mutex_; ///< state mutex
     int  frame_count_; ///< RGBD frame counter
 
-    boost::shared_ptr<FeatureDetector> feature_detector_; ///< The feature detector object
+    FeatureDetectorPtr feature_detector_; ///< The feature detector object
 
     // **** private functions
     
@@ -172,6 +180,22 @@ class FeatureViewer
     /** @brief ROS dynamic reconfigure callback function
      */
     void reconfigCallback(FeatureDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for GFT
+     */
+    void gftReconfigCallback(GftDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for STAR
+     */
+    void starReconfigCallback(StarDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for SURF
+     */
+    void surfReconfigCallback(SurfDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for ORB
+     */
+    void orbReconfigCallback(OrbDetectorConfig& config, uint32_t level);
 };
 
 } //namespace ccny_rgbd

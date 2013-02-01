@@ -40,12 +40,9 @@ class FeatureDetector
 { 
   public:
 
-    /** @brief Constructor from ROS nodehandles
-     * @param nh the public nodehandle
-     * @param nh_private the private nodehandle
+    /** @brief Default constructor
      */    
-    FeatureDetector(const ros::NodeHandle& nh, 
-                    const ros::NodeHandle& nh_private);
+    FeatureDetector();
         
     /** @brief Default destructor
      */  
@@ -101,9 +98,6 @@ class FeatureDetector
        
   protected:
 
-    ros::NodeHandle nh_;         ///< the public nodehanle
-    ros::NodeHandle nh_private_; ///< the private nodehanle
-
     boost::mutex mutex_;         ///< state mutex
     
     bool compute_descriptors_;   ///< whether to calculate feature descriptors
@@ -121,6 +115,8 @@ class FeatureDetector
     double max_range_;  ///< maximum allowed z-depth (in meters) for features
     double max_stdev_;  ///< maximum allowed std_dev(z) (in meters) for features
 };
+
+typedef boost::shared_ptr<FeatureDetector> FeatureDetectorPtr;
 
 } // namespace ccny_rgbd
 

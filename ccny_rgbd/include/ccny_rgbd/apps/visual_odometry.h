@@ -42,6 +42,12 @@
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
 
+#include "ccny_rgbd/FeatureDetectorConfig.h"
+#include "ccny_rgbd/GftDetectorConfig.h"
+#include "ccny_rgbd/StarDetectorConfig.h"
+#include "ccny_rgbd/SurfDetectorConfig.h"
+#include "ccny_rgbd/OrbDetectorConfig.h"
+
 namespace ccny_rgbd {
 
 /** @brief Subscribes to incoming RGBD images and outputs 
@@ -77,6 +83,12 @@ class VisualOdometry
     tf::TransformBroadcaster tf_broadcaster_; ///< ROS transform broadcaster
     ros::Publisher odom_publisher_;           ///< ROS Odometry publisher
 
+    GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
+    StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
+    SurfDetectorConfigServerPtr surf_config_server_;    ///< ROS dynamic reconfigure server for SURF params
+    OrbDetectorConfigServerPtr orb_config_server_;  ///< ROS dynamic reconfigure server for ORB params
+    
+    
     /** @brief Image transport for RGB message subscription */
     boost::shared_ptr<ImageTransport> rgb_it_;
     
@@ -166,8 +178,24 @@ class VisualOdometry
      * @param header header of the incoming message, used to stamp things correctly
      */
     bool getBaseToCameraTf(const std_msgs::Header& header);
+    
+    /** @brief ROS dynamic reconfigure callback function for GFT
+     */
+    void gftReconfigCallback(GftDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for STAR
+     */
+    void starReconfigCallback(StarDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for SURF
+     */
+    void surfReconfigCallback(SurfDetectorConfig& config, uint32_t level);
+    
+    /** @brief ROS dynamic reconfigure callback function for ORB
+     */
+    void orbReconfigCallback(OrbDetectorConfig& config, uint32_t level);
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_VISUAL_ODOMETRY_H

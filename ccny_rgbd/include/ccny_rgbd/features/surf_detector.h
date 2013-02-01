@@ -37,12 +37,9 @@ class SurfDetector: public FeatureDetector
 {
   public:
 
-    /** @brief Constructor from ROS nodehandles
-     * @param nh the public nodehandle
-     * @param nh_private the private nodehandle
+    /** @brief Default constructor
      */    
-    SurfDetector(const ros::NodeHandle& nh, 
-                 const ros::NodeHandle& nh_private);
+    SurfDetector();
         
     /** @brief Default destructor
      */   
@@ -55,6 +52,11 @@ class SurfDetector: public FeatureDetector
      */ 
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
 
+    /** @brief Set the threshold for detection
+     * @param threshold threshold for detection
+     */ 
+    void setThreshold(double threshold);
+    
   private:
 
     double threshold_;    ///< threshold for detection
@@ -64,6 +66,8 @@ class SurfDetector: public FeatureDetector
     
     cv::SurfDescriptorExtractor surf_descriptor_; ///< OpenCV descriptor extractor object
 };
+
+typedef boost::shared_ptr<SurfDetector> SurfDetectorPtr;
 
 } //namespace ccny_rgbd
 

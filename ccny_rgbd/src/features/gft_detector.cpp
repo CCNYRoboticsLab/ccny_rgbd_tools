@@ -25,24 +25,11 @@
 
 namespace ccny_rgbd {
 
-GftDetector::GftDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  FeatureDetector(nh, nh_private),
-  config_server_(ros::NodeHandle(nh_private_, "feature/GFT"))
+GftDetector::GftDetector():
+  FeatureDetector()
 {
-  if (!nh_private_.getParam ("feature/GFT/n_features", n_features_))
-    n_features_ = 200;
-  if (!nh_private_.getParam ("feature/GFT/min_distance", min_distance_))
-    min_distance_ = 1.0;
-
   gft_detector_.reset(
     new cv::GoodFeaturesToTrackDetector(n_features_, 0.01, min_distance_));
-  
-  // dynamic reconfigure
-  GftDetectorConfigServer::CallbackType f = boost::bind(
-    &GftDetector::reconfigCallback, this, _1, _2);
-  config_server_.setCallback(f);
 }
 
 GftDetector::~GftDetector()
@@ -58,15 +45,20 @@ void GftDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
   gft_detector_->detect(input_img, frame.keypoints, mask);
 }
 
-void GftDetector::reconfigCallback(GftDetectorConfig& config, uint32_t level)
+void GftDetector::setNFeatures(int n_features)
 {
-  boost::mutex::scoped_lock(mutex_);
-
-  n_features_   = config.n_features;
-  min_distance_ = config.min_distance;
-
+  n_features_ = n_features;
+    
+  gft_detector_.reset(
+    new cv::GoodFeaturesToTrackDetector(n_features_, 0.01, min_distance_));
+}
+    
+void GftDetector::setMinDistance(double min_distance)
+{
+  min_distance_ = min_distance;
+    
   gft_detector_.reset(
     new cv::GoodFeaturesToTrackDetector(n_features_, 0.01, min_distance_));
 }
 
-} //namespace
+} // namespace ccny_rgbd

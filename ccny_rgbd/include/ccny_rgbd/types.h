@@ -36,6 +36,13 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <dynamic_reconfigure/server.h>
+
+#include "ccny_rgbd/FeatureDetectorConfig.h"
+#include "ccny_rgbd/GftDetectorConfig.h"
+#include "ccny_rgbd/StarDetectorConfig.h"
+#include "ccny_rgbd/SurfDetectorConfig.h"
+#include "ccny_rgbd/OrbDetectorConfig.h"
 
 namespace ccny_rgbd {
 
@@ -84,6 +91,22 @@ typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, Came
 typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, CameraInfoMsg, CameraInfoMsg> RGBDSyncPolicy4;
 typedef message_filters::Synchronizer<RGBDSyncPolicy3> RGBDSynchronizer3;
 typedef message_filters::Synchronizer<RGBDSyncPolicy4> RGBDSynchronizer4;
+
+// ROS dynamic reconfigure
+
+typedef dynamic_reconfigure::Server<FeatureDetectorConfig> FeatureDetectorConfigServer;
+
+typedef dynamic_reconfigure::Server<GftDetectorConfig> GftDetectorConfigServer;
+typedef boost::shared_ptr<GftDetectorConfigServer> GftDetectorConfigServerPtr;
+
+typedef dynamic_reconfigure::Server<StarDetectorConfig> StarDetectorConfigServer;
+typedef boost::shared_ptr<StarDetectorConfigServer> StarDetectorConfigServerPtr; 
+
+typedef dynamic_reconfigure::Server<SurfDetectorConfig> SurfDetectorConfigServer;
+typedef boost::shared_ptr<SurfDetectorConfigServer> SurfDetectorConfigServerPtr; 
+
+typedef dynamic_reconfigure::Server<OrbDetectorConfig> OrbDetectorConfigServer;
+typedef boost::shared_ptr<OrbDetectorConfigServer> OrbDetectorConfigServerPtr; 
 
 } // namespace ccny_rgbd
 

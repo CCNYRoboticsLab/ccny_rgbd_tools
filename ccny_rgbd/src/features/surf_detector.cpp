@@ -25,14 +25,8 @@
 
 namespace ccny_rgbd {
 
-SurfDetector::SurfDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  FeatureDetector(nh, nh_private)
+SurfDetector::SurfDetector():FeatureDetector()
 {
-  if (!nh_private_.getParam ("feature/SURF/threshold", threshold_))
-    threshold_ = 400.0;
-
   surf_detector_.reset(
     new cv::SurfFeatureDetector(threshold_, 4, 2, true, false));
 }
@@ -52,6 +46,14 @@ void SurfDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
   if(compute_descriptors_)
     surf_descriptor_.compute(
       input_img, frame.keypoints, frame.descriptors);
+}
+
+void SurfDetector::setThreshold(double threshold)
+{
+  threshold_ = threshold;
+    
+  surf_detector_.reset(
+    new cv::SurfFeatureDetector(threshold_, 4, 2, true, false));
 }
 
 } // namespace ccny_rgbd

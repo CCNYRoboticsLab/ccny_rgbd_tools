@@ -25,10 +25,8 @@
 
 namespace ccny_rgbd {
 
-FeatureDetector::FeatureDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  nh_(nh), nh_private_(nh_private)
+FeatureDetector::FeatureDetector():
+  compute_descriptors_(false)
 {
 
 }

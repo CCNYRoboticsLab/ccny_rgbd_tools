@@ -25,18 +25,16 @@
 
 namespace ccny_rgbd {
 
-OrbDetector::OrbDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  FeatureDetector(nh, nh_private)
+OrbDetector::OrbDetector(): FeatureDetector(),
+  n_features_(400),
+  threshold_(31.0)
 {
-  if (!nh_private_.getParam ("feature/ORB/n_features", n_features_))
-    n_features_ = 200;
-  if (!nh_private_.getParam ("feature/ORB/threshold", threshold_))
-    threshold_ = 31.0;
-
+  mutex_.lock();
+  
   orb_detector_.reset(
     new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
+  
+  mutex_.unlock();
 }
 
 OrbDetector::~OrbDetector()
@@ -46,7 +44,7 @@ OrbDetector::~OrbDetector()
 
 void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 {
-  boost::mutex::scoped_lock(mutex_);
+  mutex_.lock();
   
   cv::Mat mask(frame.depth_img.size(), CV_8UC1);
   frame.depth_img.convertTo(mask, CV_8U);
@@ -56,36 +54,31 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
   if(compute_descriptors_)
     orb_descriptor_.compute(
       input_img, frame.keypoints, frame.descriptors);
+  
+  mutex_.unlock();
 }
 
 void OrbDetector::setThreshold(int threshold)
 {
-  boost::mutex::scoped_lock(mutex_);
+  mutex_.lock();
   
   threshold_ = threshold;
 
   orb_detector_.reset(
     new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
+  
+  mutex_.unlock();
 }
 
 void OrbDetector::setNFeatures(int n_features)
 {
-  boost::mutex::scoped_lock(mutex_);
-  
+  mutex_.lock();
   n_features_ = n_features;
 
   orb_detector_.reset(
     new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
-}
-
-int OrbDetector::getThreshold() const
-{
-  return threshold_;
-}
-
-int OrbDetector::getNFeatures() const
-{
-  return n_features_;
+  
+  mutex_.unlock();
 }
 
 } //namespace

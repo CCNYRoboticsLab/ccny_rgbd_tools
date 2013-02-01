@@ -25,24 +25,10 @@
 
 namespace ccny_rgbd {
 
-StarDetector::StarDetector(
-  const ros::NodeHandle& nh, 
-  const ros::NodeHandle& nh_private):
-  FeatureDetector(nh, nh_private),
-  config_server_(ros::NodeHandle(nh_private_, "feature/STAR"))
-{
-  if (!nh_private_.getParam ("feature/STAR/threshold", threshold_))
-    threshold_ = 30;
-  if (!nh_private_.getParam ("feature/STAR/min_distance", min_distance_))
-    min_distance_ = 1.0;
-    
+StarDetector::StarDetector(): FeatureDetector()
+{   
   star_detector_.reset(
     new cv::StarFeatureDetector(16, threshold_, 10, 8, min_distance_));
-  
-  // dynamic reconfigure
-  StarDetectorConfigServer::CallbackType f = boost::bind(
-    &StarDetector::reconfigCallback, this, _1, _2);
-  config_server_.setCallback(f);
 }
 
 StarDetector::~StarDetector()
@@ -59,16 +45,21 @@ void StarDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
 
   star_detector_->detect(input_img, frame.keypoints, mask);
 }
-
-void StarDetector::reconfigCallback(StarDetectorConfig& config, uint32_t level)
+    
+void StarDetector::setMinDistance(double min_distance)
 {
-  boost::mutex::scoped_lock(mutex_);
-
-  threshold_   = config.threshold;
-  min_distance_ = config.min_distance;
-
+  min_distance_ = min_distance;
+    
   star_detector_.reset(
     new cv::StarFeatureDetector(16, threshold_, 10, 8, min_distance_));
 }
 
-} //namespace
+void StarDetector::setThreshold(double threshold)
+{
+  threshold_ = threshold;
+    
+  star_detector_.reset(
+    new cv::StarFeatureDetector(16, threshold_, 10, 8, min_distance_));
+}
+
+} // namespace ccny_rgbd

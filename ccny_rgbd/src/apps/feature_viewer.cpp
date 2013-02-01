@@ -93,30 +93,70 @@ void FeatureViewer::initParams()
 
 void FeatureViewer::resetDetector()
 {  
+  gft_config_server_.reset();
+  star_config_server_.reset();
+  orb_config_server_.reset();
+  surf_config_server_.reset();
+  
   if (detector_type_ == "ORB")
   { 
     ROS_INFO("Creating ORB detector");
-    feature_detector_.reset(new OrbDetector(nh_, nh_private_));
+    feature_detector_.reset(new OrbDetector());
+    orb_config_server_.reset(new 
+      OrbDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/ORB")));
+    
+    // dynamic reconfigure
+    OrbDetectorConfigServer::CallbackType f = boost::bind(
+      &FeatureViewer::orbReconfigCallback, this, _1, _2);
+    orb_config_server_->setCallback(f);
   }
   else if (detector_type_ == "SURF")
   {
-    ROS_INFO("Creating ORB detector");
-    feature_detector_.reset(new SurfDetector(nh_, nh_private_));
+    ROS_INFO("Creating SURF detector");
+    feature_detector_.reset(new SurfDetector());
+    surf_config_server_.reset(new 
+      SurfDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/SURF")));
+    
+    // dynamic reconfigure
+    SurfDetectorConfigServer::CallbackType f = boost::bind(
+      &FeatureViewer::surfReconfigCallback, this, _1, _2);
+    surf_config_server_->setCallback(f);
   }
   else if (detector_type_ == "GFT")
   {
     ROS_INFO("Creating GFT detector");
-    feature_detector_.reset(new GftDetector(nh_, nh_private_));
+    feature_detector_.reset(new GftDetector());
+    gft_config_server_.reset(new 
+      GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
+    
+    // dynamic reconfigure
+    GftDetectorConfigServer::CallbackType f = boost::bind(
+      &FeatureViewer::gftReconfigCallback, this, _1, _2);
+    gft_config_server_->setCallback(f);
   }
   else if (detector_type_ == "STAR")
   {
     ROS_INFO("Creating STAR detector");
-    feature_detector_.reset(new StarDetector(nh_, nh_private_));
+    feature_detector_.reset(new StarDetector());
+    star_config_server_.reset(new 
+      StarDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/STAR")));
+    
+    // dynamic reconfigure
+    StarDetectorConfigServer::CallbackType f = boost::bind(
+      &FeatureViewer::starReconfigCallback, this, _1, _2);
+    star_config_server_->setCallback(f);
   }
   else
   {
     ROS_FATAL("%s is not a valid detector type! Using GFT", detector_type_.c_str());
-    feature_detector_.reset(new GftDetector(nh_, nh_private_));
+    feature_detector_.reset(new GftDetector());
+    gft_config_server_.reset(new 
+      GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
+    
+    // dynamic reconfigure
+    GftDetectorConfigServer::CallbackType f = boost::bind(
+      &FeatureViewer::gftReconfigCallback, this, _1, _2);
+    gft_config_server_->setCallback(f);
   }
 }
 
@@ -262,6 +302,41 @@ void FeatureViewer::reconfigCallback(FeatureDetectorConfig& config, uint32_t lev
   show_keypoints_ = config.show_keypoints;
   
   mutex_.unlock();
+}
+
+void FeatureViewer::gftReconfigCallback(GftDetectorConfig& config, uint32_t level)
+{
+  GftDetectorPtr gft_detector = 
+    boost::static_pointer_cast<GftDetector>(feature_detector_);
+    
+  gft_detector->setNFeatures(config.n_features);
+  gft_detector->setMinDistance(config.min_distance); 
+}
+
+void FeatureViewer::starReconfigCallback(StarDetectorConfig& config, uint32_t level)
+{
+  StarDetectorPtr star_detector = 
+    boost::static_pointer_cast<StarDetector>(feature_detector_);
+    
+  star_detector->setThreshold(config.threshold);
+  star_detector->setMinDistance(config.min_distance); 
+}
+
+void FeatureViewer::surfReconfigCallback(SurfDetectorConfig& config, uint32_t level)
+{
+  SurfDetectorPtr surf_detector = 
+    boost::static_pointer_cast<SurfDetector>(feature_detector_);
+    
+  surf_detector->setThreshold(config.threshold);
+}
+    
+void FeatureViewer::orbReconfigCallback(OrbDetectorConfig& config, uint32_t level)
+{
+  OrbDetectorPtr orb_detector = 
+    boost::static_pointer_cast<OrbDetector>(feature_detector_);
+    
+  orb_detector->setThreshold(config.threshold);
+  orb_detector->setNFeatures(config.n_features);
 }
 
 } //namespace ccny_rgbd
