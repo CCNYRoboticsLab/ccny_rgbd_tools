@@ -59,7 +59,7 @@ class GftDetector: public FeatureDetector
     void setNFeatures(int n_features);
     
     /** @brief Set the minimum distance (in pixels) between the features
-     * @param n_features minimum distance (in pixels) between the features
+     * @param min_distance minimum distance (in pixels) between the features
      */ 
     void setMinDistance(double min_distance);    
     

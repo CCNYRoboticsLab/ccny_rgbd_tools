@@ -48,7 +48,8 @@
 
 namespace ccny_rgbd {
 
-/** @brief ?
+/** @brief Application to test and visualize the different type of
+ * feature detectors
  */  
 class FeatureViewer
 { 

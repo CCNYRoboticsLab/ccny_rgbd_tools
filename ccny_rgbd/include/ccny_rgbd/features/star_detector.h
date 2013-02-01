@@ -52,7 +52,7 @@ class StarDetector: public FeatureDetector
     void findFeatures(RGBDFrame& frame, const cv::Mat& input_img);
     
     /** @brief Set the minimum distance (in pixels) between the features
-     * @param n_features minimum distance (in pixels) between the features
+     * @param min_distance minimum distance (in pixels) between the features
      */ 
     void setMinDistance(double min_distance);    
     
