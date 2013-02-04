@@ -26,30 +26,29 @@
 namespace ccny_rgbd {
 
 KeyframeGraphSolverG2O::KeyframeGraphSolverG2O(
-  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh,
   const ros::NodeHandle& nh_private):
-  KeyframeGraphSolver(nh, nh_private)
+  KeyframeGraphSolver(nh, nh_private),
+  vertexIdx(0)
 {
-  optimizer_.setMethod(g2o::SparseOptimizer::LevenbergMarquardt);
-  optimizer_.setVerbose(false);
+  optimizer.setMethod(g2o::SparseOptimizer::LevenbergMarquardt);
+  optimizer.setVerbose(false);
   
-  g2o::LinearSolverCholmod<g2o::BlockSolverX::PoseMatrixType> solver_type;
-  solver_ = new g2o::BlockSolverX(&optimizer_, &solver_type);
+  linearSolver = new g2o::LinearSolverCholmod<g2o::BlockSolverX::PoseMatrixType>();
+  solver_ptr = new g2o::BlockSolverX(&optimizer, linearSolver);
   
-  optimizer_.setSolver(solver_);
+  optimizer.setSolver(solver_ptr);
 }
 
 KeyframeGraphSolverG2O::~KeyframeGraphSolverG2O()
 {
-  delete solver_;
+
 }
 
 void KeyframeGraphSolverG2O::solve(
   KeyframeVector& keyframes,
   KeyframeAssociationVector& associations)
 {  
-  optimizer_.clear();
-  
   // add vertices
   printf("Adding vertices...\n");
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
@@ -65,19 +64,20 @@ void KeyframeGraphSolverG2O::solve(
     const KeyframeAssociation& association = associations[as_idx];
     int from_idx = association.kf_idx_a;
     int to_idx   = association.kf_idx_b;
-        
+    
+    int matches = association.matches.size();
+    
     Eigen::Matrix<double,6,6> inf = Eigen::Matrix<double,6,6>::Identity();
     
-    if (association.type == KeyframeAssociation::VO)
+    if (matches == 0)
     {
-      // this is a visual odometry edge 
+      // this is an odometry edge 
       inf = inf * 100.0;
     }
-    else if (association.type == KeyframeAssociation::RANSAC)
+    else
     {
       // this is an SURF+RANSAC edge 
-      int n_matches = association.matches.size();
-      inf = inf * n_matches;
+      inf = inf * matches;
     }
     
     addEdge(from_idx, to_idx, eigenFromTf(association.a2b), inf);
@@ -96,7 +96,7 @@ void KeyframeGraphSolverG2O::addVertex(
   const Eigen::Matrix4f& vertex_pose,
   int vertex_idx)
 {
-  /// @todo use eigen quaternion, not manual conversion 
+  // TODO: use eigen quaternion, not manual conversion 
   //Transform Eigen::Matrix4f into 3D traslation and rotation for g2o
   double yaw,pitch,roll; 
   yaw   = atan2f(vertex_pose(1,0),vertex_pose(0,0));
@@ -111,6 +111,8 @@ void KeyframeGraphSolverG2O::addVertex(
   q.w()=cos(roll/2)*cos(pitch/2)*cos(yaw/2)+sin(roll/2)*sin(pitch/2)*sin(yaw/2);
 
   g2o::SE3Quat pose(q,t); // vertex pose
+
+  // TODO: smart pointers
   
   // set up node
   g2o::VertexSE3 *vc = new g2o::VertexSE3();
@@ -122,7 +124,7 @@ void KeyframeGraphSolverG2O::addVertex(
     vc->setFixed(true);
 
   // add to optimizer
-  optimizer_.addVertex(vc);
+  optimizer.addVertex(vc);
 }
 
 void KeyframeGraphSolverG2O::addEdge(
@@ -131,8 +133,7 @@ void KeyframeGraphSolverG2O::addEdge(
   const Eigen::Matrix4f& relative_pose,
   const Eigen::Matrix<double,6,6>& information_matrix)
 {
-  /// @todo: use eigen quaternion, not manual conversion 
-  
+  // TODO: use eigen quaternion, not manual conversion 
   //Transform Eigen::Matrix4f into 3D traslation and rotation for g2o
   double yaw,pitch,roll;
   yaw   = atan2f(relative_pose(1,0),relative_pose(0,0));
@@ -148,28 +149,30 @@ void KeyframeGraphSolverG2O::addEdge(
 
   // relative transformation
   g2o::SE3Quat transf(q,t); 
- 
+
+  // TODO: smart pointers
+  
   g2o::EdgeSE3* edge = new g2o::EdgeSE3;
-  edge->vertices()[0] = optimizer_.vertex(from_idx);
-  edge->vertices()[1] = optimizer_.vertex(to_idx);
+  edge->vertices()[0] = optimizer.vertex(from_idx);
+  edge->vertices()[1] = optimizer.vertex(to_idx);
   edge->setMeasurement(transf);
 
   //Set the information matrix
   edge->setInformation(information_matrix);
 
-  optimizer_.addEdge(edge);
+  optimizer.addEdge(edge);
 }
 
 void KeyframeGraphSolverG2O::optimizeGraph()
 {
   //Prepare and run the optimization
-  optimizer_.initializeOptimization();
+  optimizer.initializeOptimization();
 
   //Set the initial Levenberg-Marquardt lambda
-  optimizer_.setUserLambdaInit(0.01);
+  optimizer.setUserLambdaInit(0.01);
 
   //Run optimization
-  optimizer_.optimize(10);
+  optimizer.optimize(10);
 }
 
 void KeyframeGraphSolverG2O::updatePoses(
@@ -180,7 +183,7 @@ void KeyframeGraphSolverG2O::updatePoses(
     RGBDKeyframe& keyframe = keyframes[kf_idx];
     
     //Transform the vertex pose from G2O quaternion to Eigen::Matrix4f
-    g2o::VertexSE3* vertex = dynamic_cast<g2o::VertexSE3*>(optimizer_.vertex(kf_idx));
+    g2o::VertexSE3* vertex = dynamic_cast<g2o::VertexSE3*>(optimizer.vertex(kf_idx));
     double optimized_pose_quat[7];
     vertex->getEstimateData(optimized_pose_quat);
 
