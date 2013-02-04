@@ -82,13 +82,13 @@ class VisualOdometry
     tf::TransformListener tf_listener_; ///< ROS transform listener
     tf::TransformBroadcaster tf_broadcaster_; ///< ROS transform broadcaster
     ros::Publisher odom_publisher_;           ///< ROS Odometry publisher
+    ros::Publisher cloud_publisher_;        ///< ROS feature cloud publisher
 
     GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
     StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
     SurfDetectorConfigServerPtr surf_config_server_;    ///< ROS dynamic reconfigure server for SURF params
     OrbDetectorConfigServerPtr orb_config_server_;  ///< ROS dynamic reconfigure server for ORB params
-    
-    
+        
     /** @brief Image transport for RGB message subscription */
     boost::shared_ptr<ImageTransport> rgb_it_;
     
@@ -131,6 +131,12 @@ class VisualOdometry
      */
     std::string reg_type_;
 
+    /** @brief If true, publish the pcl feature cloud
+     * 
+     * Note: this might slightly decrease performance
+     */
+    bool publish_cloud_; 
+    
     int queue_size_;  ///< Subscription queue size
     
     // **** variables
@@ -176,6 +182,12 @@ class VisualOdometry
      * @param header header of the incoming message, used to stamp things correctly
      */
     void publishOdom(const std_msgs::Header& header);  
+    
+    /** @brief Publish the feature point cloud
+     * 
+     * Note: this might decrease performance
+     */
+    void publishFeatureCloud(RGBDFrame& frame);
 
     /** @brief Caches the transform from the base frame to the camera frame
      * @param header header of the incoming message, used to stamp things correctly
