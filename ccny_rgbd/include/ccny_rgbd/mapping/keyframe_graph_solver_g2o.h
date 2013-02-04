@@ -64,8 +64,10 @@ class KeyframeGraphSolverG2O: public KeyframeGraphSolver
 
   private:
 
-    g2o::SparseOptimizer optimizer_;    ///< g2o optimizer
-    g2o::BlockSolverX * solver_;        ///< g2o solver
+    int vertexIdx;
+    g2o::SparseOptimizer optimizer;
+    g2o::BlockSolverX::LinearSolverType * linearSolver;
+    g2o::BlockSolverX * solver_ptr;
         
     /** @brief Adds a vertex to the g2o structure
      */
