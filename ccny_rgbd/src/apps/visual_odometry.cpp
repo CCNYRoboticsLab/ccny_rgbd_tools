@@ -48,7 +48,7 @@ VisualOdometry::VisualOdometry(
   odom_publisher_ = nh_.advertise<OdomMsg>(
     "odom", queue_size_);
   cloud_publisher_ = nh_.advertise<PointCloudFeature>(
-    "feature_cloud", 1);
+    "feature/cloud", 1);
   
   // **** subscribers
   
