@@ -45,8 +45,11 @@ VisualOdometry::VisualOdometry(
 
   // **** publishers
 
-  odom_publisher_ = nh_.advertise<OdomMsg>("odom", queue_size_);
-
+  odom_publisher_ = nh_.advertise<OdomMsg>(
+    "odom", queue_size_);
+  cloud_publisher_ = nh_.advertise<PointCloudFeature>(
+    "feature_cloud", 1);
+  
   // **** subscribers
   
   ImageTransport rgb_it(nh_);
@@ -55,7 +58,7 @@ VisualOdometry::VisualOdometry(
   sub_rgb_.subscribe(rgb_it,     "/rgbd/rgb",   queue_size_);
   sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
   sub_info_.subscribe(nh_,       "/rgbd/info",  queue_size_);
-
+  
   // Synchronize inputs.
   sync_.reset(new RGBDSynchronizer3(
                 RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
@@ -81,6 +84,8 @@ void VisualOdometry::initParams()
 
   // detector params
   
+  if (!nh_private_.getParam ("feature/publish_cloud", publish_cloud_))
+    publish_cloud_ = false;
   if (!nh_private_.getParam ("feature/detector_type", detector_type_))
     detector_type_ = "GFT";
   
@@ -220,14 +225,12 @@ void VisualOdometry::RGBDCallback(
   ros::WallTime end_reg = ros::WallTime::now();
 
   // **** publish motion **********************************************
-  if (publish_tf_)
-  {
-    publishTf(rgb_msg->header);
-  }
-  // **** publish odometry  *******************************************
   
+  if (publish_tf_) publishTf(rgb_msg->header);
   publishOdom(rgb_msg->header);
 
+  if (publish_cloud_) publishFeatureCloud(frame);
+  
   // **** print diagnostics *******************************************
 
   ros::WallTime end = ros::WallTime::now();
@@ -288,6 +291,14 @@ void VisualOdometry::publishOdom(const std_msgs::Header& header)
   odom.header.frame_id = fixed_frame_;
   tf::poseTFToMsg(f2b_, odom.pose.pose);
   odom_publisher_.publish(odom);
+}
+
+void VisualOdometry::publishFeatureCloud(RGBDFrame& frame)
+{
+  PointCloudFeature cloud;
+  cloud.header = frame.header;
+  frame.constructFeaturePointCloud(cloud);   
+  cloud_publisher_.publish(cloud);
 }
 
 bool VisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)

@@ -121,7 +121,7 @@ class FeatureViewer
      */
     bool show_keypoints_; 
     
-    /** @brief If true, publish an OpenCV window with the
+    /** @brief If true, publish the pcl feature cloud
      * 
      * Note: this might slightly decrease performance
      */
@@ -160,7 +160,7 @@ class FeatureViewer
      */
     void resetDetector();
     
-    /** @brief Publish the feautre point cloud
+    /** @brief Publish the feature point cloud
      * 
      * Note: this might decrease performance
      */
