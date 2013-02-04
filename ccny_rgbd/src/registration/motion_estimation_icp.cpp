@@ -49,7 +49,7 @@ MotionEstimationICP::MotionEstimationICP(
     min_correspondences_ = 15; 
   if (!nh_private_.getParam ("reg/ICP/max_corresp_dist_eucl", max_corresp_dist_eucl_))
     max_corresp_dist_eucl_ = 0.15;
-  if (!nh_private_.getParam ("reg/ICP/publish_model", publish_model_))
+  if (!nh_private_.getParam ("reg/ICP/publish_model_cloud", publish_model_))
     publish_model_ = false;
   if (!nh_private_.getParam ("reg/ICP/history_size", history_size))
     history_size = 5;
@@ -72,7 +72,7 @@ MotionEstimationICP::MotionEstimationICP(
   if (publish_model_)
   {
     model_publisher_ = nh_.advertise<PointCloudFeature>(
-      "model", 1);
+      "model/cloud", 1);
   }
 }
 

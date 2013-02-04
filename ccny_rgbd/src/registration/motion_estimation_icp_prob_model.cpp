@@ -57,9 +57,9 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(
   if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors_))
     n_nearest_neighbors_ = 4;
 
-  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model", publish_model_))
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cloud", publish_model_))
     publish_model_ = false;
-  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cov", publish_model_cov_))
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_covariances", publish_model_cov_))
     publish_model_cov_ = true;
 
   // **** variables
@@ -79,12 +79,12 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(
   if (publish_model_)
   {
     model_publisher_ = nh_.advertise<PointCloudFeature>(
-      "model", 1);
+      "model/cloud", 1);
   }
   if (publish_model_cov_)
   {
     covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
-      "model_covariances", 1);
+      "model/covariances", 1);
   }
 
   // **** services

@@ -50,9 +50,9 @@ FeatureViewer::FeatureViewer(
   // **** publishers
   
   cloud_publisher_ = nh_.advertise<PointCloudFeature>(
-    "feature_cloud", 1);
+    "feature/cloud", 1);
   covariances_publisher_ = nh_.advertise<visualization_msgs::Marker>(
-    "feature_covariances", 1);
+    "feature/covariances", 1);
   
   // **** subscribers
   
