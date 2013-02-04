@@ -23,7 +23,7 @@
 
     <param name="kf_dist_eps"  value="0.15"/>
     <param name="kf_angle_eps" value="0.15"/> 
-    <param name="full_map_res" value="0.005"/>
+    <param name="full_map_res" value="0.01"/>
 
   </node>
 
