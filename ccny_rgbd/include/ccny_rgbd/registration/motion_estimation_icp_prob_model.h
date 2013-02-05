@@ -35,7 +35,7 @@
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/Save.h"
-#include "ccny_rgbd/Load.h"
+//#include "ccny_rgbd/Load.h"
 
 namespace ccny_rgbd {
 
@@ -87,16 +87,7 @@ class MotionEstimationICPProbModel: public MotionEstimation
      * @retval false saving failed
      */
     bool saveSrvCallback(ccny_rgbd::Save::Request& request,
-                         ccny_rgbd::Save::Response& response);
-    
-    /** @brief ROS service to load model to a file
-     * @param request ROS service request
-     * @param response ROS service response
-     * @retval true loaded succesfully
-     * @retval false loading failed
-     */
-    bool loadSrvCallback(ccny_rgbd::Save::Request& request,
-                         ccny_rgbd::Save::Response& response);
+                         ccny_rgbd::Save::Response& response);   
 
   private:
 
@@ -105,7 +96,6 @@ class MotionEstimationICPProbModel: public MotionEstimation
     ros::Publisher model_publisher_;        ///< The publisher for the model point cloud
     ros::Publisher covariances_publisher_;  ///< The publisher for the covariance markers
     ros::ServiceServer save_service_;       ///< Service to save the model to file
-    ros::ServiceServer load_service_;       ///< Service to load the model from file
 
     // **** params
 
@@ -274,14 +264,6 @@ class MotionEstimationICPProbModel: public MotionEstimation
      * @retval false saving failed
      */
     bool saveModel(const std::string& filename);
-    
-    /** @brief ROS service to load model from a file
-     * @todo this is only saving the point cloud, not the actual distributions
-     * @param filename ifilename to load model from
-     * @retval true loaded succesfully
-     * @retval false loading failed
-     */
-    bool loadModel(const std::string& filename);
 };
 
 } // namespace ccny_rgbd
