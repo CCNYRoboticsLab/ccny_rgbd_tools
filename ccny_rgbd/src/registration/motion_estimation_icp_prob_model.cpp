@@ -40,9 +40,9 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(
     base_frame_ = "/camera_link";
 
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_linear", tf_epsilon_linear_))
-    tf_epsilon_linear_ = 1e-3; // 1 mm
+    tf_epsilon_linear_ = 1e-4; // 1 mm
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_angular", tf_epsilon_angular_))
-    tf_epsilon_angular_ = 1.7e-2; // 1 deg
+    tf_epsilon_angular_ = 1.7e-3; // 1 deg
   if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", max_iterations_))
     max_iterations_ = 10;
   if (!nh_private_.getParam ("reg/ICPProbModel/min_correspondences", min_correspondences_))
@@ -60,7 +60,7 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(
   if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cloud", publish_model_))
     publish_model_ = false;
   if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_covariances", publish_model_cov_))
-    publish_model_cov_ = true;
+    publish_model_cov_ = false;
 
   // **** variables
 
@@ -91,8 +91,6 @@ MotionEstimationICPProbModel::MotionEstimationICPProbModel(
 
   save_service_ = nh_.advertiseService(
     "save_sparse_map", &MotionEstimationICPProbModel::saveSrvCallback, this);
-  load_service_ = nh_.advertiseService(
-    "load_sparse_map", &MotionEstimationICPProbModel::loadSrvCallback, this);
 }
 
 MotionEstimationICPProbModel::~MotionEstimationICPProbModel()
@@ -454,7 +452,7 @@ void MotionEstimationICPProbModel::publishCovariances()
       geometry_msgs::Point b;
 
       double sigma = sqrt(std::abs(evl.at<double>(0,e)));
-      double scale = sigma * 2.0;
+      double scale = sigma * 3.0;
 
       tf::Vector3 evt_tf(evt.at<double>(e,0), 
                          evt.at<double>(e,1), 
@@ -492,25 +490,9 @@ bool MotionEstimationICPProbModel::saveSrvCallback(
   return result;
 }
 
-bool MotionEstimationICPProbModel::loadSrvCallback(
-  ccny_rgbd::Save::Request& request,
-  ccny_rgbd::Save::Response& response)
-{
-  ROS_INFO("Loading model from %s...", request.filename.c_str());
-
-  bool result = loadModel(request.filename);
-
-  if (result)
-    ROS_INFO("Successfully loaded model.");
-  else
-    ROS_ERROR("Failed to load model.");
-
-  return result;
-}
-
 bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
 {
-  /// @todo save means and covariances 
+  /// @todo also save Eigen means and covariances 
 /*
   // save as OpenCV yml matrix
   std::string filename_yml = filename + ".yml";
@@ -528,32 +510,6 @@ bool MotionEstimationICPProbModel::saveModel(const std::string& filename)
   int result_pcd = writer.writeBinary<PointFeature>(filename_pcd, *model_ptr_);
 
   return (result_pcd == 0); 
-}
-
-bool MotionEstimationICPProbModel::loadModel(const std::string& filename)
-{
-  /// @todo load means and covariances 
-  /*
-  // load OpenCV yml matrix
-  std::string filename_yml = filename + ".yml";
-
-  cv::FileStorage fs(filename_yml, cv::FileStorage::READ);
-  fs["means"] >> means_;
-  fs["covariances"] >> covariances_;
-  fs["model_idx"] >> model_idx_;
-  fs["model_size"] >> model_size_;
-  */
-
-  // load pcd
-  std::string filename_pcd = filename + ".pcd";
-  pcl::PCDReader reader;
-  int result_pcd = reader.read<PointFeature>(filename_pcd, *model_ptr_);
-  model_ptr_->header.frame_id = fixed_frame_;
-
-  // update the model tree
-  model_tree_.setInputCloud(model_ptr_);
-
-  return (result_pcd == 0);
 }
 
 } // namespace ccny_rgbd
