@@ -34,6 +34,11 @@ FeatureViewer::FeatureViewer(
 {
   ROS_INFO("Starting RGBD Feature Viewer");
   
+  // dynamic reconfigure
+  FeatureDetectorConfigServer::CallbackType f = boost::bind(
+    &FeatureViewer::reconfigCallback, this, _1, _2);
+  config_server_.setCallback(f);
+  
   // **** initialize ROS parameters
   
   initParams();
@@ -42,11 +47,6 @@ FeatureViewer::FeatureViewer(
   resetDetector();
   mutex_.unlock();
 
-  // dynamic reconfigure
-  FeatureDetectorConfigServer::CallbackType f = boost::bind(
-    &FeatureViewer::reconfigCallback, this, _1, _2);
-  config_server_.setCallback(f);
-  
   // **** publishers
   
   cloud_publisher_ = nh_.advertise<PointCloudFeature>(
