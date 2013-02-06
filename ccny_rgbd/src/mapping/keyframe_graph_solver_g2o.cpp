@@ -1,9 +1,33 @@
+/**
+ *  @file keyframe_graph_solver_g2o.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com> 
+ *  @note based on GraphOptimizer_G2O.cpp by Miguel Algaba Borrego
+ *  @section LICENSE
+ * 
+ *  Copyright (C) 2013, City University of New York
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "ccny_rgbd/mapping/keyframe_graph_solver_g2o.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-KeyframeGraphSolverG2O::KeyframeGraphSolverG2O(ros::NodeHandle nh, ros::NodeHandle nh_private):
+KeyframeGraphSolverG2O::KeyframeGraphSolverG2O(
+  const ros::NodeHandle& nh,
+  const ros::NodeHandle& nh_private):
   KeyframeGraphSolver(nh, nh_private),
   vertexIdx(0)
 {
@@ -40,19 +64,20 @@ void KeyframeGraphSolverG2O::solve(
     const KeyframeAssociation& association = associations[as_idx];
     int from_idx = association.kf_idx_a;
     int to_idx   = association.kf_idx_b;
-        
+    
+    int matches = association.matches.size();
+    
     Eigen::Matrix<double,6,6> inf = Eigen::Matrix<double,6,6>::Identity();
     
-    if (association.type == KeyframeAssociation::VO)
+    if (matches == 0)
     {
-      // this is a visual odometry edge 
+      // this is an odometry edge 
       inf = inf * 100.0;
     }
-    else if (association.type == KeyframeAssociation::RANSAC)
+    else
     {
       // this is an SURF+RANSAC edge 
-      int n_matches = association.matches.size();
-      inf = inf * n_matches;
+      inf = inf * matches;
     }
     
     addEdge(from_idx, to_idx, eigenFromTf(association.a2b), inf);

@@ -1,7 +1,29 @@
+/**
+ *  @file rgbd_util.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
+ *  Copyright (C) 2013, City University of New York
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "ccny_rgbd/rgbd_util.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
 void getTfDifference(const tf::Transform& motion, double& dist, double& angle)
 {
@@ -23,7 +45,7 @@ tf::Transform tfFromEigen(Eigen::Matrix4f trans)
             trans(1,0),trans(1,1),trans(1,2),
             trans(2,0),trans(2,1),trans(2,2));
   tf::Transform ret;
-  ret.setOrigin(btVector3(trans(0,3),trans(1,3),trans(2,3)));
+  ret.setOrigin(tf::Vector3(trans(0,3),trans(1,3),trans(2,3)));
   ret.setBasis(btm);
   return ret;
 }
@@ -49,7 +71,7 @@ Eigen::Matrix4f eigenFromTf(const tf::Transform& tf)
    return out_mat;
 }
 
-void getXYZRPY(
+void tfToXYZRPY(
   const tf::Transform& t,
   double& x,    double& y,     double& z,
   double& roll, double& pitch, double& yaw)
@@ -64,7 +86,6 @@ void getXYZRPY(
 
 bool tfGreaterThan(const tf::Transform& tf, double dist, double angle)
 {
-  //TODO: can be optimized for squared length
   double d = tf.getOrigin().length();
   
   if (d >= dist) return true;

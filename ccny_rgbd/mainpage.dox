@@ -1,0 +1,43 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\brief \b ccny_rgbd is a collection of tools for fast visual odometry and mapping from RGB-D data
+
+\section authors Author(s)
+ Ivan Dryanovski <ivan.dryanovski@gmail.com>
+
+\section copyright Copyright
+ 
+ Copyright (C) 2013, City University of New York <br>
+ CCNY Robotics Lab <br>
+ http://robotics.ccny.cuny.edu
+
+\section codeapi Code API
+
+ ROS Applications:
+  - RGB-D image processing: \ref ccny_rgbd::RGBDImageProc "RGBDImageProc"
+  - Fast visual odometry: \ref ccny_rgbd::VisualOdometry "VisualOdometry"
+  - Keyframe-based mapping and SLAM: \ref ccny_rgbd::KeyframeMapper "KeyframeMapper"
+
+ Some base classes of interest:
+  - Base class for sparse feature detectors: \ref ccny_rgbd::FeatureDetector "FeatureDetector"
+  - Base class for motion estimation methods: \ref ccny_rgbd::MotionEstimation "MotionEstimation"
+ 
+ Some implementation classes of interest:
+  - GoodFeaturesToTrack featureDetector: \ref ccny_rgbd::GftDetector "GftDetector"
+  - KF-based motion estimation using a persistent model: \ref ccny_rgbd::MotionEstimationICPProbModel "MotionEstimationICPProbModel"
+  - SURF + RANSAC-based graph detection: \ref ccny_rgbd::KeyframeGraphDetector "KeyframeGraphDetector"
+  - g2o-based graph slam post-processing: \ref ccny_rgbd::KeyframeGraphSolverG2O "KeyframeGraphSolverG2O"
+
+\section reference References
+
+Ivan Dryanovski, Roberto G. Valenti, Jizhong Xiao. 
+\b "Fast Visual Odometry and Mapping from RGB-D Data". 
+2013 International Conference on Robotics and Automation (ICRA2013).
+
+\section license License
+
+\b ccny_rgbd is licensed under GPLv3.
+  
+*/

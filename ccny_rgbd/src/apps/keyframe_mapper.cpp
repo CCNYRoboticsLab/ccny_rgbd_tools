@@ -1,9 +1,33 @@
+/**
+ *  @file keyframe_mapper.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
+ *  Copyright (C) 2013, City University of New York
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "ccny_rgbd/apps/keyframe_mapper.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
+KeyframeMapper::KeyframeMapper(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private),
   graph_detector_(nh_, nh_private_)
@@ -16,6 +40,8 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
   
   // **** params
 
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("full_map_res", full_map_res_))
@@ -24,15 +50,15 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     kf_dist_eps_  = 0.10;
   if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
     kf_angle_eps_  = 10.0 * M_PI / 180.0;
-  
+    
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
-    "keyframes", 1);
+    "keyframes", queue_size_);
   poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_poses", 1);
+    "keyframe_poses", queue_size_);
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
-    "keyframe_associations", 1);
+    "keyframe_associations", queue_size_);
   
   // **** services
 
@@ -42,9 +68,7 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
     "publish_keyframes", &KeyframeMapper::publishKeyframesSrvCallback, this);
   save_kf_service_ = nh_.advertiseService(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
-  save_kf_ff_service_ = nh_.advertiseService(
-    "save_keyframes_ff", &KeyframeMapper::saveKeyframesFFSrvCallback, this);
- load_kf_service_ = nh_.advertiseService(
+  load_kf_service_ = nh_.advertiseService(
     "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
   save_full_service_ = nh_.advertiseService(
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
@@ -57,16 +81,17 @@ KeyframeMapper::KeyframeMapper(ros::NodeHandle nh, ros::NodeHandle nh_private):
  
   // **** subscribers
 
-  image_transport::ImageTransport rgb_it(nh_);
-  image_transport::ImageTransport depth_it(nh_);
+  ImageTransport rgb_it(nh_);
+  ImageTransport depth_it(nh_);
 
-  sub_depth_.subscribe(depth_it, "/rgbd/depth", 1);
-  sub_rgb_.subscribe(rgb_it, "/rgbd/rgb", 1);
-  sub_info_.subscribe(nh_, "/rgbd/info", 1);
+  sub_rgb_.subscribe(rgb_it,     "/rgbd/rgb",   queue_size_);
+  sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
+  sub_info_.subscribe(nh_,       "/rgbd/info",  queue_size_);
 
-  // Synchronize inputs. Topic subscriptions happen on demand in the connection callback.
-  int queue_size = 5;
-  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
+  // Synchronize inputs.
+  sync_.reset(new RGBDSynchronizer3(
+                RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
+   
   sync_->registerCallback(boost::bind(&KeyframeMapper::RGBDCallback, this, _1, _2, _3));  
 }
 
@@ -76,8 +101,8 @@ KeyframeMapper::~KeyframeMapper()
 }
   
 void KeyframeMapper::RGBDCallback(
-  const ImageMsg::ConstPtr& depth_msg,
   const ImageMsg::ConstPtr& rgb_msg,
+  const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
 {
   tf::StampedTransform transform;
@@ -350,15 +375,6 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
   ROS_INFO("Saving keyframes...");
   std::string path = request.filename;
   return saveKeyframes(keyframes_, path);
-}
-
-bool KeyframeMapper::saveKeyframesFFSrvCallback(
-  Save::Request& request,
-  Save::Response& response)
-{
-  ROS_INFO("Saving keyframes (in fixed frame)...");
-  std::string path = request.filename;
-  return saveKeyframes(keyframes_, path, true);
 }
 
 bool KeyframeMapper::loadKeyframesSrvCallback(
