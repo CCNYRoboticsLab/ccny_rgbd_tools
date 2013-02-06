@@ -131,6 +131,8 @@ bool MotionEstimationKLTProbModel::getMotionEstimationImpl(
   
   cv::Mat input_img(frame.rgb_img.size(), CV_8UC1);
   cvtColor(frame.rgb_img, input_img, CV_BGR2GRAY);
+
+  std::vector<cv::Point2f> points;
     
   if (first_time_)
   {
@@ -145,13 +147,12 @@ bool MotionEstimationKLTProbModel::getMotionEstimationImpl(
     gft_detector.detect(input_img, kp, mask);
     
     for (unsigned int i = 0; i < kp.size(); ++i)
-      prev_points.push_back(kp[i].pt);
+      points.push_back(kp[i].pt);
     
     first_time_ = false;
   }
   else
   {
-    std::vector<cv::Point2f> points;
     std::vector<uchar> status;
     std::vector<float> err;
     
