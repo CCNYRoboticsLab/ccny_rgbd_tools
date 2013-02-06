@@ -43,31 +43,6 @@ VisualOdometry::VisualOdometry(
   
   f2b_.setIdentity();
 
-<<<<<<< HEAD
-  // feature params
-  if      (detector_type_ == "ORB")
-    feature_detector_ = new OrbDetector(nh_, nh_private_);
-  else if (detector_type_ == "SURF")
-    feature_detector_ = new SurfDetector(nh_, nh_private_);
-  else if (detector_type_ == "GFT")
-    feature_detector_ = new GftDetector(nh_, nh_private_);
-  else if (detector_type_ == "STAR")
-    feature_detector_ = new StarDetector(nh_, nh_private_);
-  else
-    ROS_FATAL("%s is not a valid detector type!", detector_type_.c_str());
-
-  // registration params
-  if      (reg_type_ == "ICP")
-    motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
-  else if (reg_type_ == "ICPProbModel")
-    motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
-  else if (reg_type_ == "KLTProbModel")
-    motion_estimation_ = new MotionEstimationKLTProbModel(nh_, nh_private_);
-  else
-    ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
-
-=======
->>>>>>> 0dc6a4f7a401e9a9d96ff24177715ad841c133df
   // **** publishers
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
@@ -133,12 +108,14 @@ void VisualOdometry::initParams()
   // registration params
   
   if (!nh_private_.getParam ("reg/reg_type", reg_type_))
-    reg_type_ = "ICPProbModel";
+    reg_type_ = "148bModel";
   
   if      (reg_type_ == "ICP")
     motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
   else if (reg_type_ == "ICPProbModel")
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
+  else if (reg_type_ == "KLTProbModel")
+    motion_estimation_ = new MotionEstimationKLTProbModel(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 }
