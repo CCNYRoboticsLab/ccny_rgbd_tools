@@ -20,8 +20,8 @@
   
   <!-- RGBD processing -->
   <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
-     <arg name="manager_name" value="$(arg manager_name)" />
-     <arg name="calib_path"   value="$(arg calib_path)" />
+     <arg name="manager_name"  value="$(arg manager_name)" />
+     <arg name="calib_path"    value="$(arg calib_path)" />
      <arg name="publish_cloud" value="$(arg publish_cloud)" />
   </include>
            
