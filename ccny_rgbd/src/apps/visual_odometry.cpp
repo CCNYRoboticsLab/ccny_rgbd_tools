@@ -237,17 +237,18 @@ void VisualOdometry::RGBDCallback(
 
   int n_features = frame.keypoints.size();
   int n_valid_features = frame.n_valid_keypoints;
+  int n_model_pts = motion_estimation_->getModelSize();
 
   double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
   double d_features = 1000.0 * (end_features - start_features).toSec();
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
-  printf("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s %4.1f TOTAL %4.1f\n",
+  printf("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s[%d] %4.1f TOTAL %4.1f\n",
     frame_count_,
     d_frame, 
     detector_type_.c_str(), n_features, n_valid_features, d_features, 
-    reg_type_.c_str(), d_reg, 
+    reg_type_.c_str(), n_model_pts, d_reg, 
     d_total);
 
 /*
