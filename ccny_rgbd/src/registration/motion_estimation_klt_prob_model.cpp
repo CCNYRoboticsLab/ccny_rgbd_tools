@@ -137,7 +137,7 @@ bool MotionEstimationKLTProbModel::getMotionEstimationImpl(
   if (first_time_)
   {
     printf("first time\n");
-    cv::GoodFeaturesToTrackDetector gft_detector(300, 0.01, 1.0);
+    cv::GoodFeaturesToTrackDetector gft_detector(300, 0.01, 5.0);
 
     cv::Mat mask(frame.depth_img.size(), CV_8UC1);
     frame.depth_img.convertTo(mask, CV_8U); 
@@ -156,7 +156,7 @@ bool MotionEstimationKLTProbModel::getMotionEstimationImpl(
     std::vector<uchar> status;
     std::vector<float> err;
     
-    printf("prev_kp_.size() = %d\n", prev_points_.size());
+    printf("prev_kp_.size() = %d\n", (int)prev_points_.size());
     
     calcOpticalFlowPyrLK(
       prev_img_, input_img, 
@@ -166,14 +166,44 @@ bool MotionEstimationKLTProbModel::getMotionEstimationImpl(
     
     int n_tracked = 0;
     
-    printf("%d %d\n", (int)prev_points_.size(), (int)points.size());
+    printf("prev: %d this: %d\n", (int)prev_points_.size(), (int)points.size());
     
+    KeypointVector m_kpv;
+    KeypointVector d_kpv;
+    
+    // transfer points2f to keyypoints
+    frame.keypoints.clear();    
     for (unsigned int i = 0; i < status.size(); ++i)
     {
-      if(status[i] == 1) n_tracked++;
+      if(status[i] == 1)
+      {
+        n_tracked++;
+        
+        cv::KeyPoint d_kp;
+        d_kp.pt = points[i];
+        d_kpv.push_back(d_kp);
+        
+        cv::KeyPoint m_kp;
+        m_kp.pt = prev_points_[i];
+        m_kpv.push_back(m_kp);
+      }
     }
     
     printf("%d tracked\n", n_tracked);
+    
+    // show keypoints
+    
+    cv::namedWindow("Keypoints", CV_WINDOW_NORMAL);
+    cv::Mat kp_img(frame.rgb_img.size(), CV_8UC1);
+    cv::drawKeypoints(frame.rgb_img, d_kpv, kp_img, cv::Scalar(255,0,0));
+            
+    for (unsigned int i = 0; i < m_kpv.size(); ++i)
+    {
+      cv::line(kp_img, m_kpv[i].pt, d_kpv[i].pt, cv::Scalar(0,0,255), 1);
+    }
+    
+    cv::imshow("Keypoints", kp_img);
+    cv::waitKey(1);
   }
   
   prev_img_ = input_img.clone(); // TODO: clone needed?
