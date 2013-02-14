@@ -175,24 +175,25 @@ void RGBDImageProc::initMaps(
     intr_depth.at<double>(1,2) *= h_factor;
   }
   
-  size_out_.width  = size_in_.width  * scale_;
-  size_out_.height = size_in_.height * scale_;
+  cv::Size size_out;
+  size_out.height = size_in_.height * scale_;
+  size_out.width  = size_in_.width  * scale_;
    
   // **** get optimal camera matrices
   intr_rect_rgb_ = cv::getOptimalNewCameraMatrix(
-    intr_rgb, dist_rgb, size_in_, alpha, size_out_);
+    intr_rgb, dist_rgb, size_in_, alpha, size_out);
  
   intr_rect_depth_ = cv::getOptimalNewCameraMatrix(
-    intr_depth, dist_depth, size_in_, alpha, size_out_);
+    intr_depth, dist_depth, size_in_, alpha, size_out);
       
   // **** create undistortion maps
   cv::initUndistortRectifyMap(
     intr_rgb, dist_rgb, cv::Mat(), intr_rect_rgb_, 
-    size_out_, CV_16SC2, map_rgb_1_, map_rgb_2_);
+    size_out, CV_16SC2, map_rgb_1_, map_rgb_2_);
   
   cv::initUndistortRectifyMap(
     intr_depth, dist_depth, cv::Mat(), intr_rect_depth_, 
-    size_out_, CV_16SC2, map_depth_1_, map_depth_2_);  
+    size_out, CV_16SC2, map_depth_1_, map_depth_2_);  
   
   // **** rectify the coefficient images
   if(unwarp_)
@@ -204,12 +205,12 @@ void RGBDImageProc::initMaps(
 
   // **** save new intrinsics as camera models
   rgb_rect_info_msg_.header = rgb_info_msg->header;
-  rgb_rect_info_msg_.width  = size_out_.width;
-  rgb_rect_info_msg_.height = size_out_.height;  
+  rgb_rect_info_msg_.width  = size_out.width;
+  rgb_rect_info_msg_.height = size_out.height;  
 
   depth_rect_info_msg_.header = depth_info_msg->header;
-  depth_rect_info_msg_.width  = size_out_.width;
-  depth_rect_info_msg_.height = size_out_.height;  
+  depth_rect_info_msg_.width  = size_out.width;
+  depth_rect_info_msg_.height = size_out.height;  
   
   convertMatToCameraInfo(intr_rect_rgb_,   rgb_rect_info_msg_);
   convertMatToCameraInfo(intr_rect_depth_, depth_rect_info_msg_);  
@@ -329,9 +330,9 @@ void RGBDImageProc::RGBDCallback(
 void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
 {
   boost::mutex::scoped_lock(mutex_);
-  initialized_ = false;
   publish_cloud_ = config.publish_cloud;
   scale_ = config.scale;
+  size_in_ = cv::Size(0,0); // force a reinitialization on the next image callback
   ROS_INFO("Resampling scale set to %.2f", scale_);
 }
 
