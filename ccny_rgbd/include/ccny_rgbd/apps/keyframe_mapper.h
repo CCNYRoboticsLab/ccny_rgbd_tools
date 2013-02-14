@@ -118,7 +118,7 @@ class KeyframeMapper
      * The resolution of the map can be controlled via the \ref full_map_res_
      * parameter.
      * 
-     * The argument should be an integer with the idnex of the keyframe
+     * The argument should be the path to the .pcd file
      */
     bool saveFullSrvCallback(
       Save::Request& request,

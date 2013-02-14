@@ -51,7 +51,7 @@ KeyframeGraphDetector::KeyframeGraphDetector(
     max_corresp_dist_desc_ = 1.0;
   if (!nh_private_.getParam ("graph/max_corresp_dist_eucl", max_corresp_dist_eucl_))
     max_corresp_dist_eucl_ = 0.03;
-  if (!nh_private_.getParam ("graph/n_keypoints_", n_keypoints_))
+  if (!nh_private_.getParam ("graph/n_keypoints", n_keypoints_))
     n_keypoints_ = 200;
     
   // derived params
