@@ -32,7 +32,7 @@ RGBDImageProc::RGBDImageProc(
   rgb_image_transport_(nh_),
   depth_image_transport_(nh_), 
   config_server_(nh_private_),
-  initialized_(false)
+  size_in_(0,0)
 { 
   // parameters 
   if (!nh_private_.getParam ("queue_size", queue_size_))
@@ -120,7 +120,6 @@ bool RGBDImageProc::loadCalibration()
   return true;
 }
 
-
 bool RGBDImageProc::loadUnwarpCalibration()
 {
   if (!boost::filesystem::exists(calib_warp_filename_))
@@ -158,8 +157,23 @@ void RGBDImageProc::initMaps(
   // **** sizes 
   double alpha = 0.0;
     
-  size_in_.width  = rgb_info_msg->width;
-  size_in_.height = rgb_info_msg->height;
+  if (size_in_.width  != (int)rgb_info_msg->width || 
+      size_in_.height != (int)rgb_info_msg->height)
+  {
+    ROS_WARN("Image size does not match CameraInfo size. Rescaling.");
+    double w_factor = (double)size_in_.width  / (double)rgb_info_msg->width;
+    double h_factor = (double)size_in_.height / (double)rgb_info_msg->height;
+    
+    intr_rgb.at<double>(0,0) *= w_factor;
+    intr_rgb.at<double>(1,1) *= h_factor;   
+    intr_rgb.at<double>(0,2) *= w_factor;
+    intr_rgb.at<double>(1,2) *= h_factor;
+
+    intr_depth.at<double>(0,0) *= w_factor;
+    intr_depth.at<double>(1,1) *= h_factor;   
+    intr_depth.at<double>(0,2) *= w_factor;
+    intr_depth.at<double>(1,2) *= h_factor;
+  }
   
   size_out_.width  = size_in_.width  * scale_;
   size_out_.height = size_in_.height * scale_;
@@ -210,13 +224,26 @@ void RGBDImageProc::RGBDCallback(
   boost::mutex::scoped_lock(mutex_);
   
   // for profiling
-  double dur_unwarp, dur_rectify, dur_reproject, dur_cloud, dur_allocate;
+  double dur_unwarp, dur_rectify, dur_reproject, dur_cloud, dur_allocate; 
+  
+  // **** images need to be the same size
+  if (rgb_msg->height != depth_msg->height || 
+      rgb_msg->width  != depth_msg->width)
+  {
+    ROS_WARN("RGB and depth images have different sizes, skipping");
+    return;
+  }
   
   // **** initialize if needed
-  if (!initialized_)
+  if (size_in_.height != (int)rgb_msg->height ||
+      size_in_.width  != (int)rgb_msg->width)
   {
+    ROS_INFO("Initializing");
+  
+    size_in_.height = (int)rgb_msg->height;
+    size_in_.width  = (int)rgb_msg->width;
+    
     initMaps(rgb_info_msg, depth_info_msg);
-    initialized_ = true;
   }
   
   // **** convert ros images to opencv Mat
@@ -285,8 +312,13 @@ void RGBDImageProc::RGBDCallback(
   
   dur_allocate = getMsDuration(start_allocate); 
 
-  ROS_INFO("Rect: %.1f Reproj: %.1f Unwarp: %.1f Cloud %.1f Alloc: %.1f ms", 
-    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate);
+  // **** print diagnostics
+  
+  double dur_total = dur_rectify + dur_reproject + dur_unwarp + dur_cloud + dur_allocate;
+  
+  ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms", 
+    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
+    dur_total);
 
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);

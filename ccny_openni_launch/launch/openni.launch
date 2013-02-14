@@ -3,7 +3,7 @@
 
   <!-- Parameters -->
   <arg name="manager_name" value="rgbd_manager"/>
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_openni_default"/> 
   
   <!-- Nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager"
