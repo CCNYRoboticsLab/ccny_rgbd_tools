@@ -79,10 +79,11 @@ class MonocularVisualOdometry
     CameraInfoSubFilter sub_info_;
 
     // **** parameters 
-
     std::string pcd_filename_;
     std::string fixed_frame_; 
     std::string base_frame_;
+    std::string path_to_keyframes_;
+    int initial_keyframe_number_;
 
     std::string detector_type_;
     std::string descriptor_type_;
@@ -125,9 +126,6 @@ class MonocularVisualOdometry
     std::string topic_cam_info_;
     std::string topic_image_;
     std::string topic_virtual_image_;
-
-    std::string path_to_keyframes_;
-    int initial_keyframe_number_;
 
     // **** private functions
     
