@@ -197,8 +197,27 @@ target_link_libraries (mono_vo_node
 
 
 ################################################################
-# test mesh triangulation
+# Mesh model
 ################################################################
+
+#find_package(PCL 1.6 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+rosbuild_add_executable (keyframes_reshaper src/node/keyframes_reshaper_node.cpp
+                                  src/apps/keyframes_reshaper.cpp
+)
+
+target_link_libraries (keyframes_reshaper 
+                            ccny_rgbd_structures
+                            ${PCL_LIBRARIES}
+                            ccny_rgbd_util
+                            boost_signals 
+                            boost_system
+                            # open_gl                       
+                        )
+
 project(greedy_projection)
 
 find_package(PCL 1.2 REQUIRED)
