@@ -32,6 +32,9 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/regex.hpp>
+#include <octomap/octomap.h>
+#include <octomap/OcTree.h>
+#include <octomap/ColorOcTree.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
@@ -123,7 +126,19 @@ class KeyframeMapper
     bool saveFullSrvCallback(
       Save::Request& request,
       Save::Response& response);
-
+    
+    /** @brief ROS callback to create an Octomap and save it to
+     * file.
+     * 
+     * The resolution of the map can be controlled via the \ref octomap_res_
+     * parameter.
+     * 
+     * The argument should be the path to the .bt file
+     */
+    bool saveOctomapSrvCallback(
+      Save::Request& request,
+      Save::Response& response);
+    
     /** @brief ROS callback load keyframes from disk
      * 
      * The argument should be a string with the directory pointing to 
@@ -158,7 +173,7 @@ class KeyframeMapper
   protected:
 
     ros::NodeHandle nh_;          ///< public nodehandle
-    ros::NodeHandle nh_private_;  ///< private nodehandle
+    ros::NodeHandle nh_private_;  ///< private nodepcdhandle
     
     std::string fixed_frame_;     ///< the fixed frame (usually "odom")
     
@@ -200,6 +215,9 @@ class KeyframeMapper
     /** @brief ROS service to save the full map to disk */
     ros::ServiceServer save_full_service_;
     
+    /** @brief ROS service to save octomap to disk */
+    ros::ServiceServer save_octomap_service_;
+    
     /** @brief ROS service to load all keyframes from disk */
     ros::ServiceServer load_kf_service_;
     
@@ -227,7 +245,8 @@ class KeyframeMapper
     CameraInfoSubFilter sub_info_;
     
     // params
-    double full_map_res_; ///< downsampling resolution of full map
+    double full_map_res_; ///< downsampling resolution of full map (in meters)
+    double octomap_res_;  ///< tree resolution for octomap (in meters)
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
           
@@ -279,8 +298,52 @@ class KeyframeMapper
      * @retval false save failed.
      */
     bool saveFullMap(const std::string& path);
+           
+    /** @brief Builds an octomap octree from all keyframes
+     * @param tree reference to the octomap octree
+     */
+    void buildOctomap(octomap::OcTree& tree);
+    
+    void buildColorOctomap(octomap::ColorOcTree& tree);
+    
+    /** @brief Builds and saves an Octomap to a specified path
+     * @param path path to save the octomap to
+     */
+    void saveOctomap(const std::string& path);
+    
+    /** @brief Convert a tf pose to octomap pose
+     * @param poseTf the tf pose
+     * @return octomap pose
+     */
+    static inline octomap::pose6d poseTfToOctomap(
+      const tf::Pose& poseTf)
+    {
+      return octomap::pose6d(
+              pointTfToOctomap(poseTf.getOrigin()),
+              quaternionTfToOctomap(poseTf.getRotation()));
+    }
+   
+    /** @brief Convert a tf point to octomap point
+    * @param poseTf the tf point
+    * @return octomap point
+    */
+    static inline octomap::point3d pointTfToOctomap(
+      const tf::Point& ptTf)
+    {
+      return octomap::point3d(ptTf.x(), ptTf.y(), ptTf.z());
+    }
+   
+    /** @brief Convert a tf quaternion to octomap quaternion
+    * @param poseTf the tf quaternion
+    * @return octomap quaternion
+    */
+    static inline octomath::Quaternion quaternionTfToOctomap(
+      const tf::Quaternion& qTf)
+    {
+      return octomath::Quaternion(qTf.w(), qTf.x(), qTf.y(), qTf.z());
+    }
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_KEYFRAME_MAPPER_H

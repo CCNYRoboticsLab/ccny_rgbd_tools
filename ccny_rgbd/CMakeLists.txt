@@ -29,6 +29,12 @@ pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
+# Octomap
+find_package(octomap REQUIRED)
+include_directories(${OCTOMAP_INCLUDE_DIRS})
+link_directories(${OCTOMAP_LIBRARY_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
+
 # boost
 rosbuild_add_boost_directories()
 
@@ -108,6 +114,7 @@ rosbuild_add_executable(keyframe_mapper_node
   src/apps/keyframe_mapper.cpp)
 
 target_link_libraries (keyframe_mapper_node
+  ${OCTOMAP_LIBRARIES}
   ccny_rgbd_structures 
   ccny_rgbd_mapping
   ccny_rgbd_util
