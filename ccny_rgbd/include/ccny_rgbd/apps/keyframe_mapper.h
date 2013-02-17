@@ -116,14 +116,14 @@ class KeyframeMapper
       Save::Response& response);
 
     /** @brief ROS callback to create an aggregate 3D map and save it to 
-     * file.
+     * pcd file.
      * 
-     * The resolution of the map can be controlled via the \ref full_map_res_
+     * The resolution of the map can be controlled via the \ref pcd_map_res_
      * parameter.
      * 
      * The argument should be the path to the .pcd file
      */
-    bool saveFullSrvCallback(
+    bool savePcdMapSrvCallback(
       Save::Request& request,
       Save::Response& response);
     
@@ -212,8 +212,8 @@ class KeyframeMapper
     /** @brief ROS service to save all keyframes to disk */
     ros::ServiceServer save_kf_service_;
     
-    /** @brief ROS service to save the full map to disk */
-    ros::ServiceServer save_full_service_;
+    /** @brief ROS service to save the entire map as pcd to disk */
+    ros::ServiceServer save_pcd_map_service_;
     
     /** @brief ROS service to save octomap to disk */
     ros::ServiceServer save_octomap_service_;
@@ -245,10 +245,11 @@ class KeyframeMapper
     CameraInfoSubFilter sub_info_;
     
     // params
-    double full_map_res_; ///< downsampling resolution of full map (in meters)
+    double pcd_map_res_; ///< downsampling resolution of pcd map (in meters)
     double octomap_res_;  ///< tree resolution for octomap (in meters)
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
+    bool octomap_with_color_; ///< whetehr to save Octomaps with color info      
           
     // state vars
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested
@@ -292,25 +293,35 @@ class KeyframeMapper
      */
     void publishKeyframePoses();
     
-    /** @brief Save the full (downsampled) map to disk.
+    /** @brief Save the full map to disk as pcd
      * @param path path to save the map to
      * @retval true save was successful
      * @retval false save failed.
      */
-    bool saveFullMap(const std::string& path);
+    bool savePcdMap(const std::string& path);
            
+    /** @brief Builds an pcd map from all keyframes
+     * @param map_cloud the point cloud to be built
+     */
+    void buildPcdMap(PointCloudT& map_cloud);
+                   
+   /** @brief Save the full map to disk as octomap
+     * @param path path to save the map to
+     * @retval true save was successful
+     * @retval false save failed.
+     */
+    bool saveOctomap(const std::string& path);
+    
     /** @brief Builds an octomap octree from all keyframes
      * @param tree reference to the octomap octree
      */
     void buildOctomap(octomap::OcTree& tree);
     
-    void buildColorOctomap(octomap::ColorOcTree& tree);
-    
-    /** @brief Builds and saves an Octomap to a specified path
-     * @param path path to save the octomap to
+    /** @brief Builds an octomap octree from all keyframes, with color
+     * @param tree reference to the octomap octree
      */
-    void saveOctomap(const std::string& path);
-    
+    void buildColorOctomap(octomap::ColorOcTree& tree);
+        
     /** @brief Convert a tf pose to octomap pose
      * @param poseTf the tf pose
      * @return octomap pose
