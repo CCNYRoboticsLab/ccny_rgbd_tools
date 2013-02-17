@@ -46,6 +46,8 @@ KeyframeMapper::KeyframeMapper(
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("full_map_res", full_map_res_))
     full_map_res_ = 0.01;
+  if (!nh_private_.getParam ("octomap_res", octomap_res_))
+    octomap_res_ = 0.05;  
   if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
     kf_dist_eps_  = 0.10;
   if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
@@ -72,6 +74,8 @@ KeyframeMapper::KeyframeMapper(
     "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
   save_full_service_ = nh_.advertiseService(
     "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
+  save_octomap_service_ = nh_.advertiseService(
+    "save_octomap", &KeyframeMapper::saveOctomapSrvCallback, this);
   add_manual_keyframe_service_ = nh_.advertiseService(
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
   generate_graph_service_ = nh_.advertiseService(
@@ -462,5 +466,124 @@ bool KeyframeMapper::solveGraphSrvCallback(
   return true;
 }
 
+bool KeyframeMapper::saveOctomapSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
+{
+  saveOctomap(request.filename);
+  return true;
+}
+
+void KeyframeMapper::saveOctomap(const std::string& path)
+{ 
+  ROS_INFO("Building octomap...");
+  //octomap::OcTree tree(octomap_res_);   
+  //buildOctomap(tree);
+  
+  octomap::ColorOcTree tree(octomap_res_);   
+  buildColorOctomap(tree);
+  
+  ROS_INFO("Saving octomap...");
+  //std::ofstream stream(path.c_str());
+  //tree.wite(stream);
+  
+  tree.write(path);
+  
+  //tree.writeColorHistogram(path + "hist");
+  
+  ROS_INFO("Done");
+}
+
+void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
+{
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    ROS_INFO("Processing keyframe %u", kf_idx);
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const PointCloudT& cloud = keyframe.cloud;
+
+    // build octomap cloud from pcl cloud
+    octomap::Pointcloud octomap_cloud;
+    for (unsigned int pt_idx = 0; pt_idx < cloud.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud.points[pt_idx];
+      if (!std::isnan(p.z))
+        octomap_cloud.push_back(p.x, p.y, p.z);
+    }
+    
+    octomap::point3d sensor_origin(0.0, 0.0, 0.0);  
+    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+    
+    tree.insertScan(octomap_cloud, sensor_origin, frame_origin);
+  }
+}
+
+void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
+{/*
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    ROS_INFO("Processing keyframe %u", kf_idx);
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const PointCloudT& cloud = keyframe.cloud;
+
+    octomap::point3d sensor_origin(0.0, 0.0, 0.0);  
+    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+    
+    // insert into map one by one
+    octomap::Pointcloud octomap_cloud;
+    for (unsigned int pt_idx = 0; pt_idx < cloud.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud.points[pt_idx];
+      if (!std::isnan(p.z))
+      {
+        octomap::point3d endpoint(p.x, p.y, p.z);
+        octomap::ColorOcTreeNode* n = tree.updateNode(endpoint, true); 
+        n->setColor(p.r, p.g, p.b); // set color to yellow
+      }
+    }
+    
+    tree.updateInnerOccupancy();
+  }
+  */
+  
+  
+    for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    ROS_INFO("Processing keyframe %u", kf_idx);
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const PointCloudT& cloud = keyframe.cloud;
+
+    // build octomap cloud from pcl cloud
+    octomap::Pointcloud octomap_cloud;
+    for (unsigned int pt_idx = 0; pt_idx < cloud.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud.points[pt_idx];
+      if (!std::isnan(p.z))
+        octomap_cloud.push_back(p.x, p.y, p.z);
+    }
+    
+    octomap::point3d sensor_origin(0.0, 0.0, 0.0);  
+    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+    
+    // insert scan
+    tree.insertScan(octomap_cloud, sensor_origin, frame_origin);
+    
+    // insert colors
+    PointCloudT cloud_tf;
+    pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    for (unsigned int pt_idx = 0; pt_idx < cloud_tf.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud_tf.points[pt_idx];
+      if (!std::isnan(p.z))
+      {
+        octomap::point3d endpoint(p.x, p.y, p.z);
+        octomap::ColorOcTreeNode* n = tree.search(endpoint);
+        if (n) n->setColor(p.r, p.g, p.b); 
+      }
+    }
+    
+    tree.updateInnerOccupancy();
+  }
+}
 
 } // namespace ccny_rgbd
