@@ -77,6 +77,7 @@ target_link_libraries(ccny_rgbd_mapping
   boost_regex
   cholmod
   g2o_core
+  g2o_stuff
   g2o_solver_cholmod
   g2o_solver_csparse
   g2o_types_slam3d)
