@@ -42,6 +42,14 @@ rosbuild_add_boost_directories()
 # Build libraries
 ################################################################
 
+rosbuild_add_library (ccny_rgbd_util
+  src/rgbd_util.cpp
+)
+
+rosbuild_add_library (ccny_rgbd_proc_util
+  src/proc_util.cpp
+)
+
 rosbuild_add_library (ccny_rgbd_structures
   src/structures/rgbd_frame.cpp
   src/structures/rgbd_keyframe.cpp
@@ -65,21 +73,17 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation_icp_prob_model.cpp
 )
 
+target_link_libraries(ccny_rgbd_registration
+  ccny_rgbd_util)
+
 rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_graph_detector.cpp
   src/mapping/keyframe_graph_solver.cpp
   src/mapping/keyframe_graph_solver_g2o.cpp
 )
 
-rosbuild_add_library (ccny_rgbd_util
-  src/rgbd_util.cpp
-)
-
-rosbuild_add_library (ccny_rgbd_proc_util
-  src/proc_util.cpp
-)
-
 target_link_libraries(ccny_rgbd_mapping
+  ccny_rgbd_util
   boost_regex
   cholmod
   g2o_core
