@@ -1,13 +1,17 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
-  <arg name="PATH_TO_KEYFRAMES" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/Keyframes" />
+  <!-- arg name="PATH_TO_KEYFRAMES" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/Keyframes" / -->
+  <arg name="PATH_TO_KEYFRAMES" default="$(env HOME)/ros/my_bunnies" />
   
   <node pkg="ccny_rgbd" type="keyframes_reshaper" name="keyframes_reshaper" 
     output="screen">
 
     # Keyframes location:
     <param name="apps/keyframes_reshaper/path_to_keyframes" value="$(arg PATH_TO_KEYFRAMES)" />
+    <param name="apps/keyframes_reshaper/keyframe_dir_num_of_chars" value="4" />
+    <param name="apps/keyframes_reshaper/generate_config_file" value="false" />
+    <param name="apps/keyframes_reshaper/load_as_keyframes" value="false" />
     <param name="apps/keyframes_reshaper/first_keyframe_number" value="0" /> 
     <param name="apps/keyframes_reshaper/last_keyframe_number" value="1" /> 
     
@@ -17,6 +21,7 @@
     <param name="apps/keyframes_reshaper/smoothing_res" value="0.0" /> 
 
     # PCD file location
+    <param name="apps/keyframes_reshaper/input_cloud_filename" value="cloud.pcd"/> # Optional 
     <param name="apps/keyframes_reshaper/output_filename" value="cloud_reshaped"/> 
   </node>
 
