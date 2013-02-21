@@ -2,28 +2,32 @@
 
 namespace ccny_rgbd {
 
-RGBDImageProc::RGBDImageProc(ros::NodeHandle nh, ros::NodeHandle nh_private):
+RGBDImageProc::RGBDImageProc(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private):
   nh_(nh), nh_private_(nh_private), 
   rgb_image_transport_(nh_),
   depth_image_transport_(nh_), 
+  config_server_(nh_private_),
   initialized_(false)
-{
+{ 
   // parameters 
-  if (!nh_private_.getParam ("scale", scale_))
+  if (!nh_private_.getParam("scale1", scale_))
     scale_ = 1.0;
-  if (!nh_private_.getParam ("unwarp", unwarp_))
+  if (!nh_private_.getParam("unwarp", unwarp_))
     unwarp_ = true;
-  if (!nh_private_.getParam ("publish_cloud", publish_cloud_))
+  if (!nh_private_.getParam("publish_cloud", publish_cloud_))
     publish_cloud_ = true;
-  
-  std::string home_path = getenv("HOME");
-  calib_path_ = home_path + "/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01/";
+  if (!nh_private_.getParam("calib_path", calib_path_))
+  {
+    std::string home_path = getenv("HOME");
+    calib_path_ = home_path + "./ros/rgbd_calibration";
+  }
 
-  calib_extr_filename_ = calib_path_ + "extr.yml";
-  calib_warp_filename_ = calib_path_ + "warp.yml";
+  calib_extr_filename_ = calib_path_ + "/extr.yml";
+  calib_warp_filename_ = calib_path_ + "/warp.yml";
   
   // load calibration (extrinsics, depth unwarp params) from files
   loadCalibration();
+  if (unwarp_) loadUnwarpCalibration();
   
   // publishers
   rgb_publisher_   = rgb_image_transport_.advertise("rgbd/rgb", 1);
@@ -68,24 +72,34 @@ bool RGBDImageProc::loadCalibration()
     // TODO: handle this with default ir2rgb
     return false;
   }
+
+  // load intrinsics and distortion coefficients
+  ROS_INFO("Reading camera calibration files...");
+  cv::FileStorage fs_extr(calib_extr_filename_, cv::FileStorage::READ);
+
+  fs_extr["ir2rgb"] >> ir2rgb_;
+
+  return true;
+}
+
+
+bool RGBDImageProc::loadUnwarpCalibration()
+{
   if (!boost::filesystem::exists(calib_warp_filename_))
   {
     ROS_ERROR("Could not open %s", calib_warp_filename_.c_str());
     // TODO: handle this with default warp coeff
     return false;
   }
-
-  // **** load intrinsics and distortion coefficients
-  ROS_INFO("Reading camera calibration files...");
-  cv::FileStorage fs_extr(calib_extr_filename_, cv::FileStorage::READ);
-  cv::FileStorage fs_warp(calib_warp_filename_, cv::FileStorage::READ);   
   
-  fs_extr["ir2rgb"] >> ir2rgb_;
+  // load warp coefficients
+  cv::FileStorage fs_warp(calib_warp_filename_, cv::FileStorage::READ);   
+
   fs_warp["c0"] >> coeff_0_;
   fs_warp["c1"] >> coeff_1_;
   fs_warp["c2"] >> coeff_2_;
   fs_warp["fit_mode"] >> fit_mode_;
-
+  
   return true;
 }
 
@@ -130,9 +144,12 @@ void RGBDImageProc::initMaps(
     size_out_, CV_16SC2, map_depth_1_, map_depth_2_);  
   
   // **** rectify the coefficient images
-  cv::remap(coeff_0_, coeff_0_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
-  cv::remap(coeff_1_, coeff_1_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
-  cv::remap(coeff_2_, coeff_2_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  if(unwarp_)
+  {
+    cv::remap(coeff_0_, coeff_0_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+    cv::remap(coeff_1_, coeff_1_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+    cv::remap(coeff_2_, coeff_2_rect_, map_depth_1_, map_depth_2_,  cv::INTER_NEAREST);
+  }
 
   // **** save new intrinsics as camera models
   rgb_rect_info_msg_.header = rgb_info_msg->header;

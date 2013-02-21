@@ -332,10 +332,8 @@ void projectCloudToImage(const PointCloudT& cloud,
                          int width,
                          int height,
                          cv::Mat& rgb_img,
-                         cv::Mat& depth_img
-                         )
+                         cv::Mat& depth_img)
 {
-  
   rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
 
@@ -386,12 +384,12 @@ void projectCloudToImage(const PointCloudT& cloud,
   }   
 }
 
-void holeFilling(const cv::Mat& rgb_img,
-                 const cv::Mat& depth_img,
-                 uint mask_size,
-                 cv::Mat& filled_rgb_img,
-                 cv::Mat& filled_depth_img)
-
+void holeFilling(
+  const cv::Mat& rgb_img,
+  const cv::Mat& depth_img,
+  uint mask_size,
+  cv::Mat& filled_rgb_img,
+  cv::Mat& filled_depth_img)
 {
   uint w = (mask_size-1)/2;
 
@@ -399,62 +397,61 @@ void holeFilling(const cv::Mat& rgb_img,
   filled_depth_img = cv::Mat::zeros(depth_img.rows, depth_img.cols, CV_16UC1);
   
   for (uint u=0; u < depth_img.cols; ++u)
-    for (uint v=0; v < depth_img.rows; ++v)
+  for (uint v=0; v < depth_img.rows; ++v)
+  {
+    if (depth_img.at<uint16_t>(v,u) == 0)
     {
-      if (depth_img.at<uint16_t>(v,u) == 0)
+      double count = 0;
+      double depth_sum = 0;
+      double rgb_sum_b = 0; 
+      double rgb_sum_g = 0;
+      double rgb_sum_r = 0;
+
+      for (uint uu = u - w; uu <= u+w; ++uu)
+      for (uint vv = v - w; vv <= v+w; ++vv)
       {
-        double count = 0;
-        double depth_sum = 0;
-        double rgb_sum_b = 0; 
-        double rgb_sum_g = 0;
-        double rgb_sum_r = 0;
+        if (uu < 0 || uu >= depth_img.cols || vv < 0 || vv >= depth_img.rows ) continue;
 
-        for (uint uu = u - w; uu <= u+w; ++uu)
-        for (uint vv = v - w; vv <= v+w; ++vv)
+        uint16_t neighbor_depth  = depth_img.at<uint16_t>(vv, uu);
+        cv::Vec3b neighbor_color = rgb_img.at<cv::Vec3b>(vv, uu);
+
+        if (neighbor_depth != 0)
         {
-          if (uu < 0 || uu >= depth_img.cols || vv < 0 || vv >= depth_img.rows ) continue;
+          double neighbor_color_b = (double)neighbor_color[0];
+          double neighbor_color_g = (double)neighbor_color[1];
+          double neighbor_color_r = (double)neighbor_color[2];
 
-          uint16_t neighbor_depth  = depth_img.at<uint16_t>(vv, uu);
-          cv::Vec3b neighbor_color = rgb_img.at<cv::Vec3b>(vv, uu);
-
-          if (neighbor_depth != 0)
-          {
-            double neighbor_color_b = (double)neighbor_color[0];
-            double neighbor_color_g = (double)neighbor_color[1];
-            double neighbor_color_r = (double)neighbor_color[2];
-
-            depth_sum = depth_sum + neighbor_depth;
-            rgb_sum_b = rgb_sum_b + neighbor_color_b;
-            rgb_sum_g = rgb_sum_g + neighbor_color_g;
-            rgb_sum_r = rgb_sum_r + neighbor_color_r;
-            ++count;
-          }
-        }
-        if (count != 0)
-        { 
-          filled_depth_img.at<uint16_t>(v,u) = depth_sum/count;
-          cv::Vec3b color_rgb;
-          color_rgb[0] = (uint8_t)(rgb_sum_b/count);  
-          color_rgb[1] = (uint8_t)(rgb_sum_g/count);
-          color_rgb[2] = (uint8_t)(rgb_sum_r/count);
-          filled_rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+          depth_sum = depth_sum + neighbor_depth;
+          rgb_sum_b = rgb_sum_b + neighbor_color_b;
+          rgb_sum_g = rgb_sum_g + neighbor_color_g;
+          rgb_sum_r = rgb_sum_r + neighbor_color_r;
+          ++count;
         }
       }
-      else 
-      {
-        filled_depth_img.at<uint16_t>(v,u) = depth_img.at<uint16_t>(v,u);
-        filled_rgb_img.at<cv::Vec3b>(v,u)  = rgb_img.at<cv::Vec3b>(v,u); 
+      if (count != 0)
+      { 
+        filled_depth_img.at<uint16_t>(v,u) = depth_sum/count;
+        cv::Vec3b color_rgb;
+        color_rgb[0] = (uint8_t)(rgb_sum_b/count);  
+        color_rgb[1] = (uint8_t)(rgb_sum_g/count);
+        color_rgb[2] = (uint8_t)(rgb_sum_r/count);
+        filled_rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
       }
     }
-   
+    else 
+    {
+      filled_depth_img.at<uint16_t>(v,u) = depth_img.at<uint16_t>(v,u);
+      filled_rgb_img.at<cv::Vec3b>(v,u)  = rgb_img.at<cv::Vec3b>(v,u); 
+    }
+  }
 }
 
-void holeFilling2(const cv::Mat& rgb_img,
-                 const cv::Mat& depth_img,
-                 uint mask_size,
-                 cv::Mat& filled_rgb_img,
-                 cv::Mat& filled_depth_img)
-
+void holeFilling2(
+  const cv::Mat& rgb_img,
+  const cv::Mat& depth_img,
+  uint mask_size,
+  cv::Mat& filled_rgb_img,
+  cv::Mat& filled_depth_img)
 {
   uint w = (mask_size-1)/2;
 
@@ -462,445 +459,36 @@ void holeFilling2(const cv::Mat& rgb_img,
   filled_depth_img = cv::Mat::zeros(depth_img.rows, depth_img.cols, CV_16UC1);
   
   for (uint u=0; u < depth_img.cols; ++u)
-    for (uint v=0; v < depth_img.rows; ++v)
-    {
-      if (depth_img.at<uint16_t>(v,u) == 0)
+  for (uint v=0; v < depth_img.rows; ++v)
+  {
+    if (depth_img.at<uint16_t>(v,u) == 0)
+    {   
+      double min_depth = 0;
+      for (uint uu = u - w; uu <= u+w; ++uu)
+      for (uint vv = v - w; vv <= v+w; ++vv)
       {
+        if (uu < 0 || uu >= depth_img.cols || vv < 0 || vv >= depth_img.rows ) continue;
         
-        double min_depth = 0;
-        for (uint uu = u - w; uu <= u+w; ++uu)
-        for (uint vv = v - w; vv <= v+w; ++vv)
-        {
-          if (uu < 0 || uu >= depth_img.cols || vv < 0 || vv >= depth_img.rows ) continue;
-          
-          uint16_t neighbor_depth  = depth_img.at<uint16_t>(vv, uu);
-          cv::Vec3b neighbor_color = rgb_img.at<cv::Vec3b>(vv, uu);
+        uint16_t neighbor_depth  = depth_img.at<uint16_t>(vv, uu);
+        cv::Vec3b neighbor_color = rgb_img.at<cv::Vec3b>(vv, uu);
 
-          if (neighbor_depth != 0 )
+        if (neighbor_depth != 0 )
+        {
+          if (min_depth == 0 || neighbor_depth < min_depth )
           {
-            if (min_depth == 0 || neighbor_depth < min_depth )
-            {
-              min_depth = neighbor_depth;   
-              filled_depth_img.at<uint16_t>(v,u) =  min_depth;  
-              filled_rgb_img.at<cv::Vec3b>(v,u)  =  rgb_img.at<cv::Vec3b>(vv,uu);       
-            }
+            min_depth = neighbor_depth;   
+            filled_depth_img.at<uint16_t>(v,u) =  min_depth;  
+            filled_rgb_img.at<cv::Vec3b>(v,u)  =  rgb_img.at<cv::Vec3b>(vv,uu);       
           }
         }
-      }  
-      else 
-      {
-        filled_depth_img.at<uint16_t>(v,u) = depth_img.at<uint16_t>(v,u);
-        filled_rgb_img.at<cv::Vec3b>(v,u)  = rgb_img.at<cv::Vec3b>(v,u); 
       }
-    }
-}
-
-void tfFromImagePair(
-  const cv::Mat& current_img,
-  const cv::Mat& next_img,
-  const cv::Mat& current_depth_img,
-  const Matrix3f& intrinsic_matrix,
-  tf::Transform& transform,
-  double max_descriptor_space_distance,
-  std::string feature_detection_alg,
-  std::string feature_descriptor_alg,
-  int number_of_iterations,
-  float reprojection_error,
-  int min_inliers_count,
-  bool draw_matches,
-  bool profile
-  )
-{
-  ros::WallTime start_feature_matching = ros::WallTime::now();
-
-  // Mask next image with depth img as mask (takes care of wholes where information is missing)
-  cv::Mat current_img_mask;
-  current_depth_img.convertTo(current_img_mask, CV_8U);
-  if(draw_matches)
-  {
-    cv::namedWindow("Virtual Image", CV_WINDOW_KEEPRATIO);
-    cv::imshow("Virtual Image", current_img);
-    cv::namedWindow("Monocular Image", CV_WINDOW_KEEPRATIO);
-    cv::imshow("Monocular Image", next_img);
-    cv::namedWindow("Mask", CV_WINDOW_KEEPRATIO);
-    cv::imshow("Mask", current_img_mask);
-    cv::waitKey(1);
-  }
-
-  cv::Ptr<cv::FeatureDetector> feature_detector;
-
-  if (feature_detection_alg == "ORB")
-  {
-    // ORB features
-    int nfeatures=5;
-    float scaleFactor=1.2f;
-    int nlevels=8;
-    int edgeThreshold=31;
-    int firstLevel=0;
-    int WTA_K=2;
-    int scoreType=cv::ORB::HARRIS_SCORE;
-    int patchSize=31;
-    feature_detector = new cv::ORB(nfeatures, scaleFactor, nlevels, edgeThreshold, firstLevel,
-                                   WTA_K, scoreType, patchSize); // Hessian threshold
-  }
-  else if (feature_detection_alg == "SURF")
-  {
-    // Construction of the SURF feature detector
-    double hessian_thresh = 32;
-    feature_detector = new cv::SURF(hessian_thresh); // Hessian threshold
-  }
-  else if (feature_detection_alg == "FAST")
-  {
-    int threshold=10;
-    bool nonmaxSuppression=true;
-    feature_detector = new cv::FastFeatureDetector(threshold, nonmaxSuppression);
-  }
-  else if (feature_detection_alg == "STAR")
-  {
-    int maxSize=45;
-    int responseThreshold=30;
-    int lineThresholdProjected=10;
-    int lineThresholdBinarized=8;
-    int suppressNonmaxSize=5;
-    feature_detector = new cv::StarFeatureDetector(maxSize, responseThreshold,
-                                                   lineThresholdProjected, lineThresholdBinarized, suppressNonmaxSize);
-  }
-  else if (feature_detection_alg == "MSER")
-  {
-    // TODO: check parameters
-    int delta = 3;
-    int min_area = 25;
-    int max_area = 100;
-    float max_variation = 40;
-    float min_diversity = 10;
-    int max_evolution = 4;
-    double area_threshold = 64;
-    double min_margin = 2;
-    int edge_blur_size = 6;
-    feature_detector = new cv::MSER(delta, min_area, max_area, max_variation, min_diversity,
-                                    max_evolution, area_threshold, min_margin, edge_blur_size);
-  }
-  else
-  {
-    feature_detection_alg == "GFT";
-    int n_features = 200;
-    int grid_cells = 1;
-    feature_detector = new cv::GoodFeaturesToTrackDetector(
-        n_features, // maximum number of corners to be returned
-        0.10,  // quality level
-        10); // minimum allowed distance between points
-    // point detection using FeatureDetector method
-
-    cv::GridAdaptedFeatureDetector * grid_detector; // FIXME: bring outside the "else" case
-    grid_detector = new cv::GridAdaptedFeatureDetector(
-        feature_detector, n_features, grid_cells, grid_cells);
-  }
-
-  // vector of keypoints
-  std::vector<std::vector<cv::KeyPoint> > keypoints_current_vector;
-  std::vector<cv::KeyPoint> keypoints_current;
-  std::vector<cv::KeyPoint> keypoints_next;
-
-  feature_detector->detect(current_img, keypoints_current,current_img_mask);
-  feature_detector->detect(next_img, keypoints_next);
-
-  // Visualize keypoints
-  /*
-  if(draw_matches)
-  {
-    cv::Mat keypt_img_current;
-    cv::drawKeypoints(current_img, keypoints_current, keypt_img_current);
-    cv::namedWindow("Current Features");
-    cv::imshow("Current Features", keypt_img_current);
-    cv::Mat keypt_img_next;
-    cv::drawKeypoints(next_img, keypoints_next, keypt_img_next);
-    cv::namedWindow("Next Features");
-    cv::imshow("Next Features", keypt_img_next);
-    cv::waitKey(0);
-  }
-   */
-
-  /*
-  int radius_mask = 10;
-  std::vector<cv::Mat> keypoints_masks;
-  std::vector<cv::Mat> current_img_vector;
-
-  for(int k=0; k<keypoints_next.size();k++)
-  {
-    cv::Mat mask = cv::Mat::zeros(next_img.rows, next_img.cols, CV_8UC1);
-    cv::Point keypoint_position = keypoints_next[k].pt;
-    cv::circle(mask, keypoint_position, radius_mask, cv::Scalar(255), -1);
-    keypoints_masks.push_back(mask);
-//    if(draw_matches)
-//    {
-//      cv::namedWindow("Masks", CV_WINDOW_KEEPRATIO);
-//      cv::imshow("Masks", mask);
-//      cv::waitKey(50);
-//    }
-
-    current_img_vector.push_back(current_img);
-  }
-  feature_detector->detect(current_img_vector, keypoints_current_vector, keypoints_masks);
-  */
-
-  std::cout << "Number of feature points (Reference): " << keypoints_current.size() << std::endl;
-  std::cout << "Number of feature points (Virtual): " << keypoints_next.size() << std::endl;
-
-
-  cv::Ptr<cv::DescriptorExtractor> descriptor_extractor;
-  int norm_type; ///< normal distance type for matching (in descriptor space)
-
-  // TODO: it should be done outside to allow for parameterization (and pass just the pointer to the detector)
-  if (feature_descriptor_alg == "SURF")
-  {
-    ROS_INFO("Descriptor: SURF");
-    norm_type = cv::NORM_L2;
-    descriptor_extractor = new cv::SurfDescriptorExtractor();
-  }
-  else if (feature_descriptor_alg == "BRIEF")
-  {
-    norm_type = cv::NORM_HAMMING;
-    descriptor_extractor = new cv::BriefDescriptorExtractor();
-  }
-  else if (feature_descriptor_alg == "FREAK")
-  {
-    norm_type = cv::NORM_HAMMING;
-    //      norm_type = cv::NORM_L2;
-    bool orientationNormalized = true;
-    bool scaleNormalized = true;
-    float patternScale = 22.0f;
-    int nOctaves = 4;
-    descriptor_extractor = new cv::FREAK(orientationNormalized, scaleNormalized, patternScale, nOctaves);
-  }
-  else // use ORB
-  {
-    // FIXME: pay attention that with ORB, since it uses Hamming distances, the FLANN matcher will not work
-    // Use the BruteForce matcher with ORB!!!
-
-    feature_descriptor_alg = "ORB";
-    norm_type = cv::NORM_HAMMING;
-    descriptor_extractor = new cv::OrbDescriptorExtractor();
-  }
-
-//  std::vector<cv::Mat> descriptors_current_vector;
-  cv::Mat descriptors_current;
-  cv::Mat descriptors_next;
-
-
-//  descriptor_extractor->compute(current_img_vector, keypoints_current_vector, descriptors_current_vector);
-  descriptor_extractor->compute(current_img, keypoints_current, descriptors_current);
-  descriptor_extractor->compute(next_img, keypoints_next, descriptors_next);
-
-  std::cout << "Current image's descriptor matrix size: " << descriptors_current.rows << " by " << descriptors_current.cols << std::endl;
-  std::cout << "Next image's descriptor matrix size: " << descriptors_next.rows << " by " << descriptors_next.cols << std::endl;
-
-  /*
-  // Construction of the matcher
-  cv::BFMatcher matcher_brute_force(norm_type, true);
-//  matcher_brute_force.add(descriptors_current_vector); // Because we will be using masks
-
-  // Match the two image descriptors
-  std::vector<std::vector<cv::DMatch> > matches_radius;
-  std::vector<std::vector<cv::DMatch> > matches_knn;
-
-  // TODO: parametrize:
-  float max_distance = max_descriptor_space_distance;
-//  float max_distance = 2; // SURF
-  bool use_radius_match = true;
-
-  matcher_brute_force.radiusMatch(descriptors_next, descriptors_current, matches_radius, max_distance); // Match search within radius
-  // Using masks
-//  matcher_brute_force.radiusMatch(descriptors_next, matches_radius, max_distance, keypoints_masks); // Match search within radius
-
-  std::cout << "Radius Matches: " << matches_radius.size() <<  std::endl;
-//    int number_of_matches = matches_radius.size();
-//    for(int m=0; m<number_of_matches; m++)
-//    {
-//      ROS_INFO( "Match[%d]: imgIdx = %d, queryIdx = %d, trainIdx = %d, distance = %f",
-//                m, matches_radius[m].imgIdx, matches_radius[i][m].queryIdx, matches_radius[i][m].trainIdx, matches_radius[i][m].distance);
-//      std::cout << "\tPoint at Query: " << keypointsLL[0][matches_radius[i][m].queryIdx].pt<< std::endl;
-//      std::cout << "\tPoint at Train: " << keypointsRR[0][matches_radius[i][m].trainIdx].pt<< std::endl;
-//    }
-
-    if(draw_matches)
+    }  
+    else 
     {
-      cv::Mat current_img_copy = current_img.clone();
-      cv::Mat next_img_copy = next_img.clone();
-
-      cv::Mat matches_result_img;
-      cv::drawMatches(current_img_copy, keypoints_current, // 1st image and its keypoints
-                      next_img_copy, keypoints_next, // 2nd image and its keypoints
-                      matches_radius, // the matches
-                      matches_result_img // the image produced
-                     ); // color of the lines
-      cv::namedWindow("Matches radius", CV_WINDOW_KEEPRATIO);
-      cv::imshow("Matches radius", matches_result_img);
-    }
-
-*/
-
-
-    /*// KNN
-    matcher_brute_force.knnMatch(descriptors_current, descriptors_next, matches_knn, 1); // Match search within radius
-
-    std::cout << "Knn Matches: " << matches_knn.size() << std::endl;
-  //    int number_of_matches = matches_radius.size();
-  //    for(int m=0; m<number_of_matches; m++)
-  //    {
-  //      ROS_INFO( "Match[%d]: imgIdx = %d, queryIdx = %d, trainIdx = %d, distance = %f",
-  //                m, matches_radius[m].imgIdx, matches_radius[i][m].queryIdx, matches_radius[i][m].trainIdx, matches_radius[i][m].distance);
-  //      std::cout << "\tPoint at Query: " << keypointsLL[0][matches_radius[i][m].queryIdx].pt<< std::endl;
-  //      std::cout << "\tPoint at Train: " << keypointsRR[0][matches_radius[i][m].trainIdx].pt<< std::endl;
-  //    }
-
-      if(draw_matches)
-      {
-        cv::Mat current_img_copy = current_img.clone();
-        cv::Mat next_img_copy = next_img.clone();
-
-        cv::Mat matches_result_img;
-        cv::drawMatches(current_img_copy, keypoints_current, // 1st image and its keypoints
-                        next_img_copy, keypoints_next, // 2nd image and its keypoints
-                        matches_knn, // the matches
-                        matches_result_img // the image produced
-                       ); // color of the lines
-        cv::namedWindow("Matches knn", CV_WINDOW_KEEPRATIO);
-        cv::imshow("Matches knn", matches_result_img);
-      }
-
-*/
-
-  cv::FlannBasedMatcher matcher_flann;
-  std::vector<cv::DMatch>  matches_flann;
-  // **** build candidate matches ***********************************
-  matcher_flann.match(descriptors_next, descriptors_current, matches_flann);
-
-  // remove bad matches - too far away in descriptor space,
-  // create vector of 2D and 3D point correspondences for PnP
-  std::vector<cv::Point2f> corr_2D_points_vector;
-  std::vector<cv::Point3f> corr_3D_points_vector;
-
-  std::vector<cv::DMatch> candidate_matches;
-  for (unsigned int m_idx = 0; m_idx < matches_flann.size(); ++m_idx)
-  {
-    cv::DMatch match = matches_flann[m_idx];
-
-    if (match.distance < max_descriptor_space_distance)
-    {
-      int idx_query = match.queryIdx;
-      int idx_train = match.trainIdx;
-      cv::Point2f cv_2D_point_train = keypoints_current[idx_train].pt;
-      // Compute 3D point
-      cv::Point2f cv_2D_point_query = keypoints_next[idx_query].pt;
-      float depth = (float) current_depth_img.at<uint16_t>((int) roundf(cv_2D_point_train.y), (int) roundf(cv_2D_point_train.x)) / 1000.0f;
-      //printf("Depth(%f,%f) = %f \t", cv_2D_point_query.x, cv_2D_point_query.y, depth);
-      if(depth > 0)
-      {
-        candidate_matches.push_back(match);
-        corr_2D_points_vector.push_back(cv_2D_point_query);
-
-        Vector3f p_cam;
-        p_cam(0,0) = cv_2D_point_train.x * depth;
-        p_cam(1,0) = cv_2D_point_train.y * depth;
-        p_cam(2,0) = depth;
-        //printf("Point in Camera frame: (%f,%f, %f) \t", p_cam(0,0), p_cam(1,0), p_cam(2,0));
-
-        Vector3f p_world = intrinsic_matrix.inverse() * p_cam;
-
-        cv::Point3d cv_p_world;
-        cv_p_world.x = p_world(0,0);
-        cv_p_world.y = p_world(1,0);
-        cv_p_world.z = p_world(2,0);
-        corr_3D_points_vector.push_back(cv_p_world);
-        //printf("3D Point: (%f,%f, %f) \n", cv_p_world.x, cv_p_world.y, cv_p_world.z);
-
-      }
-//      else
-//      {
-//        ROS_ERROR("Depth value shouldn't be zero");
-//      }
+      filled_depth_img.at<uint16_t>(v,u) = depth_img.at<uint16_t>(v,u);
+      filled_rgb_img.at<cv::Vec3b>(v,u)  = rgb_img.at<cv::Vec3b>(v,u); 
     }
   }
-
-  if(profile)
-  {
-    printf("Feature-Matching delay =  %f ms \t using %s detector and %s descriptor\n", getMsDuration(start_feature_matching), feature_detection_alg.c_str(), feature_descriptor_alg.c_str());
-  }
-
-  if(draw_matches)
-  {
-    cv::Mat current_img_copy = current_img.clone();
-    cv::Mat next_img_copy = next_img.clone();
-
-    cv::Mat matches_result_img;
-    cv::drawMatches(
-        next_img_copy, keypoints_next, // Query image and its keypoints
-        current_img_copy, keypoints_current, // Train image and its keypoints
-        candidate_matches, // the matches
-        matches_result_img // the image produced
-    ); // color of the lines
-    cv::namedWindow("Matches FLANN", CV_WINDOW_KEEPRATIO);
-    cv::imshow("Matches FLANN", matches_result_img);
-  }
-
-  // Fix max inliers count to be reasonable within number of descriptors
-  int number_of_candidate_matches = candidate_matches.size();
-  if(number_of_candidate_matches < min_inliers_count)
-    min_inliers_count = number_of_candidate_matches; // update minimum
-
-  // -----------------------------------------------------------------------------
-  // ------- transformation computation with PnP ---------------------------------
-  cv::Mat M; // The intrinsic matrix
-  cv3x3FromEigen(intrinsic_matrix, M);
-
-  cv::Mat rvec, rmat;
-  cv::Mat tvec;
-  // FIXME: commented temporarily because there is not initial trasformation being passed
-  //    tfToOpenCVRt(transform, rmat, tvec);
-  //    cv::Rodrigues(rmat, rvec);
-
-  bool useExtrinsicGuess = false;
-  std::vector<int> inliers_indices;
-
-  ros::WallTime start_PnP_RANSAC = ros::WallTime::now();
-  //          cv::solvePnP(corr_3D_points_vector, corr_2D_points_vector, M, cv::Mat(), rvec, tvec, true);
-  cv::solvePnPRansac(corr_3D_points_vector, corr_2D_points_vector, M, cv::Mat(), rvec, tvec, useExtrinsicGuess,
-                     number_of_iterations, reprojection_error, min_inliers_count, inliers_indices);
-  if(profile)
-  {
-    printf("PnP-RANSAC delay =  %f ms  using %d iterations (Finding %d inliers)\n", getMsDuration(start_PnP_RANSAC), number_of_iterations, (int) inliers_indices.size());
-  }
-
-  std::cout << inliers_indices.size() << " inliers" << std::endl;
-  if(draw_matches)
-  {
-    std::vector<cv::DMatch> inliers_matches;
-
-    for (unsigned int m_idx = 0; m_idx < inliers_indices.size(); ++m_idx)
-    {
-      cv::DMatch match = candidate_matches[inliers_indices[m_idx]];
-      inliers_matches.push_back(match);
-      cv::Mat current_img_copy = current_img.clone();
-      cv::Mat next_img_copy = next_img.clone();
-
-      cv::Mat matches_result_img;
-      cv::drawMatches(
-          next_img_copy, keypoints_next, // Query image and its keypoints
-          current_img_copy, keypoints_current, // Train image and its keypoints
-          inliers_matches, // the matches
-          matches_result_img // the image produced
-      ); // color of the lines
-      cv::namedWindow("Matches Inliers", CV_WINDOW_KEEPRATIO);
-      cv::imshow("Matches Inliers", matches_result_img);
-    }
-    cv::waitKey(1);
-
-  }
-
-  cv::Rodrigues(rvec, rmat);
-  tf::Transform next2current_tf;
-  openCVRtToTf(rmat, tvec, next2current_tf);
-  transform = next2current_tf.inverse();
 }
 
 } //namespace ccny_rgbd
