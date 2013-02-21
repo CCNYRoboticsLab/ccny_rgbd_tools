@@ -22,15 +22,22 @@ KeyFramesReshaper::~KeyFramesReshaper()
 void KeyFramesReshaper::processKeyframes()
 {
   std::string xf_conf_file_name = path_to_keyframes_ + output_filename_ + ".xf";
-  xf_conf_file_ = fopen(xf_conf_file_name.c_str(), "w");
-
-  for(frame_count_ = first_keyframe_number_; frame_count_ <= last_keyframe_number_; frame_count_++)
+  if(generate_config_file_)
   {
-    reshapeSingleKeyFrame(frame_count_);
+    xf_conf_file_ = fopen(xf_conf_file_name.c_str(), "w");
   }
+  if (xf_conf_file_ !=NULL || generate_config_file_ == false)
+  {
+    for(frame_count_ = first_keyframe_number_; frame_count_ <= last_keyframe_number_; frame_count_++)
+    {
+      reshapeSingleKeyFrame(frame_count_);
+    }
 
-  fclose(xf_conf_file_);
-
+    if(generate_config_file_)
+      fclose(xf_conf_file_);
+  }
+  else
+    ROS_ERROR("Failed to open file \"%s\"", xf_conf_file_name.c_str());
 }
 
 std::string KeyFramesReshaper::formKeyframeName(int keyframe_number, int num_of_chars)
@@ -47,7 +54,7 @@ std::string KeyFramesReshaper::formKeyframeName(int keyframe_number, int num_of_
 
 void KeyFramesReshaper::generateKeyframePath(const std::string& keyframe_path, int keyframe_number, std::string& current_keyframe_path)
 {
-  current_keyframe_path = keyframe_path + formKeyframeName(keyframe_number, 4);
+  current_keyframe_path = keyframe_path + formKeyframeName(keyframe_number, keyframe_dir_num_of_chars_);
   std::cout << "Current Frame: " << current_keyframe_path << std::endl;
 }
 
@@ -59,29 +66,59 @@ bool KeyFramesReshaper::reshapeSingleKeyFrame(int keyframe_number)
   std::string next_keyframe_path;
 
   generateKeyframePath(path_to_keyframes_, keyframe_number, current_keyframe_path);
+  std::string filename_without_ext;
+  filename_without_ext = current_keyframe_path + "/" + output_filename_;
 
   bool current_success = false;
 
   RGBDKeyframe current_keyframe;
-  current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+  PointCloudFilteredT::Ptr cloud_in(new PointCloudFilteredT);
+  if(load_as_keyframes_)
+  {
+    current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+#ifdef USE_RGB_COLOR
+    cloud_in.reset(new PointCloudFilteredT(current_keyframe.cloud));
+#endif
+  }
+  else
+  {
+    pcl::PCDReader reader;
+    std::string cloud_filename = current_keyframe_path + "/" + input_cloud_filename_ ;
+    reader.read (cloud_filename, *cloud_in);
+  }
 
-  PointCloudT::ConstPtr cloud_in (new PointCloudT(current_keyframe.cloud));
 
-  PointCloudT::Ptr cloud_without_NaNs (new PointCloudT);
+  /* FIXME: not necessary for now (we think)
+  PointCloudFilteredT::Ptr cloud_without_NaNs (new PointCloudFilteredT);
   deleteNaNs(cloud_in, cloud_without_NaNs);
 
-  PointCloudT::Ptr cloud_out (new PointCloudT);
+  PointCloudFilteredT::Ptr cloud_out (new PointCloudFilteredT);
   filterCloud(cloud_without_NaNs, cloud_out, vgf_res_, neighbor_max_proximity_, smoothing_res_);
 
   pcl::PCDWriter writer;
-  std::string downsampled_pcd_filename;
-  downsampled_pcd_filename = current_keyframe_path + "/" + output_filename_;
-
-  int result_pcd = writer.writeBinary<PointT>(downsampled_pcd_filename+".pcd", *cloud_out);
+  int result_pcd = writer.writeBinary<PointFilteredT>(filename_without_ext+".pcd", *cloud_out);
+*/
 
   //pcl::io::saveVTKFile (downsampled_pcd_filename+".vtk", *cloud_out);
-  pcl::io::savePLYFile(downsampled_pcd_filename+".ply", *cloud_out, false); // We don't want the ply in binary mode?
+  std::string filename_ply =  filename_without_ext+".ply";
+  //pcl::io::savePLYFile(filename_ply, *cloud_out, false);
+  saveCloudAsPLY(cloud_in, filename_ply);
 
+  if(generate_config_file_ && load_as_keyframes_)
+  {
+  tf::Vector3 translation = current_keyframe.pose.getOrigin();
+  tf::Quaternion rotation_quat = current_keyframe.pose.getRotation();
+
+  fprintf(xf_conf_file_, "bmesh %s %f %f %f %f %f %f %f\n", filename_ply.c_str(),
+                                                              translation.x(),
+                                                              translation.y(),
+                                                              translation.z(),
+                                                              rotation_quat.x(),
+                                                              rotation_quat.y(),
+                                                              rotation_quat.z(),
+                                                              rotation_quat.w()
+                                                              );
+  }
   //cv::Mat cv_intrinsic = current_keyframe.model.intrinsicMatrix();
   //std::cout << "CV Intrinsic matrix: " << cv_intrinsic <<std::endl;
 
@@ -191,7 +228,82 @@ bool KeyFramesReshaper::reshapeSingleKeyFrame(int keyframe_number)
   return current_success;
 }
 
-void KeyFramesReshaper::deleteNaNs(const PointCloudT::ConstPtr& cloud_in, PointCloudT::Ptr& cloud_out) const
+void KeyFramesReshaper::saveCloudAsPLY(const PointCloudFilteredT::Ptr& cloud_in, const std::string& ply_name) const
+{
+  FILE * ply_file = fopen(ply_name.c_str(), "w");
+  if (ply_file !=NULL)
+  {
+    uint points_in_size = cloud_in->points.size();
+
+    // HEADER:
+    fprintf(ply_file, "ply\n");
+    fprintf(ply_file, "format ascii 1.0\n");
+//    fprintf(ply_file, "obj_info is_mesh 0\n");
+//    fprintf(ply_file, "obj_info is_warped 0\n");
+    fprintf(ply_file, "obj_info num_cols %d\n", cloud_in->width);
+    fprintf(ply_file, "obj_info num_rows %d\n", cloud_in->height);
+
+    // count number of valid vertices
+    int valid_vertices_count = 0;
+    for (uint i=0; i<points_in_size; ++i)
+    {
+      PointFilteredT point = cloud_in->points[i];
+      if (isnan(point.x) || isnan(point.y) || isnan(point.z) )
+        continue;
+      else
+        valid_vertices_count++;
+    }
+    fprintf(ply_file, "element vertex %d\n", valid_vertices_count);
+    fprintf(ply_file, "property float x\n");
+    fprintf(ply_file, "property float y\n");
+    fprintf(ply_file, "property float z\n");
+    // TODO: adding color may work too???
+
+    fprintf(ply_file, "element range_grid %d\n", cloud_in->width*cloud_in->height);
+    fprintf(ply_file, "property list uchar int vertex_indices\n");
+    fprintf(ply_file, "end_header\n");
+
+
+    // Fill element vertices' properties:
+    for (uint i=0; i<points_in_size; ++i)
+    {
+      // convert from pcl PointT to Eigen Vector3f
+      PointFilteredT point = cloud_in->points[i];
+      if (isnan(point.x) || isnan(point.y) || isnan(point.z) )
+        continue;
+      else
+      {
+        float x = cloud_in->points[i].x;
+        float y = cloud_in->points[i].y;
+        float z = cloud_in->points[i].z;
+        fprintf(ply_file, "%f %f %f\n", x, y, z);
+      }
+    }
+
+    // Fill indices list' properties:
+    uint valid_idx_counter = 0;
+    for (uint i=0; i<points_in_size; ++i)
+    {
+      // convert from pcl PointT to Eigen Vector3f
+      PointFilteredT point = cloud_in->points[i];
+      if (isnan(point.x) || isnan(point.y) || isnan(point.z) )
+        fprintf(ply_file, "0\n");
+      else
+      {
+        fprintf(ply_file, "1 %d\n", valid_idx_counter);
+        valid_idx_counter++;
+      }
+    }
+
+    // TODO: make this process more efficient by storing buffers instead of scanning through cloud 3 times!
+
+    fclose(ply_file);
+  }
+  else
+    ROS_ERROR("Failed to open file \"%s\"", ply_name.c_str());
+}
+
+void KeyFramesReshaper::deleteNaNs(const PointCloudFilteredT::Ptr& cloud_in, PointCloudFilteredT::Ptr& cloud_out) const
 {
   cloud_out->header = cloud_in->header;
 
@@ -199,11 +311,21 @@ void KeyFramesReshaper::deleteNaNs(const PointCloudT::ConstPtr& cloud_in, PointC
   for (uint i=0; i<points_in_size; ++i)
   {
     // convert from pcl PointT to Eigen Vector3f
-    PointT point = cloud_in->points[i];
+    PointFilteredT point = cloud_in->points[i];
     if (isnan(point.x) || isnan(point.y) || isnan(point.z) )
       continue;
     else
-      cloud_out->points.push_back(point);
+    {
+#ifdef USE_RGB_COLOR
+      PointFilteredT point_filtered = cloud_in->points[i];
+#else
+      PointFilteredT point_filtered;
+      point_filtered.x = cloud_in->points[i].x;
+      point_filtered.y = cloud_in->points[i].y;
+      point_filtered.z = cloud_in->points[i].z;
+#endif
+      cloud_out->points.push_back(point_filtered);
+    }
   }
   uint points_out_size = cloud_out->points.size();
 
@@ -211,7 +333,7 @@ void KeyFramesReshaper::deleteNaNs(const PointCloudT::ConstPtr& cloud_in, PointC
 
 }
 
-void KeyFramesReshaper::filterCloud(const PointCloudT::ConstPtr& cloud_in, PointCloudT::Ptr& cloud_out, double vgf_res, double neighbor_max_proximity, double smoothing_res) const
+void KeyFramesReshaper::filterCloud(const PointCloudFilteredT::ConstPtr& cloud_in, PointCloudFilteredT::Ptr& cloud_out, double vgf_res, double neighbor_max_proximity, double smoothing_res) const
 {
 
   // double mesh_search_radius = atof(argv[5]); TODO: if meshing here
@@ -223,10 +345,10 @@ void KeyFramesReshaper::filterCloud(const PointCloudT::ConstPtr& cloud_in, Point
     with_smoothing = true;
 
   // Load input file into a PointCloud<T> with an appropriate type
-  PointCloudT::Ptr cloud_filtered (new PointCloudT);
+  PointCloudFilteredT::Ptr cloud_filtered (new PointCloudFilteredT);
 
   // Create the filtering object
-  pcl::VoxelGrid<PointT> sor1;
+  pcl::VoxelGrid<PointFilteredT> sor1;
   sor1.setInputCloud (cloud_in);
   sor1.setLeafSize (vgf_res, vgf_res, vgf_res);
   sor1.filter (*cloud_filtered);
@@ -235,10 +357,10 @@ void KeyFramesReshaper::filterCloud(const PointCloudT::ConstPtr& cloud_in, Point
   printf("VOXEL GRID FILTER: %d points \n", number_of_points);
   std::vector<bool> valid_indices(number_of_points, true);
 
-  PointT searchPoint;
+  PointFilteredT searchPoint;
   // ... populate the cloud and the search point
   // create a kd-tree instance
-  pcl::KdTreeFLANN<PointT> kdtree_naive;
+  pcl::KdTreeFLANN<PointFilteredT> kdtree_naive;
   // assign a point cloud_in - this builds the tree
   kdtree_naive.setInputCloud (cloud_filtered);
   std::vector<int> pointIdxRadius;
@@ -281,7 +403,7 @@ void KeyFramesReshaper::filterCloud(const PointCloudT::ConstPtr& cloud_in, Point
   {
     if(valid_indices[i])
     {
-      PointT valid_point = cloud_filtered->points[i];
+      PointFilteredT valid_point = cloud_filtered->points[i];
       cloud_out->points[pt] = valid_point;
       pt++;
     }
@@ -293,11 +415,11 @@ void KeyFramesReshaper::filterCloud(const PointCloudT::ConstPtr& cloud_in, Point
   {
     // smooth using mls
     printf("Creating kd-tree for smoothing\n");
-    pcl::search::KdTree<PointT>::Ptr mls_tree;
-    mls_tree.reset(new pcl::search::KdTree<PointT>());
+    pcl::search::KdTree<PointFilteredT>::Ptr mls_tree;
+    mls_tree.reset(new pcl::search::KdTree<PointFilteredT>());
 
     printf("MLS...\n");
-    pcl::MovingLeastSquares<PointT, PointNormalT> mls;
+    pcl::MovingLeastSquares<PointFilteredT, PointNormalT> mls;
     mls.setInputCloud (cloud_out);
     mls.setPolynomialFit (true);
     mls.setSearchMethod (mls_tree);
@@ -387,6 +509,8 @@ pcl::io::savePLYFile(mesh_filename+".ply", triangles);
 void KeyFramesReshaper::initParams()
 {
   // PCD File
+  if(!nh_private_.getParam("apps/keyframes_reshaper/input_cloud_filename", input_cloud_filename_ ))
+    input_cloud_filename_ = "cloud.pcd";
   if(!nh_private_.getParam("apps/keyframes_reshaper/output_filename", output_filename_))
     output_filename_ = "cloud_reshaped";
 
@@ -399,6 +523,13 @@ void KeyFramesReshaper::initParams()
       path_to_keyframes_ = path_to_keyframes_ + "/";
     }
   ROS_INFO("Path to KeyFrames: %s", path_to_keyframes_.c_str());
+
+  if (!nh_private_.getParam ("apps/keyframes_reshaper/keyframe_dir_num_of_chars", keyframe_dir_num_of_chars_))
+     keyframe_dir_num_of_chars_ = 1;
+  if (!nh_private_.getParam ("apps/keyframes_reshaper/generate_config_file", generate_config_file_))
+    generate_config_file_ = false;
+  if (!nh_private_.getParam ("apps/keyframes_reshaper/load_as_keyframes", load_as_keyframes_))
+    load_as_keyframes_ = false;
 
   if (!nh_private_.getParam ("apps/keyframes_reshaper/first_keyframe_number", first_keyframe_number_))
     first_keyframe_number_ = 0;
@@ -421,7 +552,7 @@ bool KeyFramesReshaper::readPointCloudFromPCDFile()
 //  cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
   model_ptr_ = PointCloudT::Ptr(new PointCloudT);
 
-  std::string cloud_in_name = path_to_keyframes_+"/cloud.pcd"; // FIXME: it shouldn't be a static name!
+  std::string cloud_in_name = path_to_keyframes_+ "/" + input_cloud_filename_;
   if (pcl::io::loadPCDFile<PointT> (cloud_in_name, *model_ptr_) == -1) //* load the file
   {
     PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
