@@ -1,0 +1,15 @@
+<!-- Launch file for extrinsics calibration. Reads in rgb+ir image
+ pairs of a checkerboard at different locations, and computes 
+ the 4x3 matrix [R|t] from the IR to the RGB camera frame -->
+
+<launch>
+  <node pkg="ccny_rgbd_calibrate" type="extrinsics_calibrator_node" 
+    name="extrinsics_calibrator_node" output="screen">
+
+    <param name="path" value="$(env HOME)/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_01"/>
+    <param name="n_cols"      value="8"/>
+    <param name="n_rows"      value="6"/>
+    <param name="square_size" value="23.0"/>  
+
+  </node>
+</launch>
