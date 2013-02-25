@@ -42,7 +42,9 @@ Logger::Logger(ros::NodeHandle nh, ros::NodeHandle nh_private):
     sub_rgb_.subscribe(rgb_it, "/camera/rgb/image_color", 1);
     sub_info_.subscribe(nh_, "/camera/rgb/camera_info", 1);
     
-    sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
+    // Synchronize inputs.
+    sync_.reset(new RGBDSynchronizer3(
+                RGBDSyncPolicy3(queue_size), sub_rgb_, sub_depth_, sub_info_));
     sync_->registerCallback(boost::bind(&Logger::RGBDCallback, this, _1, _2, _3));  
     
     cv::namedWindow("RGB", 1);

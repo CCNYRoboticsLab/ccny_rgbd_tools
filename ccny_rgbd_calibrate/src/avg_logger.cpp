@@ -27,16 +27,18 @@ AvgLogger::AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private):
   
   ROS_INFO("Subscribing to RGBD");
     
-  image_transport::ImageTransport rgb_it(nh_);
-  image_transport::ImageTransport depth_it(nh_);
-  
-  sub_depth_.subscribe(depth_it, "/camera/depth/image", 1);
+  ImageTransport rgb_it(nh_);
+  ImageTransport depth_it(nh_);
+
   sub_rgb_.subscribe(rgb_it, "/camera/rgb/image_color", 1);
+  sub_depth_.subscribe(depth_it, "/camera/depth/image", 1);
   sub_info_.subscribe(nh_, "/camera/rgb/camera_info", 1);
   
-  sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_depth_, sub_rgb_, sub_info_));
+  // Synchronize inputs.
+  sync_.reset(new RGBDSynchronizer3(
+                RGBDSyncPolicy3(queue_size), sub_rgb_, sub_depth_, sub_info_));
   sync_->registerCallback(boost::bind(&AvgLogger::RGBDCallback, this, _1, _2, _3));  
-   
+    
   depth_cnt_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
   depth_sum_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
   

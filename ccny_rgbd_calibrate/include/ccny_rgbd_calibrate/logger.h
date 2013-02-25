@@ -29,7 +29,7 @@ class Logger
     ros::NodeHandle nh_;
     ros::NodeHandle nh_private_;
 
-    boost::shared_ptr<Synchronizer> sync_;
+    boost::shared_ptr<RGBDSynchronizer3> sync_;
        
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
@@ -51,6 +51,6 @@ class Logger
     void prepareDirectories();
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_CALIBRATE_LOGGER_H

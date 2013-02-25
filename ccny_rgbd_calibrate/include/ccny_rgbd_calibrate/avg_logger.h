@@ -27,7 +27,7 @@ class AvgLogger
     ros::NodeHandle nh_;
     ros::NodeHandle nh_private_;
 
-    boost::shared_ptr<Synchronizer> sync_;
+    boost::shared_ptr<RGBDSynchronizer3> sync_;
        
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
@@ -59,6 +59,6 @@ class AvgLogger
     void keyboardThread();
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_CALIBRATE_AVG_LOGGER_H
