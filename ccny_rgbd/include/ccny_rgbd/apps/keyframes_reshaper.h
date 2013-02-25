@@ -19,7 +19,7 @@
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
 
-//#define USE_RGB_COLOR
+#define USE_RGB_COLOR
 
 namespace ccny_rgbd
 {
@@ -57,6 +57,7 @@ class KeyFramesReshaper
     bool load_as_keyframes_; ///< If set true, it will use the CCNY_RGBD Keyframe loading mechanism
     int first_keyframe_number_;
     int last_keyframe_number_;
+    double vertex_confidence_;
 
     double vgf_res_;
     double neighbor_max_proximity_;
