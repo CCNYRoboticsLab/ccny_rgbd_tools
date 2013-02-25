@@ -257,6 +257,9 @@ void KeyFramesReshaper::saveCloudAsPLY(const PointCloudFilteredT::Ptr& cloud_in,
     fprintf(ply_file, "property float x\n");
     fprintf(ply_file, "property float y\n");
     fprintf(ply_file, "property float z\n");
+    if(vertex_confidence_ > 0.0f)
+      fprintf(ply_file, "property float confidence\n");
+
     // TODO: adding color may work too???
 
     fprintf(ply_file, "element range_grid %d\n", cloud_in->width*cloud_in->height);
@@ -264,6 +267,7 @@ void KeyFramesReshaper::saveCloudAsPLY(const PointCloudFilteredT::Ptr& cloud_in,
     fprintf(ply_file, "end_header\n");
 
 
+    // FIXME: We are dropping the color (always)
     // Fill element vertices' properties:
     for (uint i=0; i<points_in_size; ++i)
     {
@@ -276,7 +280,10 @@ void KeyFramesReshaper::saveCloudAsPLY(const PointCloudFilteredT::Ptr& cloud_in,
         float x = cloud_in->points[i].x;
         float y = cloud_in->points[i].y;
         float z = cloud_in->points[i].z;
-        fprintf(ply_file, "%f %f %f\n", x, y, z);
+        if(vertex_confidence_ > 0)
+          fprintf(ply_file, "%f %f %f %f\n", x, y, z, (float) vertex_confidence_);
+        else
+          fprintf(ply_file, "%f %f %f\n", x, y, z);
       }
     }
 
@@ -542,6 +549,9 @@ void KeyFramesReshaper::initParams()
     neighbor_max_proximity_ = 0.002;
   if (!nh_private_.getParam ("apps/keyframes_reshaper/smoothing_res", smoothing_res_))
     smoothing_res_ = 0.0;
+
+  if (!nh_private_.getParam ("apps/keyframes_reshaper/vertex_confidence", vertex_confidence_))
+    vertex_confidence_ = 0.0f;
 
   ROS_INFO("Parameters initialized.");
 
