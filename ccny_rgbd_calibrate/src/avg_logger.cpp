@@ -31,7 +31,7 @@ AvgLogger::AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private):
   ImageTransport depth_it(nh_);
 
   sub_rgb_.subscribe(rgb_it, "/camera/rgb/image_color", 1);
-  sub_depth_.subscribe(depth_it, "/camera/depth/image", 1);
+  sub_depth_.subscribe(depth_it, "/camera/depth/image_raw", 1);
   sub_info_.subscribe(nh_, "/camera/rgb/camera_info", 1);
   
   // Synchronize inputs.
@@ -39,8 +39,9 @@ AvgLogger::AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private):
                 RGBDSyncPolicy3(queue_size), sub_rgb_, sub_depth_, sub_info_));
   sync_->registerCallback(boost::bind(&AvgLogger::RGBDCallback, this, _1, _2, _3));  
     
-  depth_cnt_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
-  depth_sum_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
+  c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
+  m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
+  s_img_ = cv::Mat::zeros(480, 640, CV_64FC1); 
   
   input_thread_ = boost::thread(&AvgLogger::keyboardThread, this);   
 }
@@ -79,9 +80,11 @@ void AvgLogger::prepareDirectories()
   
   ss_rgb_path_   << ss_seq_path.str() << "/rgb/";
   ss_depth_path_ << ss_seq_path.str() << "/depth/";
+  ss_stdev_path_ << ss_seq_path.str() << "/stdev/";
 
   boost::filesystem::create_directory(ss_rgb_path_.str()); 
   boost::filesystem::create_directory(ss_depth_path_.str()); 
+  boost::filesystem::create_directory(ss_stdev_path_.str()); 
 }
 
 void AvgLogger::RGBDCallback(
@@ -95,7 +98,7 @@ void AvgLogger::RGBDCallback(
   cv::Size pattern_size(n_rows_, n_cols_);
   std::vector<cv::Point2f> corners_2d;
   cv::Mat img_mono;
-  cv::cvtColor(rgb_ptr->image, img_mono, CV_RGB2GRAY);
+  cv::cvtColor(rgb_ptr->image, img_mono, CV_BGR2GRAY);
  
   int params = CV_CALIB_CB_ADAPTIVE_THRESH + 
                CV_CALIB_CB_NORMALIZE_IMAGE + 
@@ -148,12 +151,21 @@ void AvgLogger::RGBDCallback(
     for (int u = 0; u < depth_img.cols; ++u)
     for (int v = 0; v < depth_img.rows; ++v)
     {
-      float z = depth_img.at<float>(v, u);
+      float z = depth_img.at<uint16_t>(v, u);
+      int   c = c_img_.at<uint16_t>(v, u);
       
       if (!isnan(z))
       {
-        depth_sum_img_.at<double>(v, u)   += z;
-        depth_cnt_img_.at<uint16_t>(v, u) += 1;
+        double old_m = m_img_.at<double>(v, u);
+        double new_m = old_m + (z - old_m) / (double)c;
+        
+        double old_s = s_img_.at<double>(v, u);
+        double new_s = old_s + (z - old_m) * (z - new_m);
+        
+        // update 
+        c_img_.at<uint16_t>(v, u) += 1;
+        m_img_.at<double>(v, u) = new_m;
+        s_img_.at<double>(v, u) = new_s;      
       }
     }
     
@@ -174,29 +186,30 @@ void AvgLogger::RGBDCallback(
     // create average depth image
     cv::Mat depth_avg_img = cv::Mat::zeros(480, 640, CV_16UC1);
     
+    // create the stdev depth image (in nm)
+    cv::Mat depth_std_img = cv::Mat::zeros(480, 640, CV_16UC1);
+    
     for (int u = 0; u < depth_avg_img.cols; ++u)
     for (int v = 0; v < depth_avg_img.rows; ++v)
     {
-      double z = depth_sum_img_.at<double>(v, u);
-      int    c = depth_cnt_img_.at<uint16_t>(v, u);
-      
-      if (c > 0)
-      {
-        // average all the readings
-        double avg_z = z / (double)c;
-        uint16_t avg_z_mm = (int)(avg_z * 1000.0);
-        depth_avg_img.at<uint16_t>(v, u) = avg_z_mm;
-      }
+      depth_avg_img.at<uint16_t>(v, u) = getMean(v, u);   
+      depth_std_img.at<uint16_t>(v, u) = getStDev(v, u);
     }
    
-    // reset accumulator andcounter images
-    depth_cnt_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
-    depth_sum_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
-   
+    // reset accumulator and counter images
+    c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
+    m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
+    s_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
+        
     // write out the average depth image
+    std::string stdev_filename = ss_stdev_path_.str() + ss_filename.str();
+    cv::imwrite(stdev_filename, depth_std_img);
+    ROS_INFO("Depth %s saved", stdev_filename.c_str());
+      
+    // write out the stdev depth image
     std::string depth_filename = ss_depth_path_.str() + ss_filename.str();
     cv::imwrite(depth_filename, depth_avg_img);
-    ROS_INFO("Depth %s saved", depth_filename.c_str());
+    ROS_INFO("stdev %s saved", depth_filename.c_str());
       
     // stop logging, bump up image id, and reset counter
     count_ = 0;
@@ -206,4 +219,34 @@ void AvgLogger::RGBDCallback(
   }
 }
 
-} //namespace ccny_rgbd
+uint16_t AvgLogger::getMean(int v, int u)
+{
+  int c = c_img_.at<uint16_t>(v, u);
+  
+  uint16_t mean_z;
+  if (c > 0)
+    mean_z = m_img_.at<double>(v, u);
+  else
+    mean_z = 0;
+  
+  return mean_z;
+}
+
+uint16_t AvgLogger::getStDev(int v, int u)
+{
+  int c = c_img_.at<uint16_t>(v, u);
+  
+  uint16_t std_dev_z;
+  if (c > 1)
+  {
+    double s = s_img_.at<double>(v, u);
+    double var_z = s / (double)(c - 1);
+    std_dev_z = sqrt(var_z) * 100.0; // in 10*nm
+  }
+  else
+    std_dev_z = 0;
+  
+  return std_dev_z;
+}
+
+} // namespace ccny_rgbd

@@ -35,6 +35,7 @@ class AvgLogger
 
     std::stringstream ss_rgb_path_;
     std::stringstream ss_depth_path_;
+    std::stringstream ss_stdev_path_;
 
     boost::thread input_thread_;
     
@@ -43,9 +44,10 @@ class AvgLogger
     bool logging_;
     bool rgb_saved_;
     
-    cv::Mat depth_cnt_img_;
-    cv::Mat depth_sum_img_;
-    
+    cv::Mat c_img_;   // uint16t
+    cv::Mat m_img_;   // double
+    cv::Mat s_img_;   // double
+        
     // parameters   
     int n_depth_;
     int id_;   
@@ -57,6 +59,9 @@ class AvgLogger
     void prepareDirectories();
     
     void keyboardThread();
+    
+    uint16_t getMean(int v, int u);
+    uint16_t getStDev(int v, int u);
 };
 
 } // namespace ccny_rgbd

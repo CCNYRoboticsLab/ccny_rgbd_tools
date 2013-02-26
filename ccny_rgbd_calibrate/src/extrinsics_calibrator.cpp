@@ -33,6 +33,8 @@ ExtrinsicsCalibrator::ExtrinsicsCalibrator(ros::NodeHandle nh, ros::NodeHandle n
   // perform and test calibration
   calibrate();
   testExtrinsicCalibration();
+    
+  cv::waitKey(0);
 }
 
 ExtrinsicsCalibrator::~ExtrinsicsCalibrator()
@@ -224,6 +226,8 @@ void ExtrinsicsCalibrator::calibrate()
 
 void ExtrinsicsCalibrator::testExtrinsicCalibration()
 {
+  ROS_INFO("Testing extrinsic calibration...");
+  
   // **** load images
   cv::Mat rgb_img    = cv::imread(rgb_test_filename_);
   cv::Mat depth_img  = cv::imread(depth_test_filename_,-1);
@@ -241,12 +245,12 @@ void ExtrinsicsCalibrator::testExtrinsicCalibration()
   // **** visualize
   showBlendedImage(depth_img_rect,     rgb_img_rect, "Unregistered");
   showBlendedImage(depth_img_rect_reg, rgb_img_rect, "Registered");  
-  cv::waitKey(0);
   
   // **** save as a point cloud
   PointCloudT cloud;
   buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, cloud);
   pcl::io::savePCDFileBinary<PointT>(cloud_filename_, cloud);
+  ROS_INFO("Saving test results to %s", cloud_filename_.c_str());
 }
 
 } //namespace ccny_rgbd
