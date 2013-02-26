@@ -162,11 +162,9 @@ void KeyframeMapper::addKeyframe(
   const RGBDFrame& frame, 
   const tf::Transform& pose)
 {
-  //ROS_INFO("Adding frame");
   RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
-  keyframe.constructDensePointCloud();
-
+  
   if (manual_add_)
   {
     ROS_INFO("Adding frame manually");
@@ -232,14 +230,17 @@ void KeyframeMapper::publishKeyframeData(int i)
 {
   RGBDKeyframe& keyframe = keyframes_[i];
 
-  // data transformed to the fixed frame
-  PointCloudT keyframe_data_ff; 
-  pcl::transformPointCloud(
-    keyframe.cloud, keyframe_data_ff, eigenFromTf(keyframe.pose));
+  // construct a cloud from the images
+  PointCloudT cloud;
+  keyframe.constructDensePointCloud(cloud);
+  
+  // cloud transformed to the fixed frame
+  PointCloudT cloud_ff; 
+  pcl::transformPointCloud(cloud, cloud_ff, eigenFromTf(keyframe.pose));
 
-  keyframe_data_ff.header.frame_id = fixed_frame_;
+  cloud_ff.header.frame_id = fixed_frame_;
 
-  keyframes_pub_.publish(keyframe_data_ff);
+  keyframes_pub_.publish(cloud_ff);
 }
 
 void KeyframeMapper::publishKeyframeAssociations()
@@ -383,7 +384,12 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
 {
   ROS_INFO("Saving keyframes...");
   std::string path = request.filename;
-  return saveKeyframes(keyframes_, path);
+  bool result = saveKeyframes(keyframes_, path);
+  
+  if (result) ROS_INFO("Keyframes saved to %s", path.c_str());
+  else ROS_ERROR("Keyframe saving failed!");
+  
+  return result;
 }
 
 bool KeyframeMapper::loadKeyframesSrvCallback(
@@ -392,7 +398,12 @@ bool KeyframeMapper::loadKeyframesSrvCallback(
 {
   ROS_INFO("Loading keyframes...");
   std::string path = request.filename;
-  return loadKeyframes(keyframes_, path);
+  bool result = loadKeyframes(keyframes_, path);
+  
+  if (result) ROS_INFO("Keyframes loaded successfully");
+  else ROS_ERROR("Keyframe loading failed!");
+  
+  return result;
 }
 
 bool KeyframeMapper::savePcdMapSrvCallback(
@@ -403,10 +414,8 @@ bool KeyframeMapper::savePcdMapSrvCallback(
   const std::string& path = request.filename; 
   bool result = savePcdMap(path);
   
-  if (result)
-    ROS_INFO("Saved to %s", path.c_str());
-  else
-    ROS_WARN("Failed saving to %s", path.c_str());
+  if (result) ROS_INFO("Pcd map saved to %s", path.c_str());
+  else ROS_ERROR("Pcd map saving failed");
   
   return result;
 }
@@ -419,10 +428,8 @@ bool KeyframeMapper::saveOctomapSrvCallback(
   const std::string& path = request.filename;
   bool result = saveOctomap(path);
     
-  if (result)
-    ROS_INFO("Saved to %s", path.c_str());
-  else
-    ROS_WARN("Failed saving to %s", path.c_str());
+  if (result) ROS_INFO("Octomap saved to %s", path.c_str());
+  else ROS_ERROR("Octomap saving failed");
     
   return result;
 }
@@ -482,9 +489,12 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    
+    PointCloudT cloud;   
+    keyframe.constructDensePointCloud(cloud);
 
     PointCloudT cloud_tf;
-    pcl::transformPointCloud(keyframe.cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
     cloud_tf.header.frame_id = fixed_frame_;
 
     *aggregate_cloud += cloud_tf;
@@ -527,8 +537,10 @@ void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
   {
     ROS_INFO("Processing keyframe %u", kf_idx);
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    const PointCloudT& cloud = keyframe.cloud;
-
+    
+    PointCloudT cloud;
+    keyframe.constructDensePointCloud(cloud);
+           
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
 
     // build octomap cloud from pcl cloud
@@ -554,7 +566,9 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
   {
     ROS_INFO("Processing keyframe %u", kf_idx);
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    const PointCloudT& cloud = keyframe.cloud;
+    
+    PointCloudT cloud;
+    keyframe.constructDensePointCloud(cloud);
 
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
     

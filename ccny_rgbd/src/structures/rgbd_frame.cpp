@@ -43,19 +43,19 @@ RGBDFrame::RGBDFrame(
   model.fromCameraInfo(info_msg);
 }
 
-double RGBDFrame::getStdDevZ(double z)
+double RGBDFrame::getStdDevZ(double z) const
 {
   return Z_STDEV_CONSTANT * z * z;
 }
 
-double RGBDFrame::getVarZ(double z)
+double RGBDFrame::getVarZ(double z) const
 {
   double std_dev_z = getStdDevZ(z);
   return std_dev_z * std_dev_z;
 }
 
 void RGBDFrame::getGaussianDistribution(
-  int u, int v, double& z_mean, double& z_var)
+  int u, int v, double& z_mean, double& z_var) const
 {
   // get raw z value (in mm)
   uint16_t z_raw = depth_img.at<uint16_t>(v, u);
@@ -68,7 +68,7 @@ void RGBDFrame::getGaussianDistribution(
 }
 
 void RGBDFrame::getGaussianMixtureDistribution(
-  int u, int v, double& z_mean, double& z_var)
+  int u, int v, double& z_mean, double& z_var) const
 {
   /// @todo Different window sizes? based on sigma_u, sigma_v?
   int w = 1;
@@ -237,14 +237,84 @@ void RGBDFrame::constructFeaturePointCloud(
   cloud.header = header;    
 }
 
-bool RGBDFrame::save(const RGBDFrame& frame, const std::string& path)
+void RGBDFrame::constructDensePointCloud(
+  PointCloudT& cloud,
+  double max_z,
+  double max_stdev_z) const
+{
+  double max_var_z = max_stdev_z * max_stdev_z; // maximum allowed z variance
+
+  // Use correct principal point from calibration
+  float cx = model.cx();
+  float cy = model.cy();
+
+  // Scale by focal length for computing (X,Y)
+  float constant_x = 1.0 / model.fx();
+  float constant_y = 1.0 / model.fy();
+
+  float bad_point = std::numeric_limits<float>::quiet_NaN();
+
+  cloud.points.clear();
+  cloud.points.resize(rgb_img.rows * rgb_img.cols);
+  for (int v = 0; v < rgb_img.rows; ++v)
+  for (int u = 0; u < rgb_img.cols; ++u)
+  {
+    unsigned int index = v * rgb_img.cols + u;
+
+    uint16_t z_raw = depth_img.at<uint16_t>(v, u);
+    float z = z_raw * 0.001; //convert to meters
+
+    PointT& p = cloud.points[index];
+
+    double z_mean, z_var; 
+
+    // check for out of range or bad measurements
+    if (z_raw != 0)
+    {
+      getGaussianMixtureDistribution(u, v, z_mean, z_var);
+
+      // check for variance and z limits     
+      if (z_var < max_var_z && z_mean < max_z)
+      {
+        // fill in XYZ
+        p.x = z * (u - cx) * constant_x;
+        p.y = z * (v - cy) * constant_y;
+        p.z = z;
+      }
+      else
+      {
+        p.x = p.y = p.z = bad_point;
+      }
+    }
+    else
+    {
+      p.x = p.y = p.z = bad_point;
+    }
+ 
+    // fill out color
+    const cv::Vec3b& color = rgb_img.at<cv::Vec3b>(v,u);
+    p.r = color[2];
+    p.g = color[1];
+    p.b = color[0];
+  }
+
+  cloud.header = header;
+  cloud.height = rgb_img.rows;
+  cloud.width  = rgb_img.cols;
+  cloud.is_dense = false;
+}
+
+bool RGBDFrame::save(
+  const RGBDFrame& frame, 
+  const std::string& path)
 {
   // set the filenames
   std::string rgb_filename    = path + "/rgb.png";
   std::string depth_filename  = path + "/depth.png";
   std::string header_filename = path + "/header.yml";
   std::string intr_filename   = path + "/intr.yml"; 
-
+  std::string cloud_filename  = path + "/cloud.pcd";
+  
   // create the directory
   bool directory_result = boost::filesystem::create_directory(path); 
 
@@ -253,6 +323,26 @@ bool RGBDFrame::save(const RGBDFrame& frame, const std::string& path)
     ROS_ERROR("Could not create directory: %s", path.c_str());
     return false;
   }
+
+/*
+  // save cloud
+  if (save_cloud)
+  {
+    pcl::PCDWriter writer;
+    int result_pcd;
+
+    PointCloudT cloud;
+    frame.constructDensePointCloud(cloud);
+    
+    result_pcd = writer.writeBinary<PointT>(cloud_filename, cloud);  
+
+    if (result_pcd != 0) 
+    {
+      ROS_ERROR("Error saving point cloud");
+      return false;
+    }
+  }
+*/
 
   // save header
   cv::FileStorage fs_h(header_filename, cv::FileStorage::WRITE);
