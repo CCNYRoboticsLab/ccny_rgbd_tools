@@ -20,7 +20,17 @@
 
   <node pkg="ccny_rgbd" type="keyframe_mapper_node" name="keyframe_mapper_node" 
     output="screen">
+    
+    <!-- NOTE: if using data from OpenNI driver directly, (without 
+    ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
+    Also add these to visual_odometry in visual_odometry.launch.
 
+    <remap from="/rgbd/depth" to="/camera/depth_registered/image_rect_raw"/>
+    <remap from="/rgbd/rgb"   to="/camera/rgb/image_rect_color"/>
+    <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>   
+    
+    -->
+    
     <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
     <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->
     <param name="full_map_res" value="0.01"/>
@@ -30,4 +40,9 @@
 </launch>
 
 
+<!-- further NOTE on depth topics:
 
+"/camera/depth_registered/image_rect_raw" should be in 16UC1
+"/camera/depth_registered/image_rect" (in 32FC1) is also supported. 
+
+-->

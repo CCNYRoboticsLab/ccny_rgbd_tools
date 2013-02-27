@@ -10,7 +10,17 @@
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
     output="screen">
+    
+    <!-- NOTE: if using data from OpenNI driver directly, (without 
+    ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
+    Also add these to keyframe_mapper in vo+mapping.launch.
 
+    <remap from="/rgbd/depth" to="/camera/depth_registered/image_rect_raw"/>
+    <remap from="/rgbd/rgb"   to="/camera/rgb/image_rect_color"/>
+    <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>
+    
+    -->
+    
     #### frames and tf output #########################
     
     <param name="publish_tf"  value="true"/>

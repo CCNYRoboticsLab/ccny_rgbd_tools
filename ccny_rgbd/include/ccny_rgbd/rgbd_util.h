@@ -264,6 +264,10 @@ void buildPointCloud(
   const cv::Mat& intr_rect_rgb,
   PointCloudT& cloud);
 
+void depthImageFloatTo16bit(
+  const cv::Mat& depth_image_in,
+  cv::Mat& depth_image_out);
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_UTIL_H

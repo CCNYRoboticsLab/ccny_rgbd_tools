@@ -34,10 +34,17 @@ RGBDFrame::RGBDFrame(
   const ImageMsg::ConstPtr& rgb_msg,
   const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
-{
-  rgb_img   = cv_bridge::toCvShare(rgb_msg)->image;
-  depth_img = cv_bridge::toCvShare(depth_msg)->image;
-
+{ 
+  rgb_img = cv_bridge::toCvShare(rgb_msg)->image;
+  
+  // handles 16UC1 natively
+  // 32FC1 need to be converted into 16UC1
+  const std::string& enc = depth_msg->encoding; 
+  if (enc.compare("16UC1") == 0)
+    depth_img = cv_bridge::toCvShare(depth_msg)->image;
+  else if (enc.compare("32FC1") == 0)
+    depthImageFloatTo16bit(cv_bridge::toCvShare(depth_msg)->image, depth_img);
+      
   header = rgb_msg->header;
 
   model.fromCameraInfo(info_msg);
