@@ -30,6 +30,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/regex.hpp>
 #include <octomap/octomap.h>
@@ -176,7 +177,8 @@ class KeyframeMapper
     ros::NodeHandle nh_;          ///< public nodehandle
     ros::NodeHandle nh_private_;  ///< private nodepcdhandle
     
-    std::string fixed_frame_;     ///< the fixed frame (usually "odom")
+    std::string map_frame_;     ///< the fixed frame (usually "odom")
+    std::string odom_frame_;     ///< the fixed frame (usually "odom")
     
     int queue_size_;  ///< Subscription queue size
     
@@ -354,6 +356,16 @@ class KeyframeMapper
     {
       return octomath::Quaternion(qTf.w(), qTf.x(), qTf.y(), qTf.z());
     }
+    
+    // **** new stuff
+    
+    tf::Transform map_to_odom_;
+    
+    ros::Timer timer_;
+    
+    void timerCallback(const ros::TimerEvent& event);
+    
+    tf::TransformBroadcaster br_;
 };
 
 } // namespace ccny_rgbd

@@ -61,7 +61,7 @@ class KeyframeGraphDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
 
-    void generateSingleKeyframeAssociations(
+    int generateSingleKeyframeAssociations(
       KeyframeVector& keyframes,
       int kf_idx,
       KeyframeAssociationVector& associations);
@@ -166,7 +166,7 @@ class KeyframeGraphDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);   
     
-    void singleKeyframeTreeAssociations(
+    int singleKeyframeTreeAssociations(
       KeyframeVector& keyframes,
       int kf_idx,
       KeyframeAssociationVector& associations);
@@ -222,7 +222,7 @@ class KeyframeGraphDetector
       int kf_idx,
       BoolVector& candidate_keyframe_mask);
     
-    void findMatcherAssociations(
+    int findMatcherAssociations(
       const KeyframeVector keyframes,
       int kf_idx,
       cv::FlannBasedMatcher& matcher,

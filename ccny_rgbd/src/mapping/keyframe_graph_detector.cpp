@@ -63,7 +63,7 @@ KeyframeGraphDetector::~KeyframeGraphDetector()
 
 }
 
-void KeyframeGraphDetector::generateSingleKeyframeAssociations(
+int KeyframeGraphDetector::generateSingleKeyframeAssociations(
   KeyframeVector& keyframes,
   int kf_idx,
   KeyframeAssociationVector& associations)
@@ -76,8 +76,10 @@ void KeyframeGraphDetector::generateSingleKeyframeAssociations(
     addVisualOdometryAssociation(kf_idx-1, kf_idx, keyframes, associations);
   
   printf("tree assoc...\n");
-  singleKeyframeTreeAssociations(keyframes, kf_idx, associations);
+  int result = singleKeyframeTreeAssociations(keyframes, kf_idx, associations);
   printf("tree assoc done\n");
+
+  return result;
 }
 
 void KeyframeGraphDetector::generateKeyframeAssociations(
@@ -475,7 +477,7 @@ void KeyframeGraphDetector::trainMatcher(
   matcher.train();
 }
 
-void KeyframeGraphDetector::findMatcherAssociations(
+int KeyframeGraphDetector::findMatcherAssociations(
   const KeyframeVector keyframes,
   int kf_idx,
   cv::FlannBasedMatcher& matcher,
@@ -483,6 +485,8 @@ void KeyframeGraphDetector::findMatcherAssociations(
 {
   // extra params
   double sufficient_ransac_inlier_ratio = 1.0;
+  
+  int associations_found = 0;
   
   printf("[KF %d of %d]:\n", (int)kf_idx, (int)keyframes.size());
   const RGBDFrame& keyframe = keyframes[kf_idx];
@@ -586,13 +590,17 @@ void KeyframeGraphDetector::findMatcherAssociations(
       association.matches  = inlier_matches;
       association.a2b = tfFromEigen(transformation);
       associations.push_back(association);      
+      
+      associations_found++;
     }
     else  
       printf(" - RANSAC %d -> %d: FAIL\n", kf_idx_a, kf_idx_b);
   }
+  
+  return associations_found;
 }
 
-void KeyframeGraphDetector::singleKeyframeTreeAssociations(
+int KeyframeGraphDetector::singleKeyframeTreeAssociations(
   KeyframeVector& keyframes,
   int kf_idx,
   KeyframeAssociationVector& associations)
@@ -602,14 +610,15 @@ void KeyframeGraphDetector::singleKeyframeTreeAssociations(
   int n_candidates = getGeometricCandidateKeyframes(
     keyframes, kf_idx, candidate_keyframe_mask);
   printf("%d geometric candidates\n", n_candidates);
-  if (n_candidates == 0) return; ///@todo: cleaner exit when no candidates
+  if (n_candidates == 0) return 0; ///@todo: cleaner exit when no candidates
      
   // train matcher from features in the geometric candidates
   cv::FlannBasedMatcher matcher;
   trainMatcherFromIndices(keyframes, candidate_keyframe_mask, matcher);
     
-  // find the aassociations from the matcher, and add them to the associations vector   
-  findMatcherAssociations(keyframes, kf_idx, matcher, associations);
+  // find the aassociations from the matcher, and add them to the associations vector  
+  int assocuations_found = findMatcherAssociations(keyframes, kf_idx, matcher, associations);
+  return assocuations_found;
 }
 
 void KeyframeGraphDetector::treeAssociations(
