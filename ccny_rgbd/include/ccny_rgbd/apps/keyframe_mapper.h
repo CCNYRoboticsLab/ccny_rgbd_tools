@@ -40,6 +40,7 @@
 #include "ccny_rgbd/structures/rgbd_frame.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
 #include "ccny_rgbd/mapping/keyframe_graph_detector.h"
+#include "ccny_rgbd/mapping/keyframe_graph_detector_rt.h"
 #include "ccny_rgbd/mapping/keyframe_graph_solver_g2o.h"
 
 #include "ccny_rgbd/GenerateGraph.h"

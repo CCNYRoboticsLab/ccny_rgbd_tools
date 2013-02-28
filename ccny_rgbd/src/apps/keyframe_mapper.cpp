@@ -172,6 +172,17 @@ void KeyframeMapper::addKeyframe(
     keyframe.manually_added = true;
   }
   keyframes_.push_back(keyframe);
+  
+  //slam?
+  
+  if(1)
+  {
+    ros::WallTime start = ros::WallTime::now();
+    int kf_idx = keyframes_.size() - 1;
+    graph_detector_.generateSingleKeyframeAssociations(keyframes_, kf_idx, associations_);
+    double dur = getMsDuration(start);
+    printf("[%d] SLAM duration: %.2f [%d]\n", kf_idx, dur, (int)associations_.size());
+  }
 }
 
 bool KeyframeMapper::publishKeyframeSrvCallback(

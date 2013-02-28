@@ -61,6 +61,11 @@ class KeyframeGraphDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
 
+    void generateSingleKeyframeAssociations(
+      KeyframeVector& keyframes,
+      int kf_idx,
+      KeyframeAssociationVector& associations);
+    
    protected:
   
     ros::NodeHandle nh_;          ///< the public nodehandle
@@ -84,7 +89,7 @@ class KeyframeGraphDetector
     /** @brief For kd-tree based correspondences, how many candidate
      * keyframes will be tested agains the query keyframe using a RANSAC test
      */
-    double n_ransac_candidates_;
+    int n_ransac_candidates_;
     
     /** @brief How many nearest neighbors are requested per keypoint
      */
@@ -124,8 +129,10 @@ class KeyframeGraphDetector
      * 
      * @param keyframes the vector of keyframes to be used for associations
      */
-    void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
+    void prepareKeyframesForRANSAC(KeyframeVector& keyframes);
 
+    void prepareKeyframeForRANSAC(KeyframeVector& keyframes, int kf_idx);
+    
     /** @brief Creates associations based on the visual odometry poses
      * of the frames, ie, associations between consecutive frames only.
      * 
@@ -135,6 +142,14 @@ class KeyframeGraphDetector
     void visualOdometryAssociations(
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
+    
+    
+    void addVisualOdometryAssociation(
+      int kf_idx_a, 
+      int kf_idx_b,
+      KeyframeVector& keyframes,
+      KeyframeAssociationVector& associations);
+    
     
     /** @brief Creates associations based on visual matching between
      * keyframes through a RANSAC test.
@@ -150,7 +165,12 @@ class KeyframeGraphDetector
     void treeAssociations(
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);   
-
+    
+    void singleKeyframeTreeAssociations(
+      KeyframeVector& keyframes,
+      int kf_idx,
+      KeyframeAssociationVector& associations);
+    
     /** @brief Creates associations based on visual matching between
      * keyframes through a RANSAC test (for manually added frames)
      * 
@@ -192,6 +212,22 @@ class KeyframeGraphDetector
     void trainMatcher(const KeyframeVector& keyframes,
                       cv::FlannBasedMatcher& matcher);
     
+    void trainMatcherFromIndices(
+      const KeyframeVector& keyframes,
+      const BoolVector& candidate_keyframe_mask,
+      cv::FlannBasedMatcher& matcher);
+    
+    int getGeometricCandidateKeyframes(
+      const KeyframeVector& keyframes,
+      int kf_idx,
+      BoolVector& candidate_keyframe_mask);
+    
+    void findMatcherAssociations(
+      const KeyframeVector keyframes,
+      int kf_idx,
+      cv::FlannBasedMatcher& matcher,
+      KeyframeAssociationVector& associations);
+    
     /** @brief Given two keyframes, finds all keypoint correposndences
      * which follow a rigid transformation model
      * 
@@ -212,7 +248,8 @@ class KeyframeGraphDetector
      * @param best_transformation the best transformation determined by RANSAC
      */
     void pairwiseMatchingRANSAC(
-      RGBDFrame& frame_a, RGBDFrame& frame_b,
+      const RGBDFrame& frame_a, 
+      const RGBDFrame& frame_b,
       double max_eucl_dist_sq, 
       double max_desc_dist,
       double sufficient_inlier_ratio,
