@@ -153,13 +153,13 @@ void AvgLogger::RGBDCallback(
     for (int v = 0; v < depth_img.rows; ++v)
     {
       float z = depth_img.at<uint16_t>(v, u);
-      int   c = c_img_.at<uint16_t>(v, u);
       
       if (!isnan(z))
       {
         // increment counter
         c_img_.at<uint16_t>(v, u) += 1;
-
+        int c = c_img_.at<uint16_t>(v, u);
+        
         // running mean and stdev 
         double old_m = m_img_.at<double>(v, u);
         double new_m = old_m + (z - old_m) / (double)c;
