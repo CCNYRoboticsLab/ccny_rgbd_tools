@@ -196,6 +196,7 @@ class KeyframeMapper
     ros::Publisher keyframes_pub_;    ///< ROS publisher for the keyframe point clouds
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
+    ros::Publisher path_pub_;     ///< ROS publisher for the keyframe associations
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
@@ -259,6 +260,8 @@ class KeyframeMapper
 
     KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
     
+    PathMsg path_msg_;
+    
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted
      * @param frame the incoming RGBD frame (image)
@@ -292,6 +295,8 @@ class KeyframeMapper
     /** @brief Publishes all the keyframe pose markers
      */
     void publishKeyframePoses();
+    
+    void publishPath();
     
     /** @brief Save the full map to disk as pcd
      * @param path path to save the map to

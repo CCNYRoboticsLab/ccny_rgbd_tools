@@ -25,7 +25,7 @@
   <depend package="nodelet"/>
 
   <export>
-    <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib/"/>
+    <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib/ -Wl,-rpath,${prefix}/lib -lros"/>
     <nodelet plugin="${prefix}/nodelets/rgbd_image_proc_nodelet.xml" />
   </export>
 

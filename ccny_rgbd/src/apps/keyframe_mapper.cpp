@@ -63,7 +63,8 @@ KeyframeMapper::KeyframeMapper(
     "keyframe_poses", queue_size_);
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_associations", queue_size_);
-  
+  path_pub_ = nh_.advertise<PathMsg>( 
+    "path", queue_size_);
   // **** services
 
   pub_keyframe_service_ = nh_.advertiseService(
@@ -154,7 +155,11 @@ bool KeyframeMapper::processFrame(
       result = false;
   }
 
-  if (result) addKeyframe(frame, pose);
+  if (result)
+  {
+    addKeyframe(frame, pose);
+    publishPath();
+  }
   return result;
 }
 
@@ -600,6 +605,25 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     
     tree.updateInnerOccupancy();
   }
+}
+
+void KeyframeMapper::publishPath()
+{
+  path_msg_.header.frame_id = fixed_frame_; 
+  path_msg_.poses.clear();
+  path_msg_.poses.resize(keyframes_.size());
+  
+  for(unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++ kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
+    
+    pose_stamped.header.stamp = keyframe.header.stamp;
+    pose_stamped.header.frame_id = fixed_frame_;
+    tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
+  }
+
+  path_pub_.publish(path_msg_);
 }
 
 } // namespace ccny_rgbd

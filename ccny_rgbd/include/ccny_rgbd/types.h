@@ -30,6 +30,7 @@
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <sensor_msgs/image_encodings.h>
 #include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -78,6 +79,7 @@ typedef pcl::registration::TransformationEstimationSVD<PointFeature, PointFeatur
 typedef sensor_msgs::Image            ImageMsg;
 typedef sensor_msgs::CameraInfo       CameraInfoMsg;
 typedef nav_msgs::Odometry            OdomMsg;
+typedef nav_msgs::Path                PathMsg;
 
 // ROS publishers, subscribers, services, etc
 
