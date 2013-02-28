@@ -39,9 +39,10 @@ AvgLogger::AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private):
                 RGBDSyncPolicy3(queue_size), sub_rgb_, sub_depth_, sub_info_));
   sync_->registerCallback(boost::bind(&AvgLogger::RGBDCallback, this, _1, _2, _3));  
     
-  c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
-  m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
-  s_img_ = cv::Mat::zeros(480, 640, CV_64FC1); 
+  // http://www.johndcook.com/standard_deviation.html
+  c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);  // conter image
+  m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);  // mean accumulator
+  s_img_ = cv::Mat::zeros(480, 640, CV_64FC1);  // stdev accumulator
   
   input_thread_ = boost::thread(&AvgLogger::keyboardThread, this);   
 }
@@ -156,14 +157,16 @@ void AvgLogger::RGBDCallback(
       
       if (!isnan(z))
       {
+        // increment counter
+        c_img_.at<uint16_t>(v, u) += 1;
+
+        // running mean and stdev 
         double old_m = m_img_.at<double>(v, u);
         double new_m = old_m + (z - old_m) / (double)c;
         
         double old_s = s_img_.at<double>(v, u);
         double new_s = old_s + (z - old_m) * (z - new_m);
         
-        // update 
-        c_img_.at<uint16_t>(v, u) += 1;
         m_img_.at<double>(v, u) = new_m;
         s_img_.at<double>(v, u) = new_s;      
       }
@@ -221,14 +224,7 @@ void AvgLogger::RGBDCallback(
 
 uint16_t AvgLogger::getMean(int v, int u)
 {
-  int c = c_img_.at<uint16_t>(v, u);
-  
-  uint16_t mean_z;
-  if (c > 0)
-    mean_z = m_img_.at<double>(v, u);
-  else
-    mean_z = 0;
-  
+  mean_z = m_img_.at<double>(v, u);
   return mean_z;
 }
 
