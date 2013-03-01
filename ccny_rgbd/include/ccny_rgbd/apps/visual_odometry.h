@@ -87,8 +87,8 @@ class VisualOdometry
 
     GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
     StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
-    SurfDetectorConfigServerPtr surf_config_server_;    ///< ROS dynamic reconfigure server for SURF params
-    OrbDetectorConfigServerPtr orb_config_server_;  ///< ROS dynamic reconfigure server for ORB params
+    SurfDetectorConfigServerPtr surf_config_server_;  ///< ROS dynamic reconfigure server for SURF params
+    OrbDetectorConfigServerPtr orb_config_server_;    ///< ROS dynamic reconfigure server for ORB params
         
     /** @brief Image transport for RGB message subscription */
     boost::shared_ptr<ImageTransport> rgb_it_;
@@ -113,8 +113,8 @@ class VisualOdometry
     std::string fixed_frame_; ///< Fixed frame parameter
     std::string base_frame_;  ///< Moving frame parameter
     bool publish_tf_;         ///< Parameter whether to publish a ros tf
-    bool publish_path_;
-    bool publish_odom_;
+    bool publish_path_;       ///< Parameter whether to publish a path message
+    bool publish_odom_;       ///< Parameter whether to publish an odom message
     
     /** @brief Feature detector type parameter
      * 
@@ -155,7 +155,7 @@ class VisualOdometry
 
     MotionEstimation * motion_estimation_; ///< The motion estimation object
   
-    PathMsg path_msg_;
+    PathMsg path_msg_; ///< contains a vector of positions of the Base frame.
 
     // **** private functions
     
@@ -188,6 +188,9 @@ class VisualOdometry
      */
     void publishOdom(const std_msgs::Header& header);  
 
+    /** @brief publishes the path of f2b_ (fixed-to-base) transform as an Path message
+     * @param header header of the incoming message, used to stamp things correctly
+     */
     void publishPath(const std_msgs::Header& header);
     
     /** @brief Publish the feature point cloud

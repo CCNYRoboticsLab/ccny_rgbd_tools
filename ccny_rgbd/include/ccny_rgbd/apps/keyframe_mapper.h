@@ -260,7 +260,7 @@ class KeyframeMapper
 
     KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
     
-    PathMsg path_msg_;
+    PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
     
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted
@@ -296,6 +296,8 @@ class KeyframeMapper
      */
     void publishKeyframePoses();
     
+    /** @brief Publishes all the path message
+     */
     void publishPath();
     
     /** @brief Save the full map to disk as pcd

@@ -264,6 +264,12 @@ void buildPointCloud(
   const cv::Mat& intr_rect_rgb,
   PointCloudT& cloud);
 
+/** @brief converts a 32FC1 depth image (in meters) to a
+ * 16UC1 depth image (in mm).
+ *
+ * @param depth_image_in the input 32FC1 image
+ * @param depth_image_out the output 16UC1 image
+ */
 void depthImageFloatTo16bit(
   const cv::Mat& depth_image_in,
   cv::Mat& depth_image_out);
