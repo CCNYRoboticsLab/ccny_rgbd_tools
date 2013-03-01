@@ -64,7 +64,7 @@ KeyframeMapper::KeyframeMapper(
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_associations", queue_size_);
   path_pub_ = nh_.advertise<PathMsg>( 
-    "path", queue_size_);
+    "keyframe_path", queue_size_);
   // **** services
 
   pub_keyframe_service_ = nh_.advertiseService(

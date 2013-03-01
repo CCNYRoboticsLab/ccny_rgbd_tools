@@ -40,7 +40,6 @@ KeyframeGraphDetector::KeyframeGraphDetector(
     save_ransac_results_ = false;
   if (!nh_private_.getParam ("graph/ransac_results_path", ransac_results_path_))
     ransac_results_path_ = std::getenv("HOME");
-  
   if (!nh_private_.getParam ("graph/n_ransac_candidates", n_ransac_candidates_))
     n_ransac_candidates_ = 15;
   if (!nh_private_.getParam ("graph/k_nearest_neighbors", k_nearest_neighbors_))

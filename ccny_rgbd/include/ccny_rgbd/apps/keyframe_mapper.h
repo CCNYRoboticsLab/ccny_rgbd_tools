@@ -196,7 +196,7 @@ class KeyframeMapper
     ros::Publisher keyframes_pub_;    ///< ROS publisher for the keyframe point clouds
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
-    ros::Publisher path_pub_;     ///< ROS publisher for the keyframe associations
+    ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
