@@ -3,6 +3,11 @@ ccny_rgbd changelist
 
 latest
 ------------------------
+
+
+0.1.1          3/1/2013
+------------------------
+ * some topic renames for consistency with other packges (odom -> vo)
  * added CHANGELIST
  * keyframe_mapper: lazy pointcloud building, reduces memory requirements considerably
  * rgbd_image_proc now supports non-VGA input
