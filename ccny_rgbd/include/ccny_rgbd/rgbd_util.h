@@ -199,7 +199,7 @@ void transformMeans(
  * 
  * @param means vector of 3x1 matrices of positions (3D means)
  * @param covariances vector of 3x3 covariance matrices
- * @param transform the tranformation to be applied to all the means and covariances
+ * @param transform the transformation to be applied to all the means and covariances
  */
 void transformDistributions(
   Vector3fVector& means,
@@ -237,7 +237,7 @@ void buildRegisteredDepthImage(
   const cv::Mat& depth_img_rect,
   cv::Mat& depth_img_rect_reg);
 
-/** @brief Constructs a point cloud, a depth image and instrinsic matrix
+/** @brief Constructs a point cloud, a depth image and intrinsic matrix
  * 
  * @param depth_img_rect rectified depth image (16UC1, in mm) 
  * @param intr_rect_ir intinsic matrix of the rectified depth image

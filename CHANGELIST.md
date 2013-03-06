@@ -5,7 +5,7 @@ latest
 ------------------------
 
 
-0.1.1          3/1/2013
+0.1.1         (3/1/2013)
 ------------------------
  * some topic renames for consistency with other packges (odom -> vo)
  * added CHANGELIST
@@ -18,6 +18,6 @@ latest
  * bug fixes in manifests
  * bug fixes in linking
 
-0.1.0          2/12/2013
+0.1.0        (2/12/2013)
 ------------------------
  * Initial release
