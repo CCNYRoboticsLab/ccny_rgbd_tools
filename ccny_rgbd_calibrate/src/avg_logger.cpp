@@ -8,16 +8,17 @@ AvgLogger::AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private):
 {
   // **** parameters
   
-  if (!nh_private_.getParam ("n_depth", n_depth_))
+  if (!nh_private_.getParam ("n_images", n_depth_))
     n_depth_ = 300;
   if (!nh_private_.getParam ("id", id_))
     id_ = 0;
-  if (!nh_private_.getParam ("sequence", sequence_))
-    sequence_ = "rgbd";
- 
-  n_cols_ = 9;
-  n_rows_ = 6;
-
+  if (!nh_private_.getParam ("n_cols", n_cols_))
+    n_cols_ = 8;
+  if (!nh_private_.getParam ("n_rows", n_rows_))
+    n_rows_ = 6;
+  if (!nh_private_.getParam ("path", path_))
+    ROS_ERROR("path param needs to be set");
+  
   // ensures directories exist
   prepareDirectories();
   
@@ -71,26 +72,22 @@ void AvgLogger::keyboardThread()
 }
 
 void AvgLogger::prepareDirectories()
-{
-  std::stringstream ss_seq_path;
-   
-  ss_seq_path << getenv("HOME") << "/ros/images/" << sequence_;
+{ 
+  ROS_INFO("Creating directory: %s", path_.c_str());
+  boost::filesystem::create_directory(path_);
   
-  ROS_INFO("Creating directory: %s", ss_seq_path.str().c_str());
-  boost::filesystem::create_directory(ss_seq_path.str());
-  
-  ss_rgb_path_   << ss_seq_path.str() << "/rgb/";
-  ss_depth_path_ << ss_seq_path.str() << "/depth/";
-  ss_stdev_path_ << ss_seq_path.str() << "/stdev/";
+  rgb_path_   = path_ + "/rgb/";
+  depth_path_ = path_ + "/depth/";
+  stdev_path_ = path_ + "/stdev/";
 
-  boost::filesystem::create_directory(ss_rgb_path_.str()); 
-  boost::filesystem::create_directory(ss_depth_path_.str()); 
-  boost::filesystem::create_directory(ss_stdev_path_.str()); 
+  boost::filesystem::create_directory(rgb_path_); 
+  boost::filesystem::create_directory(depth_path_); 
+  boost::filesystem::create_directory(stdev_path_); 
 }
 
 void AvgLogger::RGBDCallback(
-  const sensor_msgs::ImageConstPtr& depth_msg,
   const sensor_msgs::ImageConstPtr& rgb_msg,
+  const sensor_msgs::ImageConstPtr& depth_msg,
   const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
   cv_bridge::CvImagePtr rgb_ptr = cv_bridge::toCvCopy(rgb_msg);
@@ -99,7 +96,7 @@ void AvgLogger::RGBDCallback(
   cv::Size pattern_size(n_rows_, n_cols_);
   std::vector<cv::Point2f> corners_2d;
   cv::Mat img_mono;
-  cv::cvtColor(rgb_ptr->image, img_mono, CV_BGR2GRAY);
+  cv::cvtColor(rgb_ptr->image, img_mono, CV_RGB2GRAY);
  
   int params = CV_CALIB_CB_ADAPTIVE_THRESH + 
                CV_CALIB_CB_NORMALIZE_IMAGE + 
@@ -124,7 +121,7 @@ void AvgLogger::RGBDCallback(
   
   cv::waitKey(1);
       
-  // if we are not logging, leve here
+  // if we are not logging, leave here
   if (!logging_) return;
 
   ROS_INFO("RGBD Callback [%d of %d]", count_+1, n_depth_);
@@ -138,9 +135,9 @@ void AvgLogger::RGBDCallback(
     if (found && !rgb_saved_)
     {     
       // write out the current rgb image     
-      std::string rgb_filename = ss_rgb_path_.str() + ss_filename.str();
+      std::string rgb_filename = rgb_path_ + ss_filename.str();
       cv::imwrite(rgb_filename, rgb_ptr->image);
-      ROS_INFO("RGB %s saved", rgb_filename.c_str());
+      ROS_INFO("RGB image saved to %s", rgb_filename.c_str());
       
       rgb_saved_ = true;
     }
@@ -152,7 +149,7 @@ void AvgLogger::RGBDCallback(
     for (int u = 0; u < depth_img.cols; ++u)
     for (int v = 0; v < depth_img.rows; ++v)
     {
-      float z = depth_img.at<uint16_t>(v, u);
+      double z = depth_img.at<uint16_t>(v, u);
       
       if (!isnan(z))
       {
@@ -181,38 +178,34 @@ void AvgLogger::RGBDCallback(
     if (!rgb_saved_)
     {
       // write out the current rgb image     
-      std::string rgb_filename = ss_rgb_path_.str() + ss_filename.str();
+      std::string rgb_filename = rgb_path_+ ss_filename.str();
       cv::imwrite(rgb_filename, rgb_ptr->image);
-      ROS_WARN("RGB %s saved, but might be unusable", rgb_filename.c_str());
+      ROS_WARN("RGB image saved to %s, but no checkerboard was detected", rgb_filename.c_str());
     }
     
     // create average depth image
-    cv::Mat depth_avg_img = cv::Mat::zeros(480, 640, CV_16UC1);
+    cv::Mat depth_mean_img_uint = cv::Mat::zeros(480, 640, CV_16UC1);
+    m_img_.convertTo(depth_mean_img_uint, CV_16UC1);
+  
+    std::string depth_filename = depth_path_ + ss_filename.str();
+    cv::imwrite(depth_filename, depth_mean_img_uint);
+    ROS_INFO("Depth image saved to %s", depth_filename.c_str());
     
     // create the stdev depth image (in nm)
-    cv::Mat depth_std_img = cv::Mat::zeros(480, 640, CV_16UC1);
+    cv::Mat depth_std_img = cv::Mat::zeros(480, 640, CV_64FC1);
     
-    for (int u = 0; u < depth_avg_img.cols; ++u)
-    for (int v = 0; v < depth_avg_img.rows; ++v)
-    {
-      depth_avg_img.at<uint16_t>(v, u) = getMean(v, u);   
-      depth_std_img.at<uint16_t>(v, u) = getStDev(v, u);
-    }
+    for (int u = 0; u < depth_std_img.cols; ++u)
+    for (int v = 0; v < depth_std_img.rows; ++v)
+      depth_std_img.at<double>(v, u) = getStDev(v, u);
+    
+    std::string stdev_filename = stdev_path_ + ss_filename.str();
+    saveUncertaintyImage(depth_std_img, stdev_filename);
+    ROS_INFO("Stdev image saved to %s", stdev_filename.c_str());
    
     // reset accumulator and counter images
     c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
     m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
     s_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
-        
-    // write out the average depth image
-    std::string stdev_filename = ss_stdev_path_.str() + ss_filename.str();
-    cv::imwrite(stdev_filename, depth_std_img);
-    ROS_INFO("Depth %s saved", stdev_filename.c_str());
-      
-    // write out the stdev depth image
-    std::string depth_filename = ss_depth_path_.str() + ss_filename.str();
-    cv::imwrite(depth_filename, depth_avg_img);
-    ROS_INFO("stdev %s saved", depth_filename.c_str());
       
     // stop logging, bump up image id, and reset counter
     count_ = 0;
@@ -222,25 +215,19 @@ void AvgLogger::RGBDCallback(
   }
 }
 
-uint16_t AvgLogger::getMean(int v, int u)
-{
-  mean_z = m_img_.at<double>(v, u);
-  return mean_z;
-}
-
-uint16_t AvgLogger::getStDev(int v, int u)
+double AvgLogger::getStDev(int v, int u)
 {
   int c = c_img_.at<uint16_t>(v, u);
   
-  uint16_t std_dev_z;
+  double std_dev_z;
   if (c > 1)
   {
     double s = s_img_.at<double>(v, u);
     double var_z = s / (double)(c - 1);
-    std_dev_z = sqrt(var_z) * 100.0; // in 10*nm
+    std_dev_z = sqrt(var_z);
   }
   else
-    std_dev_z = 0;
+    std_dev_z = 0.0;
   
   return std_dev_z;
 }

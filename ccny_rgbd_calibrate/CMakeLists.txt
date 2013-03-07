@@ -87,3 +87,21 @@ target_link_libraries (avg_logger_node
   boost_filesystem
   ${OPENCV_LIBRARIES}
 )
+
+################################################################
+# Build comparator app
+################################################################
+
+rosbuild_add_executable(uncertainty_comparator_node 
+  src/uncertainty_comparator_node.cpp
+  src/uncertainty_comparator.cpp)
+  
+target_link_libraries (uncertainty_comparator_node
+  ccny_rgbd_util
+  boost_signals 
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES})
+  
+  
+  

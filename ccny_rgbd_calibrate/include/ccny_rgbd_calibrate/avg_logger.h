@@ -18,8 +18,8 @@ class AvgLogger
     AvgLogger(ros::NodeHandle nh, ros::NodeHandle nh_private);
     virtual ~AvgLogger();
 
-    void RGBDCallback(const ImageMsg::ConstPtr& depth_msg,
-                      const ImageMsg::ConstPtr& rgb_msg,
+    void RGBDCallback(const ImageMsg::ConstPtr& rgb_msg,
+                      const ImageMsg::ConstPtr& depth_msg,
                       const CameraInfoMsg::ConstPtr& info_msg);  
 
   private:
@@ -33,9 +33,9 @@ class AvgLogger
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;
 
-    std::stringstream ss_rgb_path_;
-    std::stringstream ss_depth_path_;
-    std::stringstream ss_stdev_path_;
+    std::string rgb_path_;
+    std::string depth_path_;
+    std::string stdev_path_;
 
     boost::thread input_thread_;
     
@@ -54,14 +54,13 @@ class AvgLogger
     int n_cols_;
     int n_rows_;
     
-    std::string sequence_;
+    std::string path_;
 
     void prepareDirectories();
     
     void keyboardThread();
     
-    uint16_t getMean(int v, int u);
-    uint16_t getStDev(int v, int u);
+    double getStDev(int v, int u);
 };
 
 } // namespace ccny_rgbd

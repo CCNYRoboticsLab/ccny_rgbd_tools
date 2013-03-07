@@ -472,4 +472,52 @@ void buildRegisteredDepthImage(
   }
 }
 
+void saveUncertaintyImage(
+  const cv::Mat& unc_img,
+  const std::string& path)
+{
+  cv::Mat unc_img_uint;
+  
+  unc_img.convertTo(unc_img_uint, CV_16UC1, 100.0);
+  
+  cv::imwrite(path, unc_img_uint);
+}
+
+void loadUncertaintyImage(
+  cv::Mat& unc_img,
+  const std::string& path)
+{
+  cv::Mat unc_img_uint = cv::imread(path, -1);
+
+  unc_img_mm = cv::Mat(unc_img_uint.size(), CV_64FC1);
+  
+  for (int u = 0; u < unc_img_uint.cols; ++u)
+  for (int v = 0; v < unc_img_uint.cols; ++v)
+  {
+    uint16_t val_in = unc_img_uint.at<uint16_t>(v, u);
+    double& val_out = unc_img.at<double>(v, u);
+        
+    if (val_in == 0) val_out = std::numeric_limits<float>::quiet_NaN();
+    else val_out = val_in / 100.0;
+  }
+}
+
+void predictUncertaintyGMM(
+  const cv::Mat& depth_img,
+  cv::Mat& unc_img)
+{
+  
+  
+  
+}
+
+void predictUncertaintyQGMM(
+  const cv::Mat& depth_img,
+  cv::Mat& unc_img)
+{
+  
+  
+  
+}
+
 } //namespace ccny_rgbd

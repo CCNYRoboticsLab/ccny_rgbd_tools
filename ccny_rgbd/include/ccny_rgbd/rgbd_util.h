@@ -264,6 +264,22 @@ void buildPointCloud(
   const cv::Mat& intr_rect_rgb,
   PointCloudT& cloud);
 
+void saveUncertaintyImage(
+  const cv::Mat& unc_img,
+  const std::string& path);
+
+void loadUncertaintyImage(
+  cv::Mat& unc_img,
+  const std::string& path);
+
+void predictUncertaintyQ(
+  const cv::Mat& depth_img,
+  cv::Mat& unc_img);
+
+void predictUncertaintyQGMM(
+  const cv::Mat& depth_img,
+  cv::Mat& unc_img);
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_UTIL_H
