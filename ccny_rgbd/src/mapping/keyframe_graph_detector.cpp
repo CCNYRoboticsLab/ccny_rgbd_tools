@@ -230,7 +230,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
   TransformationEstimationSVD svd;
 
   // **** build candidate matches ***********************************
-
+  
   // assumes detectors and distributions are computed
   // establish all matches from b to a
   matcher.match(frame_b.descriptors, frame_a.descriptors, all_matches);
@@ -250,10 +250,16 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
     {
       candidate_matches.push_back(all_matches[m_idx]);
     }
+    
+    //printf("%f %s %s\n", match.distance, 
+    //  frame_a.kp_valid[idx_a]?"t":"f", 
+    //  frame_b.kp_valid[idx_b]?"t":"f");
   }
 
   int size = candidate_matches.size();
 
+  if (size < min_sample_size) return;
+  
   // **** build 3D features for SVD ********************************
 
   PointCloudFeature features_a, features_b;
@@ -279,16 +285,16 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
   }
 
   // **** main RANSAC loop ****************************************
-
+  
   int best_n_inliers = 0;
   Eigen::Matrix4f transformation; // transformation used inside loop
   
   for (int iteration = 0; iteration < max_ransac_iterations_; ++iteration)
-  {
+  {   
     // generate random indices
     IntVector sample_idx;
     getRandomIndices(min_sample_size, size, sample_idx);
-
+    
     // build initial inliers from random indices
     IntVector inlier_idx;
     std::vector<cv::DMatch> inlier_matches;
@@ -299,7 +305,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
       inlier_idx.push_back(m_idx);
       inlier_matches.push_back(candidate_matches[m_idx]);
     } 
-
+    
     // estimate transformation from minimum set of random samples
     svd.estimateRigidTransformation(
       features_b, inlier_idx,
@@ -330,7 +336,7 @@ void KeyframeGraphDetector::pairwiseMatchingRANSAC(
         pcl::transformPointCloud(features_b, features_b_tf, transformation);
       }
     }
-
+    
     // check if inliers are better than the best model so far
     int n_inliers = inlier_idx.size();
 
@@ -360,7 +366,7 @@ void KeyframeGraphDetector::trainMatcher(
 {
   printf("Building aggregate feature vector...\n"); 
   std::vector<cv::Mat> descriptors_vector;
-
+  
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
   {
     const RGBDKeyframe& keyframe = keyframes[kf_idx];
@@ -465,7 +471,7 @@ void KeyframeGraphDetector::treeAssociations(
         max_corresp_dist_eucl_sq_, max_corresp_dist_desc_, 
         sufficient_ransac_inlier_ratio,
         all_matches, inlier_matches, transformation);
-
+      
       if ((int)inlier_matches.size() >= min_ransac_inliers_)
       {
         if (save_ransac_results_)

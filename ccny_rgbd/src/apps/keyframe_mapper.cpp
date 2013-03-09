@@ -482,7 +482,8 @@ bool KeyframeMapper::savePcdMap(const std::string& path)
   pcl::PCDWriter writer;
   int result_pcd = writer.writeBinary<PointT>(path, pcd_map);  
 
-  return result_pcd;
+  if (result < 0) return false;
+  else return true;
 }
 
 void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
