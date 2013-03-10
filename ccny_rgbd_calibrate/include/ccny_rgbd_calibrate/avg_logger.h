@@ -3,10 +3,11 @@
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
+#include <cv_bridge/cv_bridge.h>
 #include <boost/filesystem.hpp>
 
-#include <ccny_rgbd/structures/rgbd_frame.h>
 #include <ccny_rgbd/types.h>
+#include <ccny_rgbd/rgbd_util.h>
 
 namespace ccny_rgbd
 {

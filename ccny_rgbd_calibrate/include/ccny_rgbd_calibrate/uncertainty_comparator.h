@@ -34,8 +34,11 @@ class UncertaintyLogger
     CameraInfoSubFilter sub_info_;
 
     std::string rgb_path_;
-    std::string depth_path_;
-    std::string stdev_path_;
+    
+    std::string depth_test_path_;
+    std::string depth_gt_path_;
+    
+    std::string stdev_gt_path_;
     std::string stdev_q_path_;
     std::string stdev_qgmm_path_;
 
@@ -49,6 +52,8 @@ class UncertaintyLogger
     cv::Mat c_img_;   // uint16t
     cv::Mat m_img_;   // double
     cv::Mat s_img_;   // double
+        
+    cv::Mat depth_test_img_;
         
     cv::Mat stdev_gt_img_;
     cv::Mat stdev_q_img_;
@@ -66,7 +71,7 @@ class UncertaintyLogger
     
     double getStDev(int v, int u);
 
-    void buildUncertaintyImages(const cv::Mat& depth_img);
+    void buildUncertaintyImages();
 };
 
 } // namespace ccny_rgbd

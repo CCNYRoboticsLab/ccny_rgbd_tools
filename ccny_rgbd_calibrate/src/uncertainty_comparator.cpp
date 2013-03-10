@@ -78,10 +78,12 @@ void UncertaintyLogger::prepareDirectories()
   ROS_INFO("Creating directory: %s", path_.c_str());
   boost::filesystem::create_directory(path_);
   
-  rgb_path_   = path_ + "/rgb/";
-  depth_path_ = path_ + "/depth/";
-  stdev_path_ = path_ + "/stdev/";
-  stdev_q_path_ = path_ + "/stdev_q/";
+  rgb_path_        = path_ + "/rgb/";
+  depth_gt_path_   = path_ + "/depth_gt/";
+  depth_test_path_ = path_ + "/depth_tr/";
+  
+  stdev_gt_path_   = path_ + "/stdev_gt/";
+  stdev_q_path_    = path_ + "/stdev_q/";
   stdev_qgmm_path_ = path_ + "/stdev_qgmm/";
 
   boost::filesystem::create_directory(rgb_path_); 
@@ -151,24 +153,28 @@ void UncertaintyLogger::RGBDCallback(
     cv::imwrite(rgb_filename, rgb_ptr->image);
     ROS_WARN("RGB image saved to %s", rgb_filename.c_str());
     
-    // create average depth image
-    cv::Mat depth_mean_img_uint = cv::Mat::zeros(480, 640, CV_16UC1);
-    m_img_.convertTo(depth_mean_img_uint, CV_16UC1);
+    // write out the current depth image, for use as test image
+    depth_test_img_ = depth_img.clone();
+    
+    std::string depth_test_filename = rgb_test_path_+ ss_filename.str();
+    cv::imwrite(depth_test_filename, depth_test_img_);
+    ROS_INFO("Depth_test image saved to %s", depth_test_filename.c_str());
+    
+    // create average depth image, for use as ground truth image
+    m_img_.convertTo(depth_gt_img_, CV_16UC1);
   
-    std::string depth_filename = depth_path_ + ss_filename.str();
-    cv::imwrite(depth_filename, depth_mean_img_uint);
+    std::string depth_gt_filename = depth_gt_path_ + ss_filename.str();
+    cv::imwrite(depth_gt_filename, depth_mean_img_uint);
     ROS_INFO("Depth image saved to %s", depth_filename.c_str());
     
-    // create the stdev depth image (in nm)
-    cv::Mat depth_std_img = cv::Mat::zeros(480, 640, CV_32FC1);
-    
+    // create the ground truth stdev image (in nm)    
     for (int u = 0; u < depth_std_img.cols; ++u)
     for (int v = 0; v < depth_std_img.rows; ++v)
       stdev_gt_img_.at<float>(v, u) = getStDev(v, u);
     
-    std::string stdev_filename = stdev_path_ + ss_filename.str();
-    saveUncertaintyImage(depth_std_img, stdev_filename);
-    ROS_INFO("Stdev image saved to %s", stdev_filename.c_str());
+    std::string stdev_gt_filename = stdev_gt_path_ + ss_filename.str();
+    saveUncertaintyImage(stdev_gt_img_, stdev_gt_filename);
+    ROS_INFO("Stdev ground truth image saved to %s", stdev_gt_filename.c_str());
     
     // build pred unc. images and process them 
     buildUncertaintyImages();
@@ -185,8 +191,7 @@ void UncertaintyLogger::RGBDCallback(
   }
 }
 
-void UncertaintyLogger::buildUncertaintyImages(
-  const cv::Mat& depth_img)
+void UncertaintyLogger::buildUncertaintyImages()
 {
   
   
