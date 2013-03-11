@@ -82,6 +82,7 @@ class VisualOdometry
     tf::TransformListener tf_listener_; ///< ROS transform listener
     tf::TransformBroadcaster tf_broadcaster_; ///< ROS transform broadcaster
     ros::Publisher odom_publisher_;           ///< ROS Odometry publisher
+    ros::Publisher pose_stamped_publisher_;   ///< ROS pose stamped publisher
     ros::Publisher cloud_publisher_;          ///< ROS feature cloud publisher
     ros::Publisher path_pub_;                 ///< ROS publisher for the VO path
 
@@ -115,7 +116,8 @@ class VisualOdometry
     bool publish_tf_;         ///< Parameter whether to publish a ros tf
     bool publish_path_;       ///< Parameter whether to publish a path message
     bool publish_odom_;       ///< Parameter whether to publish an odom message
-    
+    bool publish_pose_;       ///< Parameter whether to publish a pose message
+
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -186,7 +188,12 @@ class VisualOdometry
      * \todo publish also as PoseWithCovariance
      * @param header header of the incoming message, used to stamp things correctly
      */
-    void publishOdom(const std_msgs::Header& header);  
+    void publishOdom(const std_msgs::Header& header); 
+
+    /** @brief publishes the f2b_ (fixed-to-base) transform as an pose stamped message
+    * @param header header of the incoming message, used to stamp things correctly
+    */
+    void publishPoseStamped(const std_msgs::Header& header); 
 
     /** @brief publishes the path of f2b_ (fixed-to-base) transform as an Path message
      * @param header header of the incoming message, used to stamp things correctly

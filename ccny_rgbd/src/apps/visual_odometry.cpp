@@ -47,6 +47,8 @@ VisualOdometry::VisualOdometry(
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
     "vo", queue_size_);
+  pose_stamped_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>(
+      "pose", queue_size_);
   cloud_publisher_ = nh_.advertise<PointCloudFeature>(
     "feature/cloud", 1);
   path_pub_ = nh_.advertise<PathMsg>(
@@ -81,6 +83,8 @@ void VisualOdometry::initParams()
     publish_path_ = true;
   if (!nh_private_.getParam ("publish_odom", publish_odom_))
     publish_odom_ = true;
+  if (!nh_private_.getParam ("publish_pose", publish_pose_))
+    publish_pose_ = true;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
@@ -235,7 +239,7 @@ void VisualOdometry::RGBDCallback(
   if (publish_tf_)   publishTf(rgb_msg->header);
   if (publish_odom_) publishOdom(rgb_msg->header);
   if (publish_path_) publishPath(rgb_msg->header);
-
+  if (publish_pose_) publishPoseStamped(rgb_msg->header);
   if (publish_cloud_) publishFeatureCloud(frame);
 
   // **** print diagnostics *******************************************
@@ -276,6 +280,17 @@ void VisualOdometry::publishOdom(const std_msgs::Header& header)
   tf::poseTFToMsg(f2b_, odom.pose.pose);
   odom_publisher_.publish(odom);
 }
+
+void VisualOdometry::publishPoseStamped(const std_msgs::Header& header)
+{
+  geometry_msgs::PoseStamped::Ptr pose_stamped_msg;
+  pose_stamped_msg = boost::make_shared<geometry_msgs::PoseStamped>();
+  pose_stamped_msg->header.stamp    = header.stamp;
+  pose_stamped_msg->header.frame_id = fixed_frame_;      
+  tf::poseTFToMsg(f2b_, pose_stamped_msg->pose);
+  pose_stamped_publisher_.publish(pose_stamped_msg);
+}
+
 
 void VisualOdometry::publishPath(const std_msgs::Header& header)
 {
