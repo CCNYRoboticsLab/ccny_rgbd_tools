@@ -482,7 +482,7 @@ bool KeyframeMapper::savePcdMap(const std::string& path)
   pcl::PCDWriter writer;
   int result_pcd = writer.writeBinary<PointT>(path, pcd_map);  
 
-  if (result < 0) return false;
+  if (result_pcd < 0) return false;
   else return true;
 }
 
