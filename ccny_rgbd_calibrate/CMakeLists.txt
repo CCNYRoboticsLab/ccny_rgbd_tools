@@ -32,23 +32,23 @@ rosbuild_add_boost_directories()
 rosbuild_add_library(ccny_rgbd_calibrate
   src/calib_util.cpp)
 
+#rosbuild_add_executable(depth_calibrator_node 
+#  src/depth_calibrator_node.cpp
+#  src/depth_calibrator.cpp)
+  
+#target_link_libraries (depth_calibrator_node 
+#  ${OPENCV_LIBRARIES}
+#  ${GSL_LIBRARIES}
+#  ccny_rgbd_util
+#  ccny_rgbd_calibrate
+#  ccny_rgbd_proc_util
+#  boost_signals 
+#  boost_system
+#  boost_filesystem)
+
 rosbuild_add_executable(extrinsics_calibrator_node 
   src/extrinsics_calibrator_node.cpp
   src/extrinsics_calibrator.cpp)
-  
-rosbuild_add_executable(depth_calibrator_node 
-  src/depth_calibrator_node.cpp
-  src/depth_calibrator.cpp)
-  
-target_link_libraries (depth_calibrator_node 
-  ${OPENCV_LIBRARIES}
-  ${GSL_LIBRARIES}
-  ccny_rgbd_util
-  ccny_rgbd_calibrate
-  ccny_rgbd_proc_util
-  boost_signals 
-  boost_system
-  boost_filesystem)
 
 target_link_libraries (extrinsics_calibrator_node 
   ${OPENCV_LIBRARIES}
@@ -103,5 +103,10 @@ target_link_libraries (uncertainty_comparator_node
   boost_filesystem
   ${OPENCV_LIBRARIES})
   
-  
-  
+rosbuild_add_compile_flags(ccny_rgbd_calibrate '-Wno-unknown-pragmas')  
+rosbuild_add_compile_flags(extrinsics_calibrator_node  '-Wno-unknown-pragmas')  
+      
+rosbuild_add_compile_flags(uncertainty_comparator_node '-Wno-unknown-pragmas')  
+rosbuild_add_compile_flags(avg_logger_node '-Wno-unknown-pragmas')  
+rosbuild_add_compile_flags(logger_node '-Wno-unknown-pragmas')  
+      

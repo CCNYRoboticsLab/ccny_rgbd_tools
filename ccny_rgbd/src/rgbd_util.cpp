@@ -489,7 +489,7 @@ void loadUncertaintyImage(
 {
   cv::Mat unc_img_uint = cv::imread(path, -1);
 
-  unc_img_mm = cv::Mat(unc_img_uint.size(), CV_64FC1);
+  unc_img = cv::Mat(unc_img_uint.size(), CV_64FC1);
   
   for (int u = 0; u < unc_img_uint.cols; ++u)
   for (int v = 0; v < unc_img_uint.cols; ++v)

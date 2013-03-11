@@ -2,7 +2,7 @@
 
 namespace ccny_rgbd {
 
-UncertaintyLogger::UncertaintyLogger(
+UncertaintyComparator::UncertaintyComparator(
   const ros::NodeHandle& nh, 
   const ros::NodeHandle& nh_private):
   nh_(nh), nh_private_(nh_private), count_(0), logging_(false),
@@ -14,10 +14,6 @@ UncertaintyLogger::UncertaintyLogger(
     n_depth_ = 300;
   if (!nh_private_.getParam ("id", id_))
     id_ = 0;
-  if (!nh_private_.getParam ("n_cols", n_cols_))
-    n_cols_ = 8;
-  if (!nh_private_.getParam ("n_rows", n_rows_))
-    n_rows_ = 6;
   if (!nh_private_.getParam ("path", path_))
     ROS_ERROR("path param needs to be set");
   
@@ -40,22 +36,22 @@ UncertaintyLogger::UncertaintyLogger(
   // Synchronize inputs.
   sync_.reset(new RGBDSynchronizer3(
                 RGBDSyncPolicy3(queue_size), sub_rgb_, sub_depth_, sub_info_));
-  sync_->registerCallback(boost::bind(&AvgLogger::RGBDCallback, this, _1, _2, _3));  
+  sync_->registerCallback(boost::bind(&UncertaintyComparator::RGBDCallback, this, _1, _2, _3));  
     
   // http://www.johndcook.com/standard_deviation.html
   c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);  // conter image
   m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);  // mean accumulator
   s_img_ = cv::Mat::zeros(480, 640, CV_64FC1);  // stdev accumulator
   
-  input_thread_ = boost::thread(&AvgLogger::keyboardThread, this);   
+  input_thread_ = boost::thread(&UncertaintyComparator::keyboardThread, this);   
 }
 
-UncertaintyLogger::~UncertaintyLogger()
+UncertaintyComparator::~UncertaintyComparator()
 {
   ROS_INFO("Destroying RGBD Visual Odometry"); 
 }
 
-void UncertaintyLogger::keyboardThread()
+void UncertaintyComparator::keyboardThread()
 {
   ros::Rate r(20);
   
@@ -73,7 +69,7 @@ void UncertaintyLogger::keyboardThread()
   }
 }
 
-void UncertaintyLogger::prepareDirectories()
+void UncertaintyComparator::prepareDirectories()
 { 
   ROS_INFO("Creating directory: %s", path_.c_str());
   boost::filesystem::create_directory(path_);
@@ -87,13 +83,13 @@ void UncertaintyLogger::prepareDirectories()
   stdev_qgmm_path_ = path_ + "/stdev_qgmm/";
 
   boost::filesystem::create_directory(rgb_path_); 
-  boost::filesystem::create_directory(depth_path_); 
-  boost::filesystem::create_directory(stdev_path_); 
+  boost::filesystem::create_directory(depth_gt_path_); 
+  boost::filesystem::create_directory(stdev_gt_path_); 
   boost::filesystem::create_directory(stdev_q_path_); 
   boost::filesystem::create_directory(stdev_qgmm_path_); 
 }
 
-void UncertaintyLogger::RGBDCallback(
+void UncertaintyComparator::RGBDCallback(
   const sensor_msgs::ImageConstPtr& rgb_msg,
   const sensor_msgs::ImageConstPtr& depth_msg,
   const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -150,13 +146,13 @@ void UncertaintyLogger::RGBDCallback(
        
     // write out the current rgb image     
     std::string rgb_filename = rgb_path_+ ss_filename.str();
-    cv::imwrite(rgb_filename, rgb_ptr->image);
+    cv::imwrite(rgb_filename, rgb_img);
     ROS_WARN("RGB image saved to %s", rgb_filename.c_str());
     
     // write out the current depth image, for use as test image
     depth_test_img_ = depth_img.clone();
     
-    std::string depth_test_filename = rgb_test_path_+ ss_filename.str();
+    std::string depth_test_filename = depth_test_path_+ ss_filename.str();
     cv::imwrite(depth_test_filename, depth_test_img_);
     ROS_INFO("Depth_test image saved to %s", depth_test_filename.c_str());
     
@@ -164,12 +160,12 @@ void UncertaintyLogger::RGBDCallback(
     m_img_.convertTo(depth_gt_img_, CV_16UC1);
   
     std::string depth_gt_filename = depth_gt_path_ + ss_filename.str();
-    cv::imwrite(depth_gt_filename, depth_mean_img_uint);
-    ROS_INFO("Depth image saved to %s", depth_filename.c_str());
+    cv::imwrite(depth_gt_filename, depth_gt_img_);
+    ROS_INFO("Depth image saved to %s", depth_gt_filename.c_str());
     
     // create the ground truth stdev image (in nm)    
-    for (int u = 0; u < depth_std_img.cols; ++u)
-    for (int v = 0; v < depth_std_img.rows; ++v)
+    for (int u = 0; u < s_img_.cols; ++u)
+    for (int v = 0; v < s_img_.rows; ++v)
       stdev_gt_img_.at<float>(v, u) = getStDev(v, u);
     
     std::string stdev_gt_filename = stdev_gt_path_ + ss_filename.str();
@@ -191,13 +187,13 @@ void UncertaintyLogger::RGBDCallback(
   }
 }
 
-void UncertaintyLogger::buildUncertaintyImages()
+void UncertaintyComparator::buildUncertaintyImages()
 {
   
   
 }
 
-double UncertaintyLogger::getStDev(int v, int u)
+double UncertaintyComparator::getStDev(int v, int u)
 {
   int c = c_img_.at<uint16_t>(v, u);
   

@@ -3,20 +3,22 @@
 
 #include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
-
+#include <opencv2/opencv.hpp>
+#include <cv_bridge/cv_bridge.h>
 #include <ccny_rgbd/types.h>
+#include <ccny_rgbd/rgbd_util.h>
 
 namespace ccny_rgbd
 {
 
-class UncertaintyLogger 
+class UncertaintyComparator
 {
   public:
 
-    UncertaintyLogger(const ros::NodeHandle& nh, 
+    UncertaintyComparator(const ros::NodeHandle& nh, 
               const ros::NodeHandle& nh_private);
     
-    virtual ~UncertaintyLogger();
+    virtual ~UncertaintyComparator();
 
     void RGBDCallback(const ImageMsg::ConstPtr& rgb_msg,
                       const ImageMsg::ConstPtr& depth_msg,
@@ -52,7 +54,8 @@ class UncertaintyLogger
     cv::Mat c_img_;   // uint16t
     cv::Mat m_img_;   // double
     cv::Mat s_img_;   // double
-        
+       
+    cv::Mat depth_gt_img_; 
     cv::Mat depth_test_img_;
         
     cv::Mat stdev_gt_img_;
