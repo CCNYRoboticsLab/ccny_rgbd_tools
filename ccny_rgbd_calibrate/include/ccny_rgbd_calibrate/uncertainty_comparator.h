@@ -35,7 +35,7 @@ class UncertaintyComparator
     ImageSubFilter      sub_rgb_;
     CameraInfoSubFilter sub_info_;
 
-    std::string rgb_path_;
+    std::string rgb_test_path_;
     
     std::string depth_test_path_;
     std::string depth_gt_path_;
@@ -55,12 +55,15 @@ class UncertaintyComparator
     cv::Mat m_img_;   // double
     cv::Mat s_img_;   // double
        
+    cv::Mat rgb_test_img_;
     cv::Mat depth_gt_img_; 
     cv::Mat depth_test_img_;
         
     cv::Mat stdev_gt_img_;
     cv::Mat stdev_q_img_;
     cv::Mat stdev_qgmm_img_;     
+        
+    double w0_, w1_, w2_;    
         
     // parameters   
     int n_depth_;
@@ -72,9 +75,17 @@ class UncertaintyComparator
     
     void keyboardThread();
     
-    double getStDev(int v, int u);
+    double getStDevGT(int v, int u);
 
     void buildUncertaintyImages();
+    void buildStDevGroundTruthImage();
+    void buildStDevQuadraticImage();
+    void buildStDevQuadraticGMMImage();
+    void getGaussianMixtureDistribution(
+      int u, int v, double& z_mean, double& z_var);
+      
+    void evaluateRMSError(double& rms_q, double& rms_qgmm);
+    void evaluateRMSErrorFeatures(double& rms_q, double& rms_qgmm);
 };
 
 } // namespace ccny_rgbd

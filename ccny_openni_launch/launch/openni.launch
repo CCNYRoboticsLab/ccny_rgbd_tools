@@ -3,7 +3,7 @@
 
   <!-- Parameters -->
   <arg name="manager_name" value="rgbd_manager"/>
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_openni_default"/> 
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   <arg name="publish_cloud" default="false"/>
   
   <!-- Nodelet manager -->
