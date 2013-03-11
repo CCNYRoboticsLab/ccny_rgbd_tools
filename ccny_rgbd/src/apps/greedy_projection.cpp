@@ -146,7 +146,7 @@ main (int argc, char** argv)
     mls.setPolynomialFit (true);
     mls.setSearchMethod (mls_tree);
     mls.setSearchRadius (smoothing_res);
-    mls.reconstruct(*cloud_for_mesh);
+    mls.reconstruct(*cloud_for_mesh); // GOOD in PCL 1.5 , Otherwise, use "process()"
     // the dense data should be available in cloud_for_mesh
     printf("done!\n");
 
