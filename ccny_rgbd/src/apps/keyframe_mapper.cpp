@@ -237,7 +237,7 @@ void KeyframeMapper::publishKeyframeData(int i)
 
   // construct a cloud from the images
   PointCloudT cloud;
-  keyframe.constructDensePointCloud(cloud);
+  keyframe.constructDensePointCloud(cloud, 10, 0.15);
   
   // cloud transformed to the fixed frame
   PointCloudT cloud_ff; 
@@ -497,7 +497,7 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;   
-    keyframe.constructDensePointCloud(cloud);
+    keyframe.constructDensePointCloud(cloud, 10, 0.15);
 
     PointCloudT cloud_tf;
     pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
@@ -545,7 +545,7 @@ void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud);
+    keyframe.constructDensePointCloud(cloud, 10, 0.15);
            
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
 
@@ -574,7 +574,7 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud);
+    keyframe.constructDensePointCloud(cloud, 10, 0.15);
 
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
     
