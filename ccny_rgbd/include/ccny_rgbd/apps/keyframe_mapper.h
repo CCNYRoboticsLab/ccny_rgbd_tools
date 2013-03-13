@@ -82,6 +82,10 @@ class KeyframeMapper
      */
     virtual ~KeyframeMapper();
 
+    /** @brief Initializes all the parameters from the ROS param server
+     */
+    void initParams();
+
     /** @brief ROS callback to publish keyframes as point clouds
      * 
      * The argument should be a regular expression string matching the
@@ -182,6 +186,9 @@ class KeyframeMapper
     
     int queue_size_;  ///< Subscription queue size
     
+    double max_range_;  ///< Maximum threshold for  range (in the z-coordinate of the camera frame)
+    double max_stdev_;  ///< Maximum threshold for range (z-coordinate) standard deviation
+
     KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages
@@ -199,6 +206,7 @@ class KeyframeMapper
     ros::Publisher keyframes_pub_;    ///< ROS publisher for the keyframe point clouds
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
+    ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
@@ -262,6 +270,8 @@ class KeyframeMapper
 
     KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
     
+    PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
+    
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted
      * @param frame the incoming RGBD frame (image)
@@ -295,6 +305,10 @@ class KeyframeMapper
     /** @brief Publishes all the keyframe pose markers
      */
     void publishKeyframePoses();
+    
+    /** @brief Publishes all the path message
+     */
+    void publishPath();
     
     /** @brief Save the full map to disk as pcd
      * @param path path to save the map to

@@ -42,23 +42,8 @@ KeyframeMapper::KeyframeMapper(
   
   // **** params
 
-  if (!nh_private_.getParam ("queue_size", queue_size_))
-    queue_size_ = 5;
-  if (!nh_private_.getParam ("map_frame", map_frame_))
-    map_frame_ = "/map";
-  if (!nh_private_.getParam ("odom_frame", odom_frame_))
-    odom_frame_ = "/odom";
-  if (!nh_private_.getParam ("pcd_map_res", pcd_map_res_))
-    pcd_map_res_ = 0.01;
-  if (!nh_private_.getParam ("octomap_res", octomap_res_))
-    octomap_res_ = 0.05;  
-  if (!nh_private_.getParam ("octomap_with_color", octomap_with_color_))
-   octomap_with_color_ = true;  
-  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
-    kf_dist_eps_  = 0.10;
-  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
-    kf_angle_eps_  = 10.0 * M_PI / 180.0;
-    
+  initParams();
+  
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
@@ -67,9 +52,11 @@ KeyframeMapper::KeyframeMapper(
     "keyframe_poses", queue_size_);
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_associations", queue_size_);
-  
+  path_pub_ = nh_.advertise<PathMsg>( 
+    "keyframe_path", queue_size_);
+
   timer_ = nh_.createTimer(ros::Duration(0.050), &KeyframeMapper::timerCallback, this);
-  
+    
   // **** services
 
   pub_keyframe_service_ = nh_.advertiseService(
@@ -113,6 +100,31 @@ KeyframeMapper::KeyframeMapper(
 KeyframeMapper::~KeyframeMapper()
 {
   delete graph_solver_;
+}
+
+void KeyframeMapper::initParams()
+{
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
+  if (!nh_private_.getParam ("map_frame", map_frame_))
+    map_frame_ = "/map";
+  if (!nh_private_.getParam ("odom_frame", odom_frame_))
+    odom_frame_ = "/odom";
+  if (!nh_private_.getParam ("pcd_map_res", pcd_map_res_))
+    pcd_map_res_ = 0.01;
+  if (!nh_private_.getParam ("octomap_res", octomap_res_))
+    octomap_res_ = 0.05;
+  if (!nh_private_.getParam ("octomap_with_color", octomap_with_color_))
+   octomap_with_color_ = true;
+  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
+    kf_dist_eps_  = 0.10;
+  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
+    kf_angle_eps_  = 10.0 * M_PI / 180.0;
+  if (!nh_private_.getParam ("max_range", max_range_))
+    max_range_  = 5.5;
+  if (!nh_private_.getParam ("max_stdev", max_stdev_))
+    max_stdev_  = 0.03;
+
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -162,7 +174,12 @@ bool KeyframeMapper::processFrame(
       result = false;
   }
 
-  if (result) addKeyframe(frame, odom_to_camera);
+  if (result)
+  {
+    addKeyframe(frame, odom_to_camera);
+    publishPath();
+  }
+
   return result;
 }
 
@@ -215,7 +232,7 @@ void KeyframeMapper::addKeyframe(
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
   PublishKeyframe::Request& request,
-  PublishKeyframe::Response& response)
+    PublishKeyframe::Response& response)
 {
   int kf_idx = request.id;
   
@@ -271,7 +288,7 @@ void KeyframeMapper::publishKeyframeData(int i)
 
   // construct a cloud from the images
   PointCloudT cloud;
-  keyframe.constructDensePointCloud(cloud);
+  keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
   
   // cloud transformed to the fixed frame
   PointCloudT cloud_ff; 
@@ -516,7 +533,8 @@ bool KeyframeMapper::savePcdMap(const std::string& path)
   pcl::PCDWriter writer;
   int result_pcd = writer.writeBinary<PointT>(path, pcd_map);  
 
-  return result_pcd;
+  if (result_pcd < 0) return false;
+  else return true;
 }
 
 void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
@@ -530,7 +548,7 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;   
-    keyframe.constructDensePointCloud(cloud);
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
 
     PointCloudT cloud_tf;
     pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
@@ -578,7 +596,7 @@ void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud);
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
            
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
 
@@ -607,7 +625,7 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud);
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
 
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
     
@@ -645,6 +663,25 @@ void KeyframeMapper::timerCallback(const ros::TimerEvent& event)
 {
   br_.sendTransform(
     tf::StampedTransform(map_to_odom_, ros::Time::now(), map_frame_, odom_frame_));
+}
+
+void KeyframeMapper::publishPath()
+{
+  path_msg_.header.frame_id = map_frame_; 
+  path_msg_.poses.clear();
+  path_msg_.poses.resize(keyframes_.size());
+  
+  for(unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++ kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
+    
+    pose_stamped.header.stamp = keyframe.header.stamp;
+    pose_stamped.header.frame_id = map_frame_;
+    tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
+  }
+
+  path_pub_.publish(path_msg_);
 }
 
 } // namespace ccny_rgbd

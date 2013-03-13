@@ -1,5 +1,5 @@
 /**
- *  @file rgbd_image_proc.cpp
+ *  @file visual_odometry.cpp
  *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
  * 
  *  @section LICENSE
@@ -46,9 +46,13 @@ VisualOdometry::VisualOdometry(
   // **** publishers
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
-    "odom", queue_size_);
+    "vo", queue_size_);
+  pose_stamped_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>(
+      "pose", queue_size_);
   cloud_publisher_ = nh_.advertise<PointCloudFeature>(
     "feature/cloud", 1);
+  path_pub_ = nh_.advertise<PathMsg>(
+    "path", queue_size_);
   
   // **** subscribers
   
@@ -75,6 +79,12 @@ void VisualOdometry::initParams()
 {
   if (!nh_private_.getParam ("publish_tf", publish_tf_))
     publish_tf_ = true;  
+  if (!nh_private_.getParam ("publish_path", publish_path_))
+    publish_path_ = true;
+  if (!nh_private_.getParam ("publish_odom", publish_odom_))
+    publish_odom_ = true;
+  if (!nh_private_.getParam ("publish_pose", publish_pose_))
+    publish_pose_ = true;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
     fixed_frame_ = "/odom";
   if (!nh_private_.getParam ("base_frame", base_frame_))
@@ -224,13 +234,14 @@ void VisualOdometry::RGBDCallback(
   f2b_ = motion * f2b_;
   ros::WallTime end_reg = ros::WallTime::now();
 
-  // **** publish motion **********************************************
+  // **** publish outputs **********************************************
   
-  if (publish_tf_) publishTf(rgb_msg->header);
-  publishOdom(rgb_msg->header);
-
+  if (publish_tf_)   publishTf(rgb_msg->header);
+  if (publish_odom_) publishOdom(rgb_msg->header);
+  if (publish_path_) publishPath(rgb_msg->header);
+  if (publish_pose_) publishPoseStamped(rgb_msg->header);
   if (publish_cloud_) publishFeatureCloud(frame);
-  
+
   // **** print diagnostics *******************************************
 
   ros::WallTime end = ros::WallTime::now();
@@ -251,30 +262,6 @@ void VisualOdometry::RGBDCallback(
     reg_type_.c_str(), n_model_pts, d_reg, 
     d_total);
 
-/*
-  // **** for time and model size profiling
-  
-  float time = (rgb_msg->header.stamp - init_time_).toSec();
-  int model_size = motion_estimation_->getModelSize();
-  
-  printf("%d\t%.2f\t%2.1f\t%2.1f\t%2.1f\t%d\t%d\n",
-    frame_count_, time, 
-    d_frame, d_features, d_reg, 
-    n_features, model_size);
-*/
-
-/*
-  // **** for position profiling
-
-  double pos_x = f2b_.getOrigin().getX();
-  double pos_y = f2b_.getOrigin().getY();
-  double pos_z = f2b_.getOrigin().getZ();
-
-  printf("%d \t %.2f \t %.3f \t %.3f \t %.3f \n",
-    frame_count_, time, 
-    pos_x, pos_y, pos_z);
-*/
-
   frame_count_++;
 }
 
@@ -292,6 +279,31 @@ void VisualOdometry::publishOdom(const std_msgs::Header& header)
   odom.header.frame_id = fixed_frame_;
   tf::poseTFToMsg(f2b_, odom.pose.pose);
   odom_publisher_.publish(odom);
+}
+
+void VisualOdometry::publishPoseStamped(const std_msgs::Header& header)
+{
+  geometry_msgs::PoseStamped::Ptr pose_stamped_msg;
+  pose_stamped_msg = boost::make_shared<geometry_msgs::PoseStamped>();
+  pose_stamped_msg->header.stamp    = header.stamp;
+  pose_stamped_msg->header.frame_id = fixed_frame_;      
+  tf::poseTFToMsg(f2b_, pose_stamped_msg->pose);
+  pose_stamped_publisher_.publish(pose_stamped_msg);
+}
+
+
+void VisualOdometry::publishPath(const std_msgs::Header& header)
+{
+  path_msg_.header.stamp = header.stamp;
+  path_msg_.header.frame_id = fixed_frame_;
+
+  geometry_msgs::PoseStamped pose_stamped;
+  pose_stamped.header.stamp = header.stamp;
+  pose_stamped.header.frame_id = fixed_frame_;
+  tf::poseTFToMsg(f2b_, pose_stamped.pose);
+
+  path_msg_.poses.push_back(pose_stamped);
+  path_pub_.publish(path_msg_);
 }
 
 void VisualOdometry::publishFeatureCloud(RGBDFrame& frame)
@@ -313,7 +325,7 @@ bool VisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
     tf_listener_.lookupTransform (
       base_frame_, header.frame_id, header.stamp, tf_m);
   }
-  catch (tf::TransformException ex)
+  catch (tf::TransformException& ex)
   {
     ROS_WARN("Base to camera transform unavailable %s", ex.what());
     return false;

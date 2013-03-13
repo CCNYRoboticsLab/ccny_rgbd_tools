@@ -10,7 +10,7 @@
 
   # ICPProbModel, ICP
   <arg name="reg_type" default="ICPProbModel"/> 
-
+  
   <include file="$(find ccny_rgbd)/launch/visual_odometry.launch">
     <arg name="detector_type" value="$(arg detector_type)"/>
     <arg name="reg_type"      value="$(arg reg_type)"/>
@@ -34,7 +34,8 @@
     <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
     <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->
     <param name="full_map_res" value="0.01"/>
-
+    <param name="max_range" value="7.0"/>
+    <param name="max_stdev" value="0.05"/>
   </node>
 
 </launch>
