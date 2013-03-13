@@ -14,7 +14,7 @@
 
   <node pkg="nodelet" type="nodelet" name="rgbd_image_proc"
         args="load ccny_rgbd/RGBDImageProcNodelet $(arg manager_name)"
-        output="screen">
+        output="log">
     
     <!-- Resample by a factor of 2-->
     <param name="scale" value="1.0"/>
