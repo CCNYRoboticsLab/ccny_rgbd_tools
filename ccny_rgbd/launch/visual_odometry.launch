@@ -8,6 +8,10 @@
   # ICPProbModel, ICP
   <arg name="reg_type" default="ICPProbModel"/> 
 
+  # Range thresholds:
+  <arg name="max_range" default="7.0"/> 
+  <arg name="max_stdev" default="0.05"/> 
+
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
     output="screen">
     
@@ -32,8 +36,8 @@
     #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/detector_type"       value="$(arg detector_type)"/> 
     <param name="feature/smooth"              value="0"/>
-    <param name="feature/max_range"           value="7.0"/>
-    <param name="feature/max_stdev"           value="0.05"/>
+    <param name="feature/max_range"           value="$(arg max_range)"/>
+    <param name="feature/max_stdev"           value="$(arg max_stdev)"/>
     <param name="feature/show_keypoints"      value="false"/>
     <param name="feature/publish_cloud"       value="true"/>
     <param name="feature/publish_covariances" value="false"/>

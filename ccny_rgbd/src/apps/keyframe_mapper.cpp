@@ -40,20 +40,6 @@ KeyframeMapper::KeyframeMapper(
   
   // **** params
 
-  if (!nh_private_.getParam ("queue_size", queue_size_))
-    queue_size_ = 5;
-  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
-    fixed_frame_ = "/odom";
-  if (!nh_private_.getParam ("pcd_map_res", pcd_map_res_))
-    pcd_map_res_ = 0.01;
-  if (!nh_private_.getParam ("octomap_res", octomap_res_))
-    octomap_res_ = 0.05;  
-  if (!nh_private_.getParam ("octomap_with_color", octomap_with_color_))
-   octomap_with_color_ = true;  
-  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
-    kf_dist_eps_  = 0.10;
-  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
-    kf_angle_eps_  = 10.0 * M_PI / 180.0;
     
   // **** publishers
 
@@ -108,6 +94,29 @@ KeyframeMapper::KeyframeMapper(
 KeyframeMapper::~KeyframeMapper()
 {
   delete graph_solver_;
+}
+
+void KeyframeMapper::initParams()
+{
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
+  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
+    fixed_frame_ = "/odom";
+  if (!nh_private_.getParam ("pcd_map_res", pcd_map_res_))
+    pcd_map_res_ = 0.01;
+  if (!nh_private_.getParam ("octomap_res", octomap_res_))
+    octomap_res_ = 0.05;
+  if (!nh_private_.getParam ("octomap_with_color", octomap_with_color_))
+   octomap_with_color_ = true;
+  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
+    kf_dist_eps_  = 0.10;
+  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
+    kf_angle_eps_  = 10.0 * M_PI / 180.0;
+  if (!nh_private_.getParam ("max_range", max_range_))
+    max_range_  = 5.5;
+  if (!nh_private_.getParam ("max_stdev", max_stdev_))
+    max_stdev_  = 0.03;
+
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -237,7 +246,7 @@ void KeyframeMapper::publishKeyframeData(int i)
 
   // construct a cloud from the images
   PointCloudT cloud;
-  keyframe.constructDensePointCloud(cloud, 10, 0.15);
+  keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
   
   // cloud transformed to the fixed frame
   PointCloudT cloud_ff; 
@@ -497,7 +506,7 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;   
-    keyframe.constructDensePointCloud(cloud, 10, 0.15);
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
 
     PointCloudT cloud_tf;
     pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
@@ -545,7 +554,7 @@ void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud, 10, 0.15);
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
            
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
 
@@ -574,7 +583,7 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud, 10, 0.15);
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
 
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
     

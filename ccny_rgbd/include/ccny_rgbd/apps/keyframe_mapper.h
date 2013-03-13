@@ -80,6 +80,10 @@ class KeyframeMapper
      */
     virtual ~KeyframeMapper();
 
+    /** @brief Initializes all the parameters from the ROS param server
+     */
+    void initParams();
+
     /** @brief ROS callback to publish keyframes as point clouds
      * 
      * The argument should be a regular expression string matching the
@@ -179,6 +183,9 @@ class KeyframeMapper
     
     int queue_size_;  ///< Subscription queue size
     
+    double max_range_;  ///< Maximum threshold for  range (in the z-coordinate of the camera frame)
+    double max_stdev_;  ///< Maximum threshold for range (z-coordinate) standard deviation
+
     KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages

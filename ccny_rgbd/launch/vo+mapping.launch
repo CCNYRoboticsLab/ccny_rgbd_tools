@@ -10,10 +10,16 @@
 
   # ICPProbModel, ICP
   <arg name="reg_type" default="ICPProbModel"/> 
+  
+  # Range thresholds:
+  <arg name="max_range" default="5.5"/> 
+  <arg name="max_stdev" default="0.03"/> 
 
   <include file="$(find ccny_rgbd)/launch/visual_odometry.launch">
     <arg name="detector_type" value="$(arg detector_type)"/>
     <arg name="reg_type"      value="$(arg reg_type)"/>
+    <arg name="max_range"    value="$(arg max_range)"/>
+    <arg name="max_stdev"    value="$(arg max_stdev)"/>
   </include>
 
   #### KEYFRAME MAPPING ###################################
@@ -34,6 +40,9 @@
     <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
     <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->
     <param name="full_map_res" value="0.01"/>
+
+    <param name="max_range" value="$(arg max_range)"/>
+    <param name="max_stdev" value="$(arg max_stdev)"/>
 
   </node>
 
