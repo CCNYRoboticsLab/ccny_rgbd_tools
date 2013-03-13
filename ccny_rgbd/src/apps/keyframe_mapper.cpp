@@ -39,8 +39,7 @@ KeyframeMapper::KeyframeMapper(
   graph_solver_ = new KeyframeGraphSolverG2O(nh, nh_private);
   
   // **** params
-
-    
+  initParams();
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(

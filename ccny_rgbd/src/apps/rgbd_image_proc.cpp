@@ -71,8 +71,10 @@ RGBDImageProc::RGBDImageProc(
     "rgbd/depth", queue_size_);
   info_publisher_  = nh_.advertise<CameraInfoMsg>(
     "rgbd/info", queue_size_);
-  cloud_publisher_ = nh_.advertise<PointCloudT>(
-    "rgbd/cloud", queue_size_);
+
+  if(publish_cloud_)
+    cloud_publisher_ = nh_.advertise<PointCloudT>(
+          "rgbd/cloud", queue_size_);
 
   // dynamic reconfigure
   ProcConfigServer::CallbackType f = boost::bind(&RGBDImageProc::reconfigCallback, this, _1, _2);
@@ -331,6 +333,17 @@ void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
 {
   boost::mutex::scoped_lock(mutex_);
   publish_cloud_ = config.publish_cloud;
+  if(publish_cloud_)
+  {
+      cloud_publisher_ = nh_.advertise<PointCloudT>(
+            "rgbd/cloud", queue_size_);
+  }
+  else
+  {
+    // TODO: cloud_publisher_ptr_->unadvertise();
+  }
+
+
   scale_ = config.scale;
   size_in_ = cv::Size(0,0); // force a reinitialization on the next image callback
   ROS_INFO("Resampling scale set to %.2f", scale_);
