@@ -153,7 +153,6 @@ void VisualOdometry::initParams()
             "Model points", "Registration delay",
             "Total delay");
   }
-
 }
 
 void VisualOdometry::resetDetector()
