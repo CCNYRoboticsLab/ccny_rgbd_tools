@@ -38,8 +38,12 @@ KeyframeMapper::KeyframeMapper(
 
   graph_solver_ = new KeyframeGraphSolverG2O(nh, nh_private);
   
+  map_to_odom_.setIdentity();
+  
   // **** params
+
   initParams();
+  
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
@@ -50,6 +54,9 @@ KeyframeMapper::KeyframeMapper(
     "keyframe_associations", queue_size_);
   path_pub_ = nh_.advertise<PathMsg>( 
     "keyframe_path", queue_size_);
+
+  timer_ = nh_.createTimer(ros::Duration(0.050), &KeyframeMapper::timerCallback, this);
+    
   // **** services
 
   pub_keyframe_service_ = nh_.advertiseService(
@@ -99,8 +106,10 @@ void KeyframeMapper::initParams()
 {
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
-  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
-    fixed_frame_ = "/odom";
+  if (!nh_private_.getParam ("map_frame", map_frame_))
+    map_frame_ = "/map";
+  if (!nh_private_.getParam ("odom_frame", odom_frame_))
+    odom_frame_ = "/odom";
   if (!nh_private_.getParam ("pcd_map_res", pcd_map_res_))
     pcd_map_res_ = 0.01;
   if (!nh_private_.getParam ("octomap_res", octomap_res_))
@@ -123,31 +132,33 @@ void KeyframeMapper::RGBDCallback(
   const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
 {
-  tf::StampedTransform transform;
+  tf::StampedTransform odom_to_camera;
 
   const ros::Time& time = rgb_msg->header.stamp;
 
   try{
     tf_listener_.waitForTransform(
-     fixed_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.1));
+     odom_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.1));
     tf_listener_.lookupTransform(
-      fixed_frame_, rgb_msg->header.frame_id, time, transform);  
+      odom_frame_, rgb_msg->header.frame_id, time, odom_to_camera);  
   }
   catch(...)
   {
     return;
   }
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
-  bool result = processFrame(frame, transform);
+  bool result = processFrame(frame, odom_to_camera);
   if (result) publishKeyframeData(keyframes_.size() - 1);
 }
 
 bool KeyframeMapper::processFrame(
   const RGBDFrame& frame, 
-  const tf::Transform& pose)
+  const tf::Transform& odom_to_camera)
 {
   bool result; // if true, add new frame
 
+  tf::Transform map_to_camera = map_to_odom_ * odom_to_camera;
+  
   if(keyframes_.empty() || manual_add_)
   {
     result = true;
@@ -155,7 +166,7 @@ bool KeyframeMapper::processFrame(
   else
   {
     double dist, angle;
-    getTfDifference(pose, keyframes_.back().pose, dist, angle);
+    getTfDifference(map_to_camera, keyframes_.back().pose, dist, angle);
 
     if (dist > kf_dist_eps_ || angle > kf_angle_eps_)
       result = true;
@@ -165,18 +176,21 @@ bool KeyframeMapper::processFrame(
 
   if (result)
   {
-    addKeyframe(frame, pose);
+    addKeyframe(frame, odom_to_camera);
     publishPath();
   }
+
   return result;
 }
 
 void KeyframeMapper::addKeyframe(
   const RGBDFrame& frame, 
-  const tf::Transform& pose)
+  const tf::Transform& odom_to_camera)
 {
+  tf::Transform map_to_camera = map_to_odom_ * odom_to_camera;
+  
   RGBDKeyframe keyframe(frame);
-  keyframe.pose = pose;
+  keyframe.pose = map_to_camera;
   
   if (manual_add_)
   {
@@ -185,11 +199,40 @@ void KeyframeMapper::addKeyframe(
     keyframe.manually_added = true;
   }
   keyframes_.push_back(keyframe);
+  
+  //slam?
+  
+  if(1)
+  {
+    ros::WallTime start = ros::WallTime::now();
+    
+    int kf_idx = keyframes_.size() - 1;
+    int associations_found = graph_detector_.generateSingleKeyframeAssociations(
+      keyframes_, kf_idx, associations_);
+    
+    if (associations_found > 0)
+    {
+      graph_solver_->solve(keyframes_, associations_);
+      
+      const RGBDKeyframe& last_keyframe = keyframes_[keyframes_.size() - 1];
+      tf::Transform m2c_new = last_keyframe.pose;
+      map_to_odom_ = m2c_new * odom_to_camera.inverse();
+      
+      br_.sendTransform(
+        tf::StampedTransform(map_to_odom_, ros::Time::now(), map_frame_, odom_frame_));
+      
+      publishKeyframePoses();
+      publishKeyframeAssociations();
+    }
+    
+    double dur = getMsDuration(start);
+    printf("[%d] SLAM duration: %.2f [%d]\n", kf_idx, dur, (int)associations_.size());
+  }
 }
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
   PublishKeyframe::Request& request,
-  PublishKeyframe::Response& response)
+    PublishKeyframe::Response& response)
 {
   int kf_idx = request.id;
   
@@ -251,7 +294,7 @@ void KeyframeMapper::publishKeyframeData(int i)
   PointCloudT cloud_ff; 
   pcl::transformPointCloud(cloud, cloud_ff, eigenFromTf(keyframe.pose));
 
-  cloud_ff.header.frame_id = fixed_frame_;
+  cloud_ff.header.frame_id = map_frame_;
 
   keyframes_pub_.publish(cloud_ff);
 }
@@ -260,7 +303,7 @@ void KeyframeMapper::publishKeyframeAssociations()
 {
   visualization_msgs::Marker marker;
   marker.header.stamp = ros::Time::now();
-  marker.header.frame_id = fixed_frame_;
+  marker.header.frame_id = map_frame_;
   marker.id = 0;
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.action = visualization_msgs::Marker::ADD;
@@ -330,7 +373,7 @@ void KeyframeMapper::publishKeyframePose(int i)
 
   visualization_msgs::Marker marker;
   marker.header.stamp = ros::Time::now();
-  marker.header.frame_id = fixed_frame_;
+  marker.header.frame_id = map_frame_;
   marker.ns = "keyframe_poses";
   marker.id = i;
   marker.type = visualization_msgs::Marker::ARROW;
@@ -367,7 +410,7 @@ void KeyframeMapper::publishKeyframePose(int i)
 
   visualization_msgs::Marker marker_text;
   marker_text.header.stamp = ros::Time::now();
-  marker_text.header.frame_id = fixed_frame_;
+  marker_text.header.frame_id = map_frame_;
   marker_text.ns = "keyframe_indexes";
   marker_text.id = i;
   marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
@@ -497,7 +540,7 @@ bool KeyframeMapper::savePcdMap(const std::string& path)
 void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
 {
   PointCloudT::Ptr aggregate_cloud(new PointCloudT());
-  aggregate_cloud->header.frame_id = fixed_frame_;
+  aggregate_cloud->header.frame_id = map_frame_;
 
   // aggregate all frames into single cloud
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
@@ -509,7 +552,7 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
 
     PointCloudT cloud_tf;
     pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
-    cloud_tf.header.frame_id = fixed_frame_;
+    cloud_tf.header.frame_id = map_frame_;
 
     *aggregate_cloud += cloud_tf;
   }
@@ -616,9 +659,15 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
   }
 }
 
+void KeyframeMapper::timerCallback(const ros::TimerEvent& event)
+{
+  br_.sendTransform(
+    tf::StampedTransform(map_to_odom_, ros::Time::now(), map_frame_, odom_frame_));
+}
+
 void KeyframeMapper::publishPath()
 {
-  path_msg_.header.frame_id = fixed_frame_; 
+  path_msg_.header.frame_id = map_frame_; 
   path_msg_.poses.clear();
   path_msg_.poses.resize(keyframes_.size());
   
@@ -628,7 +677,7 @@ void KeyframeMapper::publishPath()
     geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
     
     pose_stamped.header.stamp = keyframe.header.stamp;
-    pose_stamped.header.frame_id = fixed_frame_;
+    pose_stamped.header.frame_id = map_frame_;
     tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
   }
 

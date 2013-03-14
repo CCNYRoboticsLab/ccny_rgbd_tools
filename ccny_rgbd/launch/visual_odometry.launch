@@ -13,7 +13,7 @@
   <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_FILE)/$(arg BAG_NAME)" /> # Without extension
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
-    output="screen">
+    output="log">
     
     # BENCHMARK I/O:
     <param name="save_times_to_file" value="true"/>       # Whether saving results to file
