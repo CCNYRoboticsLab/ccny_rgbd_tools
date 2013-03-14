@@ -345,7 +345,6 @@ void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
       cloud_publisher_.shutdown();
   }
 
-
   scale_ = config.scale;
   size_in_ = cv::Size(0,0); // force a reinitialization on the next image callback
   ROS_INFO("Resampling scale set to %.2f", scale_);
