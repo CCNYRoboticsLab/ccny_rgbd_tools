@@ -136,8 +136,23 @@ void VisualOdometry::initParams()
   if (!nh_private_.getParam("save_times_to_file", save_times_to_file_))
     save_times_to_file_ = false;
   if(save_times_to_file_)
+  {
     p_time_file_ = fopen(times_file_name_.c_str(), "w");
 
+    if (p_time_file_ == NULL)
+    {
+      printf("saveErrorToFile: Can't create %s\n", times_file_name_.c_str());
+      return;
+    }
+
+    fprintf(p_time_file_, "%s, %s, %s, %s, %s, %s, %s, %s\n",
+            "Frame count",
+            "RGBDFrame delay",
+            "All eatures", "Valid features",
+            "Feat extr. delay",
+            "Model points", "Registration delay",
+            "Total delay");
+  }
 
 }
 
@@ -395,8 +410,13 @@ int VisualOdometry::saveTimesToFile(int n_features, int n_valid_features, int n_
         printf("saveErrorToFile: Can't create %s\n", times_file_name_.c_str());
         return 0;
       }
-    // TODO
-    // fprintf(p_time_file_, "%f,%f,%f\n", stamp.toSec(), error_magnitude, angular_error);
+     fprintf(p_time_file_, "%d, %2.1f, %d, %d, %3.1f, %d, %4.1f, %4.1f\n",
+             frame_count_,
+             d_frame,
+             n_features, n_valid_features,
+             d_features,
+             n_model_pts, d_reg,
+             d_total);
   }
   else
     // Print to screen
