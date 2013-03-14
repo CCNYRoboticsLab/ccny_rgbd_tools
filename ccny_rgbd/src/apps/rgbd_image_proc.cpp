@@ -332,15 +332,17 @@ void RGBDImageProc::RGBDCallback(
 void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
 {
   boost::mutex::scoped_lock(mutex_);
-  publish_cloud_ = config.publish_cloud;
-  if(publish_cloud_)
+  bool old_publish_cloud = publish_cloud_;
+      publish_cloud_ = config.publish_cloud;
+  if(!old_publish_cloud && publish_cloud_)
   {
-      cloud_publisher_ = nh_.advertise<PointCloudT>(
-            "rgbd/cloud", queue_size_);
+    cloud_publisher_ = nh_.advertise<PointCloudT>(
+        "rgbd/cloud", queue_size_);
   }
   else
   {
-    // TODO: cloud_publisher_ptr_->unadvertise();
+    if(old_publish_cloud && !publish_cloud_)
+      cloud_publisher_.shutdown();
   }
 
 
