@@ -11,10 +11,11 @@ recorded in a bag file.
 
   <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
     <arg name="bag_name" value="$(arg bag_name)" />
+    <arg name="calib_path" value="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
     <arg name="publish_cloud" value="true" />
+    <arg name="manager_name" value="rgbd_manager"/>
   </include>
  
-
   #### URDF model ####################################################
 
   <include file="$(find city_flyer_rgbd_launch)/launch/proc/model.launch"/>

@@ -20,8 +20,8 @@
 
   <node pkg="ccny_rgbd" type="keyframe_mapper_node" name="keyframe_mapper_node" 
     output="screen">
-    <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
-    <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->
+    <param name="kf_dist_eps"  value="0.25"/> # 25 cm 
+    <param name="kf_angle_eps" value="0.35"/> # 20 deg
     <param name="full_map_res" value="0.01"/>
     <param name="max_range" value="7.0"/>
     <param name="max_stdev" value="0.05"/>
