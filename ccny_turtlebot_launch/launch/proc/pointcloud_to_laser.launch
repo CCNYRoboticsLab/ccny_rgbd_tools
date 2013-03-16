@@ -1,0 +1,54 @@
+<launch>
+  <arg name="manager_name" default="rgbd_manager"/>
+  
+  ### Virtual (fake) laser from pointcloud  ##############
+  <node pkg="nodelet" type="nodelet" name="videre_laser" args="load pointcloud_to_laserscan/CloudToScan $(arg manager_name)" output="screen" >
+    <param name="min_height" type="double" value="0.4" />
+    <param name="max_height" type="double" value="1.4" />
+    <param name="angle_min" type="double" value="-1.57079632679" />
+    <param name="angle_max" type="double" value="1.57079632679" />
+    <param name="angle_increment" type="double" value="0.00872664625997" />
+    <param name="scan_time" type="double" value="0.0333333333333" />
+    <param name="range_min" type="double" value="0.45" />
+    <param name="range_max" type="double" value="10.0" />
+
+    # Message passing:  
+    <param name="use_imu" type="bool" value="false"/>
+    <param name="use_pose" type="bool" value="true"/>
+    <param name="publish_tf" type="bool" value="true"/>
+    
+    # Frames:
+    #param name="output_frame_id" type="str" value="/camera_rgb_frame" / # Works as a laser oriented as the camera's view
+    <param name="fixed_frame" type="string" value="/odom"/>
+    <param name="base_frame" type="string" value="/base_link"/>
+    <param name="ortho_frame" type="string" value="/base_ortho"/>
+
+    # Remap topics:    
+    <remap from="cloud" to="/rgbd/cloud" />
+    # NOT NEED: remap from="cloud" to="cloud_throttled"
+    <remap from="scan" to="scan_virtual_from_cloud"/>
+  </node>
+
+<!--
+  <node pkg="laser_ortho_projector" type="laser_ortho_projector_node" name="laser_ortho_projector" 
+    output="screen">
+    <param name="use_imu" type="bool" value="false"/>
+    <param name="publish_tf" type="bool" value="true"/>
+    <param name="fixed_frame" type="string" value="odom"/>
+    
+    <remap from="scan" to="scan_virtual_from_cloud"/> # The input
+    <remap from="cloud_ortho" to="virtual_cloud_from_ortho_proj"/> # The output
+  </node>
+-->
+  
+<!--
+  <node pkg="tf" type="static_transform_publisher" name="world_to_base" 
+    args="1.1 0.3 1.0 0.1 -0.2 0.4 /world /base_link 40" /> 
+
+  <node pkg="tf" type="static_transform_publisher" name="base_to_laser" 
+    args="1.3 0.4 0 0 0 0 /base_link /laser 40" />     
+-->
+  
+</launch>
+
+

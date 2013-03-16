@@ -1,0 +1,9 @@
+<launch>
+
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find turtlebot_description)/robots/turtlebot_xtion_pro.urdf.xacro'" />
+  
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
+    <param name="publish_frequency" value="100.0"/>
+  </node>
+
+</launch>
