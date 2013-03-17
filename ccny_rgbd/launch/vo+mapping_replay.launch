@@ -1,0 +1,100 @@
+<!--
+Launches the entire CityFlyer system in offline mode, using raw data
+recorded in a bag file.
+-->
+
+<launch>
+
+  # arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/hallway_01.bag"/
+  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_dept_01.bag"/>
+
+  #### Data Playback #########################################################
+
+  <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
+    <arg name="bag_name" value="$(arg bag_name)" />
+    <arg name="calib_path" value="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+    <arg name="publish_cloud" value="true" />
+    <arg name="unwarp" default="true"/>
+    <arg name="scale" default="1.0"/> # 0.5 is half the size, etc.
+    <arg name="manager_name" value="rgbd_manager"/>
+  </include>
+ 
+
+   #### Data Processing #########################################################
+
+  #### VISUAL ODOMETRY ####################################
+
+  # ORB, SURF, GTF, STAR
+  <arg name="detector_type" default="GFT"/> 
+
+  # ICPProbModel, ICP
+  <arg name="reg_type" default="ICPProbModel"/> 
+  
+  <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
+    output="screen">
+   
+    #### frames and tf output #########################
+    
+    <param name="publish_tf"  value="true"/>
+    <param name="fixed_frame" value="/odom"/>
+    <param name="base_frame"  value="/camera_link"/>
+       
+    #### features #####################################
+    
+    #  ORB, SURF, or GFT (Good features to track)
+    <param name="feature/detector_type"       value="$(arg detector_type)"/> 
+    <param name="feature/smooth"              value="0"/>
+    <param name="feature/max_range"           value="10.0"/>
+    <param name="feature/max_stdev"           value="$0.15"/>
+    <param name="feature/show_keypoints"      value="true"/>
+    <param name="feature/publish_cloud"       value="true"/>
+    <param name="feature/publish_covariances" value="false"/>
+
+    #### features: GFT ################################
+
+    <param name="feature/GFT/n_features"   value = "400"/>
+    <param name="feature/GFT/min_distance" value = "2.0"/>
+
+    #### features: SURF ###############################
+  
+    <param name="feature/SURF/threshold" value = "400"/>
+
+    #### features: ORB ###############################
+  
+    <param name="feature/ORB/n_features" value = "300"/>
+    <param name="feature/ORB/threshold"  value = "31"/>
+
+    #### registration #################################
+
+    <param name="reg/reg_type"          value="$(arg reg_type)"/>
+    <param name="reg/motion_constraint" value="0"/>
+
+    #### registration: ICP Prob Model #################
+
+    <param name="reg/ICPProbModel/max_iterations"            value="10"/>
+    <param name="reg/ICPProbModel/max_model_size"            value="10000"/>
+    <param name="reg/ICPProbModel/n_nearest_neighbors"       value="4"/>
+    <param name="reg/ICPProbModel/max_assoc_dist_mah"        value="10.0"/>
+    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.15"/>
+    <param name="reg/ICPProbModel/publish_model_cloud"       value="true"/>
+    <param name="reg/ICPProbModel/publish_model_covariances" value="false"/>
+  </node>
+
+  #### KEYFRAME MAPPING ###################################
+
+  <node pkg="ccny_rgbd" type="keyframe_mapper_node" name="keyframe_mapper_node" 
+    output="screen">
+    
+    <param name="kf_dist_eps"  value="0.25"/> # 25 cm
+    <param name="kf_angle_eps" value="0.35"/> # 20 deg
+    <param name="full_map_res" value="0.01"/>
+
+    <param name="max_range" value="10"/>
+    <param name="max_stdev" value="0.15"/>
+
+  </node>
+
+</launch>
+
+
+

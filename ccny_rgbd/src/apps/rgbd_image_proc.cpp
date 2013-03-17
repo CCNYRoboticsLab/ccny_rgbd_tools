@@ -43,6 +43,8 @@ RGBDImageProc::RGBDImageProc(
     unwarp_ = true;
   if (!nh_private_.getParam("publish_cloud", publish_cloud_))
     publish_cloud_ = true;
+  if (!nh_private_.getParam("verbose", verbose_))
+    verbose_ = false;
   if (!nh_private_.getParam("calib_path", calib_path_))
   {
     std::string home_path = getenv("HOME");
@@ -319,9 +321,12 @@ void RGBDImageProc::RGBDCallback(
   
   double dur_total = dur_rectify + dur_reproject + dur_unwarp + dur_cloud + dur_allocate;
   
-  ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms", 
-    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
-    dur_total);
+  if(verbose_)
+  {
+    ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms",
+             dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
+             dur_total);
+  }
 
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);
@@ -344,7 +349,6 @@ void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
     if(old_publish_cloud && !publish_cloud_)
       cloud_publisher_.shutdown();
   }
-
 
   scale_ = config.scale;
   size_in_ = cv::Size(0,0); // force a reinitialization on the next image callback

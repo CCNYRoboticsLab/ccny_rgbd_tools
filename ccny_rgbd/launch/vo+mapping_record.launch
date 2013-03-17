@@ -1,0 +1,39 @@
+<!--
+Launches the entire CityTurtle system, and records the unprocessed
+data to a bag file.
+-->
+
+<launch>
+
+  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_dept_01.bag"/>
+
+  #### kLaunch the Kinect ###################################################################
+  <!-- Parameters -->
+  <arg name="manager_name" value="rgbd_manager"/>
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="publish_cloud" value="false"/>
+  <arg name="image_mode" value="2" />
+  <arg name="depth_mode" value="2"/>
+  # modes: 
+  #             2 (640x480 VGA 30Hz)
+  #             5 (320x240 QVGA 30Hz)
+  #             8 (160x120 QQVGA 30Hz)
+  
+  <!-- Driver nodelet -->      
+  <include file="$(find ccny_openni_launch)/launch/openni_record.launch">       
+    <arg name="manager_name" value="$(arg manager_name)" />
+    <arg name="calib_path"   value="$(arg calib_path)" />
+    <arg name="image_mode"   value="$(arg image_mode)" />
+    <arg name="depth_mode"   value="$(arg depth_mode)" />
+    <arg name="bag_name" value="$(arg bag_name)" />
+  </include>
+
+  #### Use image_view in order to see what we are recording  ##############
+  <node pkg="image_view" type="image_view" name="image_view_for_recording" output="screen">
+    <remap from="image"  to="/camera/rgb/image_raw"/>
+  </node>
+
+</launch>
+
+
+

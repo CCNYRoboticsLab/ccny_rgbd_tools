@@ -78,6 +78,7 @@ target_link_libraries(ccny_rgbd_registration
 
 rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_graph_detector.cpp
+  #src/mapping/keyframe_graph_detector_rt.cpp
   src/mapping/keyframe_graph_solver.cpp
   src/mapping/keyframe_graph_solver_g2o.cpp
 )

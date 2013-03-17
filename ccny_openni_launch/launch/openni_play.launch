@@ -5,9 +5,12 @@
 
   <!-- Parameters -->
   <arg name="bag_name" />
-  <arg name="manager_name" value="rgbd_manager"/>
+  <arg name="manager_name" default="rgbd_manager"/>
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="unwarp" default="true"/> 
+  <arg name="scale" default="1.0"/>
   <arg name="publish_cloud" default="false"/>
+  <arg name="verbose" default="false"/>  # for rgbd_image_proc messages
   
   <!-- Nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager"
@@ -22,7 +25,10 @@
   <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
      <arg name="manager_name"  value="$(arg manager_name)" />
      <arg name="calib_path"    value="$(arg calib_path)" />
+     <arg name="unwarp"        value="$(arg unwarp)" />
+     <arg name="scale"        value="$(arg scale)" />
      <arg name="publish_cloud" value="$(arg publish_cloud)" />
+     <arg name="verbose"       value="$(arg verbose)"/>  
   </include>
            
 </launch>
