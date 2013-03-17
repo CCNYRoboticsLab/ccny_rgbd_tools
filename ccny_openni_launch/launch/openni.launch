@@ -2,9 +2,11 @@
 <launch>
 
   <!-- Parameters -->
-  <arg name="manager_name" value="rgbd_manager"/>
+  <arg name="manager_name" default="rgbd_manager"/>
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_openni_default"/> 
+  <arg name="unwarp" default="true"/> 
   <arg name="publish_cloud" default="false"/>
+  <arg name="verbose" default="false"/>  # for rgbd_image_proc messages
   <arg name="image_mode" default="2" />
   <arg name="depth_mode" default="2"/>
   # modes: 
@@ -28,7 +30,9 @@
   <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
      <arg name="manager_name"  value="$(arg manager_name)" />
      <arg name="calib_path"    value="$(arg calib_path)" />
-     <arg name="publish_cloud" value="$(arg publish_cloud)" />
+     <arg name="unwarp"        value="$(arg unwarp)" />
+     <arg name="publish_cloud" value="$(arg publish_cloud)" />  
+     <arg name="verbose"       value="$(arg verbose)"/>  
   </include>
 
 </launch>

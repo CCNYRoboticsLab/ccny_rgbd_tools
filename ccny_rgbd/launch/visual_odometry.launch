@@ -8,17 +8,8 @@
   # ICPProbModel, ICP
   <arg name="reg_type" default="ICPProbModel"/> 
 
-  <arg name="PATH_TO_FILE" value="$(env HOME)/ros/bags/rgbd" />
-  <arg name="BAG_NAME" value="cityflyer" /> # Without extension
-  <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_FILE)/$(arg BAG_NAME)" /> # Without extension
-
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
-    output="log">
-    
-    # BENCHMARK I/O:
-    <param name="save_times_to_file" value="true"/>       # Whether saving results to file
-    <param name="times_file_name" value="$(arg FULL_BAG_NAME)-times-$(arg detector_type).csv"/>  
-    
+    output="screen">
     
     <!-- NOTE: if using data from OpenNI driver directly, (without 
     ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
@@ -78,4 +69,3 @@
   </node>
 
 </launch>
-

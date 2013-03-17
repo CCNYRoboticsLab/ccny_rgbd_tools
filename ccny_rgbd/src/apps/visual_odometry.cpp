@@ -418,6 +418,7 @@ int VisualOdometry::saveTimesToFile(int n_features, int n_valid_features, int n_
              d_total);
   }
   else
+  {
     // Print to screen
     printf("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s[%d] %4.1f TOTAL %4.1f\n",
       frame_count_,
@@ -425,6 +426,7 @@ int VisualOdometry::saveTimesToFile(int n_features, int n_valid_features, int n_
       detector_type_.c_str(), n_features, n_valid_features, d_features,
       reg_type_.c_str(), n_model_pts, d_reg,
       d_total);
+  }
 
   return 1;
 }
