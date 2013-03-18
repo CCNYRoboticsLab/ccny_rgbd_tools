@@ -50,22 +50,6 @@
     <param name="reg/ICPProbModel/publish_model_cloud"       value="true"/>
     <param name="reg/ICPProbModel/publish_model_covariances" value="false"/>
   </node>
-
-  #### AB filter ###########################################################
-  <node pkg="ab_filter" type="ab_filter_pose_node" 
-    name="ab_filter_pose" output="screen">
-
-    <remap from="mav/pose"      to="mav/rgbd_pose"/>
-    <remap from="mav/pose_f"    to="mav/rgbd_pose_f"/>
-    <remap from="/mav/twist_f"  to="/mav/rgbd_vel_f"/>
-
-    <remap from="mav/twist_unf"   to="mav/rgbd_vel_unf"/>
-    <remap from="mav/pose_unf"  to="mav/rgbd_pose_unf"/>
-
-    <param name="alpha"               value="0.8"/>
-    <param name="beta"                value="0.3"/>
-    <param name="publish_unfiltered"  value="true"/>
-  </node>
   
 <!--
   #### KEYFRAME MAPPING ###################################

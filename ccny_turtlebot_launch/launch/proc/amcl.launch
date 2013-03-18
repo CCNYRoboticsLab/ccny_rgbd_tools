@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="path_to_2D_maps" value="$(env HOME)/ros/Maps/2D/5th Floor Steinman Hall"/>
+  <arg name="path_to_2D_maps" value="$(env HOME)/ros/Maps/2D/5th_Floor_Steinman_Hall"/>
   <arg name="map_server_yaml_file" value="$(arg path_to_2D_maps)/5th_floor_5cm.yaml"/>
 
   #### Virtual laser from point cloud ########  

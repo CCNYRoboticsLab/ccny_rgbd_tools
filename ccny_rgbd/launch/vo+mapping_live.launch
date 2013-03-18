@@ -10,7 +10,7 @@
     # MODES: 2 (640x480 VGA 30Hz) |  5 (320x240 QVGA 30Hz) |  8 (160x120 QQVGA 30Hz)
     <arg name="image_mode"   value="2" /> 
     <arg name="depth_mode"   value="2" />
-    <arg name="publish_cloud" value="false"/>
+    <arg name="publish_cloud" value="true"/>
   </include>
 
   # ORB, SURF, GTF, STAR
