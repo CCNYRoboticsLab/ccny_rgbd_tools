@@ -9,7 +9,7 @@
   <arg name="reg_type" default="ICPProbModel"/> 
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
-    output="log">
+    output="screen">
     
     <!-- NOTE: if using data from OpenNI driver directly, (without 
     ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
@@ -69,4 +69,3 @@
   </node>
 
 </launch>
-

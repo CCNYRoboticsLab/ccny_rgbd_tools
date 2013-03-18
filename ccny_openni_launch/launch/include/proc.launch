@@ -4,6 +4,9 @@
   <arg name="manager_name" />
   <arg name="calib_path"   /> 
   <arg name="publish_cloud" default="false"/>
+  <arg name="scale" default="1.0"/>
+  <arg name="unwarp" default="true"/>
+  <arg name="verbose" default="false"/> 
   
   <!-- Debayered images -->
   <node pkg="nodelet" type="nodelet" name="debayer"
@@ -14,13 +17,14 @@
 
   <node pkg="nodelet" type="nodelet" name="rgbd_image_proc"
         args="load ccny_rgbd/RGBDImageProcNodelet $(arg manager_name)"
-        output="screen">
+        output="log">
     
     <!-- Resample by a factor of 2-->
-    <param name="scale" value="1.0"/>
-    <param name="unwarp" value="true"/>
+    <param name="scale" value="$(arg scale)"/>
+    <param name="unwarp" value="$(arg unwarp)"/>
     <param name="publish_cloud" value="$(arg publish_cloud)"/>
     <param name="calib_path" value="$(arg calib_path)"/>
+    <param name="verbose" value="$(arg verbose)"/>
 
   </node> 
 

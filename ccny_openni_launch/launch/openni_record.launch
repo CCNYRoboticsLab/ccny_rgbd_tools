@@ -3,7 +3,7 @@
 
   <!-- Parameters -->
   <arg name="bag_name" />
-  <arg name="manager_name" value="rgbd_manager"/>
+  <arg name="manager_name" default="rgbd_manager"/>
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   
   <arg name="image_mode" default="2" />
