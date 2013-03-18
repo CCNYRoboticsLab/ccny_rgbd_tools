@@ -211,6 +211,19 @@ void UncertaintyComparator::RGBDCallback(
     fs << "rms_qgmm_1" << rms_qgmm_1;
     fs << "rms_f_qgmm_1" << rms_f_qgmm_1;
     
+    // 2 ---------------------------------
+
+    double rms_qgmm_2, rms_f_qgmm_2;
+    w0_ = 4.0; w1_ = 1.0; w2_ = 0.0;
+    buildStDevQuadraticGMMImage();
+    saveUncertaintyImage(stdev_qgmm_img_, stdev_qgmm_filename);
+        
+    evaluateRMSError(rms_q, rms_qgmm_2);
+    evaluateRMSErrorFeatures(rms_f_q, rms_f_qgmm_2);
+    
+    fs << "rms_qgmm_2" << rms_qgmm_2;
+    fs << "rms_f_qgmm_2" << rms_f_qgmm_2;
+    
     // reset accumulator and counter images
     c_img_ = cv::Mat::zeros(480, 640, CV_16UC1);
     m_img_ = cv::Mat::zeros(480, 640, CV_64FC1);
