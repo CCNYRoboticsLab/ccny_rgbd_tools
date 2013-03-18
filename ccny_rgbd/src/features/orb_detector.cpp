@@ -49,12 +49,27 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
   cv::Mat mask(frame.depth_img.size(), CV_8UC1);
   frame.depth_img.convertTo(mask, CV_8U);
 
-  orb_detector_->detect(input_img, frame.keypoints, mask);
+  // adaptive thresholding
+  double cur_threshold = threshold_;
+  while (cur_threshold > 5.0)
+  {
+    frame.keypoints.clear();
 
+    orb_detector_.reset(
+      new cv::OrbFeatureDetector(n_features_, 1.2f, 8, cur_threshold, 0, 2, 0, 31));
+
+    orb_detector_->detect(input_img, frame.keypoints, mask); 
+    
+    if (frame.keypoints.size() >= n_features_/2) break;
+    
+    cur_threshold = cur_threshold * 0.5;
+    printf("redetecting, cur_threshold = %.1f\n", cur_threshold);
+  }
+    
   if(compute_descriptors_)
     orb_descriptor_.compute(
       input_img, frame.keypoints, frame.descriptors);
-  
+    
   mutex_.unlock();
 }
 
