@@ -1,0 +1,26 @@
+footprint: [[0.40, 0.0], [0.0, -0.40], [-0.40, 0.0], [0.0, 0.40]]
+#robot_radius: ir_of_robot
+inflation_radius: 0.60
+
+#observation_sources: laser_scan_sensor
+observation_sources: point_cloud_sensor
+
+laser_scan_sensor: {
+  sensor_frame: /laser, 
+  data_type: LaserScan, 
+  topic: /scan_virtual_middle_unf, 
+  marking: true, 
+  clearing: true,
+  min_obstacle_height: -0.2, 
+  max_obstacle_height: 0.2
+}
+
+point_cloud_sensor: {
+  sensor_frame: /base_ortho, 
+  data_type: PointCloud2, 
+  topic: /cloud_ortho, 
+  marking: true, 
+  clearing: true,
+  min_obstacle_height: -0.5, 
+  max_obstacle_height: 0.5
+}

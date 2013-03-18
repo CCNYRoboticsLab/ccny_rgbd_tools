@@ -1,0 +1,22 @@
+<launch>
+  <node pkg="scan_to_cloud_converter" type="scan_to_cloud_converter_node" name="scan_to_cloud_converter">
+    
+    <remap from="scan"  to="scan_virtual_middle"  />
+    <remap from="cloud" to="cloud_virtual_middle" />
+
+  </node>
+
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server" 
+    output="screen">
+    
+    <remap from="cloud_in" to="cloud_virtual_middle"/>
+    <remap from="map" to="map_octomap"/>
+
+    <param name="frame_id"      value="odom"/>
+    <param name="resolution"    value="0.10"/>
+    <param name="filter_ground" value="false"/>
+
+  </node>
+
+</launch>
+

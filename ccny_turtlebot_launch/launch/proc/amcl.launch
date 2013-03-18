@@ -1,0 +1,34 @@
+<launch>
+
+  <arg name="path_to_2D_maps" value="$(env HOME)/ros/Maps/2D/5th Floor Steinman Hall"/>
+  <arg name="map_server_yaml_file" value="$(arg path_to_2D_maps)/5th_floor_5cm.yaml"/>
+
+  #### Virtual laser from point cloud ########  
+  <include file="$(find ccny_turtlebot_launch)/launch/proc/pointcloud_to_laser.launch" />
+  
+  #### Map server ###############
+  <node name="map_server" pkg="map_server" type="map_server" 
+    output="screen"
+    args="$(arg map_server_yaml_file)"/>
+
+  #### AMCL Localization  ###############
+  <node name="amcl" pkg="amcl" type="amcl" 
+    output="screen">
+
+    <remap from="scan" to="scan_virtual_from_cloud"/>
+
+    <param name="base_frame_id" value="base_ortho"/>  ### TODO??
+    <param name="odom_model_type" value="omni"/>
+    <param name="odom_alpha1" value="0.2"/>
+    <param name="odom_alpha2" value="0.2"/>
+    <param name="odom_alpha3" value="0.2"/>
+    <param name="odom_alpha4" value="0.2"/>
+    <param name="laser_max_beams" value="50"/>
+    <param name="laser_model_type" value="beam"/>
+
+    <param name="min_particles" value="50"/>
+    <param name="max_particles" value="1000"/>
+
+  </node>
+
+</launch>
