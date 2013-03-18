@@ -5,7 +5,7 @@ data to a bag file.
 
 <launch>
 
-  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_dept_01.bag"/>
+  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_apt_02.bag"/>
 
   #### kLaunch the Kinect ###################################################################
   <!-- Parameters -->

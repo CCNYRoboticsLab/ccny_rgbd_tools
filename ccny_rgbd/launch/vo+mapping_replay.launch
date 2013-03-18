@@ -6,7 +6,7 @@ recorded in a bag file.
 <launch>
 
   # arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/hallway_01.bag"/
-  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_dept_01.bag"/>
+  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_apt_01.bag"/>
 
   #### Data Playback #########################################################
 
