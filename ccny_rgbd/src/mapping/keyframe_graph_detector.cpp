@@ -52,7 +52,9 @@ KeyframeGraphDetector::KeyframeGraphDetector(
     max_corresp_dist_eucl_ = 0.03;
   if (!nh_private_.getParam ("graph/n_keypoints", n_keypoints_))
     n_keypoints_ = 200;
-    
+  if (!nh_private_.getParam ("graph/init_surf_threshold", init_surf_threshold_))
+    init_surf_threshold_ = 400;  
+
   // derived params
   max_corresp_dist_eucl_sq_ = max_corresp_dist_eucl_ * max_corresp_dist_eucl_;
 }
@@ -66,19 +68,57 @@ int KeyframeGraphDetector::generateSingleKeyframeAssociations(
   KeyframeVector& keyframes,
   int kf_idx,
   KeyframeAssociationVector& associations)
-{  
-  // calcualte neccessary features
-  prepareKeyframeForRANSAC(keyframes, kf_idx);  
+{   
+  int n_assocuations_found;
   
-  // add VO association from previous to this
+  ros::WallTime start= ros::WallTime::now();
+  
+  // calcualte neccessary features
+  ros::WallTime start_features = ros::WallTime::now();
+  prepareKeyframeForRANSAC(keyframes, kf_idx);  
+  double dur_features = getMsDuration(start_features);
+  
+  // add VO association from previous to this 
   if (kf_idx > 0)
     addVisualOdometryAssociation(kf_idx-1, kf_idx, keyframes, associations);
   
-  printf("tree assoc...\n");
-  int result = singleKeyframeTreeAssociations(keyframes, kf_idx, associations);
-  printf("tree assoc done\n");
+  // *****************************
+  //int result = singleKeyframeTreeAssociations(keyframes, kf_idx, associations);
 
-  return result;
+  // get all the geometric candidates
+  BoolVector candidate_keyframe_mask;
+  int n_candidates = getGeometricCandidateKeyframes(keyframes, kf_idx, candidate_keyframe_mask);
+    
+  double dur_train, dur_assoc;
+  if (n_candidates > 0)
+  {
+    // train matcher from features in the geometric candidates
+    ros::WallTime start_train = ros::WallTime::now();  
+    cv::FlannBasedMatcher matcher;
+    trainMatcherFromIndices(keyframes, candidate_keyframe_mask, matcher);
+    dur_train = getMsDuration(start_train);
+      
+    // find the aassociations from the matcher, and add them to the associations vector  
+    ros::WallTime start_assoc = ros::WallTime::now();  
+    n_assocuations_found = findMatcherAssociations(keyframes, kf_idx, matcher, associations);
+    dur_assoc = getMsDuration(start_assoc);
+  }
+  else
+  {
+    n_assocuations_found = 0;
+    dur_train = 0.0;
+    dur_train = 0.0;
+  }
+      
+  double dur_total = getMsDuration(start);   
+
+  printf("---------------------------------------------------------------------\n"); 
+  printf("SURF: %.1f Train[%d] %.1f Assoc[%d] %.1f\n", 
+    dur_features, 
+    dur_train, n_candidates,
+    n_assocuations_found, dur_assoc);
+  
+  return n_assocuations_found;
 }
 
 void KeyframeGraphDetector::generateKeyframeAssociations(
@@ -98,7 +138,7 @@ void KeyframeGraphDetector::generateKeyframeAssociations(
 void KeyframeGraphDetector::prepareKeyframesForRANSAC(
   KeyframeVector& keyframes)
 { 
-  ROS_INFO("preparing SURF features for RANSAC associations...\n");  
+  //ROS_INFO("preparing SURF features for RANSAC associations...\n");  
 
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); kf_idx++)
     prepareKeyframeForRANSAC(keyframes, kf_idx);
@@ -109,12 +149,11 @@ void KeyframeGraphDetector::prepareKeyframeForRANSAC(
   int kf_idx)
 {
   // parameters
-  double init_surf_threshold = 400.0;
   double min_surf_threshold = 25;
   
   RGBDKeyframe& keyframe = keyframes[kf_idx];
   cv::SurfDescriptorExtractor extractor;
-  double surf_threshold = init_surf_threshold;
+  double surf_threshold = init_surf_threshold_;
 
   while (surf_threshold >= min_surf_threshold)
   {
@@ -122,9 +161,9 @@ void KeyframeGraphDetector::prepareKeyframeForRANSAC(
     keyframe.keypoints.clear();
     detector.detect(keyframe.rgb_img, keyframe.keypoints);
 
-    ROS_INFO("[KF %d of %d] %d SURF keypoints detected (threshold: %.1f)", 
-      (int)kf_idx, (int)keyframes.size(), 
-      (int)keyframe.keypoints.size(), surf_threshold); 
+    //ROS_INFO("[KF %d of %d] %d SURF keypoints detected (threshold: %.1f)", 
+    //  (int)kf_idx, (int)keyframes.size(), 
+     // (int)keyframe.keypoints.size(), surf_threshold); 
 
     if ((int)keyframe.keypoints.size() < n_keypoints_)
       surf_threshold /= 2.0;
@@ -443,7 +482,7 @@ void KeyframeGraphDetector::trainMatcherFromIndices(
 { 
   // **** go through all candidates, and build a flann matcher
   
-  printf("Building aggregate feature vector...\n"); 
+  //printf("Building aggregate feature vector...\n"); 
   std::vector<cv::Mat> descriptors_vector;
   
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
@@ -460,7 +499,7 @@ void KeyframeGraphDetector::trainMatcherFromIndices(
   }
   matcher.add(descriptors_vector);
 
-  printf("Training feature matcher...\n");
+  //printf("Training feature matcher...\n");
   matcher.train();
 }
 
@@ -468,7 +507,7 @@ void KeyframeGraphDetector::trainMatcher(
   const KeyframeVector& keyframes,
   cv::FlannBasedMatcher& matcher)
 {
-  printf("Building aggregate feature vector...\n"); 
+  //printf("Building aggregate feature vector...\n"); 
   std::vector<cv::Mat> descriptors_vector;
   
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
@@ -478,7 +517,7 @@ void KeyframeGraphDetector::trainMatcher(
   }
   matcher.add(descriptors_vector);
 
-  printf("Training feature matcher...\n");
+  //printf("Training feature matcher...\n");
   matcher.train();
 }
 
@@ -493,7 +532,7 @@ int KeyframeGraphDetector::findMatcherAssociations(
   
   int associations_found = 0;
   
-  printf("[KF %d of %d]:\n", (int)kf_idx, (int)keyframes.size());
+  //printf("[KF %d of %d]:\n", (int)kf_idx, (int)keyframes.size());
   const RGBDFrame& keyframe = keyframes[kf_idx];
 
   // find k nearest matches for each feature in the keyframe
@@ -552,6 +591,7 @@ int KeyframeGraphDetector::findMatcherAssociations(
 
   // **** test top X candidates using RANSAC
 
+  printf(" - ransac results: ");
   for (unsigned int rc = 0; rc < ransac_candidates.size(); ++rc)
   {
     unsigned int kf_idx_a = kf_idx;
@@ -585,7 +625,7 @@ int KeyframeGraphDetector::findMatcherAssociations(
         cv::imwrite(ransac_results_path_ + "/" + ss1.str() + ".png", img_matches);
       }
 
-      printf(" - RANSAC %d -> %d: PASS\n", kf_idx_a, kf_idx_b);
+      printf("o");
 
       // create an association object
       KeyframeAssociation association;
@@ -599,12 +639,14 @@ int KeyframeGraphDetector::findMatcherAssociations(
       associations_found++;
     }
     else  
-      printf(" - RANSAC %d -> %d: FAIL\n", kf_idx_a, kf_idx_b);
+      printf("x");
   }
+  printf("\n");
   
   return associations_found;
 }
 
+/*
 int KeyframeGraphDetector::singleKeyframeTreeAssociations(
   KeyframeVector& keyframes,
   int kf_idx,
@@ -624,7 +666,7 @@ int KeyframeGraphDetector::singleKeyframeTreeAssociations(
   // find the aassociations from the matcher, and add them to the associations vector  
   int assocuations_found = findMatcherAssociations(keyframes, kf_idx, matcher, associations);
   return assocuations_found;
-}
+}*/
 
 void KeyframeGraphDetector::treeAssociations(
   KeyframeVector& keyframes,
