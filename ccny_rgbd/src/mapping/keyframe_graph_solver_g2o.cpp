@@ -50,7 +50,7 @@ void KeyframeGraphSolverG2O::solve(
   KeyframeAssociationVector& associations)
 {  
   // add vertices
-  printf("Adding vertices...\n");
+  //printf("Adding vertices...\n");
   for (unsigned int kf_idx = 0; kf_idx < keyframes.size(); ++kf_idx)
   {
     const RGBDKeyframe& keyframe = keyframes[kf_idx];
@@ -58,7 +58,7 @@ void KeyframeGraphSolverG2O::solve(
   }
   
   // add edges
-  printf("Adding edges...\n");
+  //printf("Adding edges...\n");
   for (unsigned int as_idx = 0; as_idx < associations.size(); ++as_idx)
   {
     const KeyframeAssociation& association = associations[as_idx];
@@ -84,11 +84,11 @@ void KeyframeGraphSolverG2O::solve(
   }
   
   // run the optimization
-  printf("Optimizing...\n");
+  //printf("Optimizing...\n");
   optimizeGraph();
   
   // update the poses
-  printf("Updating poses...\n");
+  //printf("Updating poses...\n");
   updatePoses(keyframes);
 }
 

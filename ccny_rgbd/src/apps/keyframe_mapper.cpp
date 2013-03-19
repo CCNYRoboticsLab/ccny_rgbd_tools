@@ -204,15 +204,19 @@ void KeyframeMapper::addKeyframe(
   
   if(1)
   {
-    ros::WallTime start = ros::WallTime::now();
+    ros::WallTime start_graph = ros::WallTime::now();
     
     int kf_idx = keyframes_.size() - 1;
     int associations_found = graph_detector_.generateSingleKeyframeAssociations(
       keyframes_, kf_idx, associations_);
-    
+    double dur_graph = getMsDuration(start_graph);
+        
+    double dur_solve, dur_pub;
     if (associations_found > 0)
     {
+      ros::WallTime start_solve= ros::WallTime::now();
       graph_solver_->solve(keyframes_, associations_);
+      dur_solve = getMsDuration(start_solve);
       
       const RGBDKeyframe& last_keyframe = keyframes_[keyframes_.size() - 1];
       tf::Transform m2c_new = last_keyframe.pose;
@@ -221,12 +225,22 @@ void KeyframeMapper::addKeyframe(
       br_.sendTransform(
         tf::StampedTransform(map_to_odom_, ros::Time::now(), map_frame_, odom_frame_));
       
+      ros::WallTime start_pub = ros::WallTime::now();
       publishKeyframePoses();
       publishKeyframeAssociations();
+      dur_pub = getMsDuration(start_pub); 
+    }
+    else
+    {
+      dur_solve = 0.0;
+      dur_pub = 0.0;
     }
     
-    double dur = getMsDuration(start);
-    printf("[%d] SLAM duration: %.2f [%d]\n", kf_idx, dur, (int)associations_.size());
+    double dur_total = getMsDuration(start_graph); 
+    
+    printf("[%d] GRAPH: %.1f SOLVE %.1f PUB %1f TOTAL %.1f\n", 
+      kf_idx, dur_graph, dur_solve, dur_pub, dur_total);
+    printf("---------------------------------------------------------------------\n"); 
   }
 }
 

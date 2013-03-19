@@ -119,6 +119,13 @@ class KeyframeGraphDetector
     /** @brief Number of desired keypoints to detect in each image
      */
     int n_keypoints_;
+    
+    
+    /** @brief Initial SURF trheshold for detection. If not enough features 
+     * are detected, threhosld is halved and detection is carried out again 
+     * until threhsold drops too low or enough features are detected.
+     */
+    double init_surf_threshold_;
 
     /** @brief Goes through all the keyframes and fills out the
      * required information (features, distributinos, etc)
@@ -166,10 +173,12 @@ class KeyframeGraphDetector
       KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);   
     
+    /*
     int singleKeyframeTreeAssociations(
       KeyframeVector& keyframes,
       int kf_idx,
       KeyframeAssociationVector& associations);
+      */
     
     /** @brief Creates associations based on visual matching between
      * keyframes through a RANSAC test (for manually added frames)
