@@ -20,7 +20,7 @@
     # Frames:
     #param name="output_frame_id" type="str" value="/camera_rgb_frame" / # Works as a laser oriented as the camera's view
     <param name="fixed_frame" type="string" value="/odom"/>
-    <param name="base_frame" type="string" value="/base_link"/>
+    <param name="base_frame" type="string" value="/base_footprint"/>
     <param name="ortho_frame" type="string" value="/base_ortho"/>
 
     # Remap topics:    

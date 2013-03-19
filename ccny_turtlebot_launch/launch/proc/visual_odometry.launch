@@ -11,13 +11,13 @@
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
     output="screen">
    
-    <remap from="pose"         to="mav/rgbd_pose"/>
+    #remap from="pose"         to="mav/rgbd_pose" /##
     
     #### frames and tf output #########################
     
     <param name="publish_tf"  value="true"/>
-    <param name="fixed_frame" value="/odom_vo"/>
-    <param name="base_frame"  value="/base_link"/>
+    <param name="fixed_frame" value="/odom"/>
+    <param name="base_frame"  value="/base_footprint"/>
        
     #### features #####################################
     

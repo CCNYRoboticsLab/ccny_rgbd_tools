@@ -7,6 +7,9 @@ hight level.
 <launch>
   <arg name="publish_cloud" value="true"/>
 
+  #### Virtual laser from point cloud ########  
+  <include file="$(find ccny_turtlebot_launch)/launch/proc/pointcloud_to_laser.launch" />
+  
   #### kinect ###################################################################
   <include file="$(find ccny_turtlebot_launch)/launch/live/openni.launch">
        <arg name="publish_cloud"   value="$(arg publish_cloud)" />
