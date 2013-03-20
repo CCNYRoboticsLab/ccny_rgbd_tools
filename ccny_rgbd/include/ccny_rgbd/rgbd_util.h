@@ -293,7 +293,6 @@ void depthImageFloatTo16bit(
  */
 void cv3x3FromEigen(const Matrix3f& emat, cv::Mat& Q);
 
-
 /** @brief converts a pair of virtual rgb/depth images from a point cloud projection
  *
  * @param cloud the input point cloud model (map)
