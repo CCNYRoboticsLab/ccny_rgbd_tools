@@ -1,8 +1,0 @@
-<launch>
-
-  <arg name="bag_name"/>
-
-  <node pkg="rosbag" type="record" name="record" output="screen"
-    args="-a -O $(env HOME)/ros/bags/$(arg bag_name)"/>
-
-</launch>
