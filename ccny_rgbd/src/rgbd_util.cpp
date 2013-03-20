@@ -140,6 +140,31 @@ void removeInvalidDistributions(
   }
 }
 
+void removeInvalidDistributions(
+  const Vector3fVector& means,
+  const Matrix3fVector& covariances,
+  const cv::Mat& descriptors,
+  const BoolVector& valid,
+  Vector3fVector& means_f,
+  Matrix3fVector& covariances_f,
+  MatVector& descriptors_f)
+{
+  unsigned int size = valid.size(); 
+  for(unsigned int i = 0; i < size; ++i)
+  {
+    if (valid[i])
+    {
+      const Vector3f& mean = means[i];
+      const Matrix3f& cov  = covariances[i];
+      const cv::Mat& desc  = descriptors.rowRange(i, i+1);
+
+      means_f.push_back(mean);
+      covariances_f.push_back(cov);
+      descriptors_f.push_back(desc);
+    }
+  }
+}
+
 void tfToEigenRt(
   const tf::Transform& tf, 
   Matrix3f& R, 

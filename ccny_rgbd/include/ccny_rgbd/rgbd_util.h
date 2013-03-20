@@ -186,6 +186,15 @@ void removeInvalidDistributions(
   Vector3fVector& means_f,
   Matrix3fVector& covariances_f);
 
+void removeInvalidDistributions(
+  const Vector3fVector& means,
+  const Matrix3fVector& covariances,
+  const cv::Mat& descriptors,
+  const BoolVector& valid,
+  Vector3fVector& means_f,
+  Matrix3fVector& covariances_f,
+  MatVector& descriptors_f);
+
 /** @brief Transforms a vector of means
  * 
  * @param means vector of 3x1 matrices of positions (3D means)

@@ -41,6 +41,7 @@
 #include "ccny_rgbd/registration/motion_estimation.h"
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 #include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
+#include "ccny_rgbd/registration/motion_estimation_ransac.h"
 
 #include "ccny_rgbd/FeatureDetectorConfig.h"
 #include "ccny_rgbd/GftDetectorConfig.h"

@@ -120,6 +120,8 @@ void VisualOdometry::initParams()
     motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
   else if (reg_type_ == "ICPProbModel")
     motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
+  else if (reg_type_ == "RANSAC")
+    motion_estimation_ = new MotionEstimationRansac(nh_, nh_private_);
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 }

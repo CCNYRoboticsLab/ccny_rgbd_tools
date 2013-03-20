@@ -6,10 +6,10 @@
   #### VISUAL ODOMETRY ####################################
 
   # ORB, SURF, GTF, STAR
-  <arg name="detector_type" default="GFT"/> 
+  <arg name="detector_type" default="ORB"/> 
 
   # ICPProbModel, ICP
-  <arg name="reg_type" default="ICPProbModel"/> 
+  <arg name="reg_type" default="RANSAC"/> 
 
   <include file="$(find ccny_rgbd)/launch/visual_odometry.launch">
     <arg name="detector_type" value="$(arg detector_type)"/>

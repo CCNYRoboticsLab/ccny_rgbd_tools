@@ -26,7 +26,7 @@
 namespace ccny_rgbd {
 
 FeatureDetector::FeatureDetector():
-  compute_descriptors_(false)
+  compute_descriptors_(true)
 {
 
 }

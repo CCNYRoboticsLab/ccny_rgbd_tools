@@ -3,10 +3,10 @@
 <launch>
 
   # ORB, SURF, GTF, STAR
-  <arg name="detector_type" default="GFT"/> 
+  <arg name="detector_type" default="ORB"/> 
 
   # ICPProbModel, ICP
-  <arg name="reg_type" default="ICPProbModel"/> 
+  <arg name="reg_type" default="RANSAC"/> 
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
     output="screen">
@@ -49,7 +49,7 @@
 
     #### features: ORB ###############################
   
-    <param name="feature/ORB/n_features" value = "100"/>
+    <param name="feature/ORB/n_features" value = "400"/>
     <param name="feature/ORB/threshold"  value = "31"/>
 
     #### registration #################################
@@ -60,7 +60,7 @@
     #### registration: ICP Prob Model #################
 
     <param name="reg/ICPProbModel/max_iterations"            value="10"/>
-    <param name="reg/ICPProbModel/max_model_size"            value="10000"/>
+    <param name="reg/ICPProbModel/max_model_size"            value="1000"/>
     <param name="reg/ICPProbModel/n_nearest_neighbors"       value="4"/>
     <param name="reg/ICPProbModel/max_assoc_dist_mah"        value="10.0"/>
     <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.15"/>
