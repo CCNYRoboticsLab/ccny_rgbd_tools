@@ -41,6 +41,8 @@ RGBDImageProc::RGBDImageProc(
     scale_ = 1.0;
   if (!nh_private_.getParam("unwarp", unwarp_))
     unwarp_ = true;
+  if (!nh_private_.getParam("verbose", verbose_))
+    verbose_ = false;
   if (!nh_private_.getParam("publish_cloud", publish_cloud_))
     publish_cloud_ = true;
   if (!nh_private_.getParam("calib_path", calib_path_))
@@ -318,11 +320,12 @@ void RGBDImageProc::RGBDCallback(
   // **** print diagnostics
   
   double dur_total = dur_rectify + dur_reproject + dur_unwarp + dur_cloud + dur_allocate;
-  
-  ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms", 
-    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
-    dur_total);
-
+  if(verbose_)
+  {
+    ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms",
+             dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
+             dur_total);
+  }
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);
   depth_publisher_.publish(depth_out_msg);
