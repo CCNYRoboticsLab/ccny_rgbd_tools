@@ -3,18 +3,20 @@
 namespace ccny_rgbd {
 
 Logger::Logger(ros::NodeHandle nh, ros::NodeHandle nh_private):
-  nh_(nh), nh_private_(nh_private), id_(0)
+  nh_(nh), nh_private_(nh_private)
 {
   // **** parameters
 
-  if (!nh_private_.getParam ("sequence", sequence_))
-    sequence_ = "rgbd";
   if (!nh_private_.getParam ("n_rgb", n_rgb_))
     n_rgb_ = 1000;
   if (!nh_private_.getParam ("n_depth", n_depth_))
     n_depth_ = 1000;
   if (!nh_private_.getParam ("n_ir", n_ir_))
     n_ir_ = 0;
+  if (!nh_private_.getParam ("id", id_))
+    id_ = 0;
+  if (!nh_private_.getParam ("path", path_))
+    ROS_ERROR("path param needs to be set");
 
   // ensures directories exist
   prepareDirectories();
@@ -58,20 +60,17 @@ Logger::~Logger()
 }
 
 void Logger::prepareDirectories()
-{
-  std::stringstream ss_seq_path;
-   
-  ss_seq_path <<   getenv("HOME") << "/ros/images/" << sequence_;
-  boost::filesystem::create_directory(ss_seq_path.str());
-  ROS_INFO("Creating directory: %s", ss_seq_path.str().c_str());
+{  
+  boost::filesystem::create_directory(path_);
+  ROS_INFO("Creating directory: %s", path_.c_str());
   
-  ss_rgb_path_   << ss_seq_path.str() << "/rgb/";
-  ss_depth_path_ << ss_seq_path.str() << "/depth/";
-  ss_ir_path_    << ss_seq_path.str() << "/ir/";
+  rgb_path_   = path_ + "/rgb/";
+  depth_path_ = path_ + "/depth/";
+  ir_path_    = path_ + "/ir/";
 
-  boost::filesystem::create_directory(ss_rgb_path_.str()); 
-  boost::filesystem::create_directory(ss_depth_path_.str()); 
-  boost::filesystem::create_directory(ss_ir_path_.str()); 
+  boost::filesystem::create_directory(rgb_path_); 
+  boost::filesystem::create_directory(depth_path_); 
+  boost::filesystem::create_directory(ir_path_); 
 }
 
 void Logger::IRCallback(
@@ -87,7 +86,7 @@ void Logger::IRCallback(
     cv::Mat ir;
     ir_ptr->image.convertTo(ir, CV_8UC1);
     
-    cv::imwrite(ss_ir_path_.str() + ss_filename.str(), ir);
+    cv::imwrite(ir_path_+ ss_filename.str(), ir);
         
     ROS_INFO("IR %s saved", ss_filename.str().c_str());
 
@@ -109,7 +108,7 @@ void Logger::RGBDCallback(
   if (id_< n_rgb_)
   {
     cv_bridge::CvImagePtr rgb_ptr = cv_bridge::toCvCopy(rgb_msg);
-    cv::imwrite(ss_rgb_path_.str() + ss_filename.str(), rgb_ptr->image);
+    cv::imwrite(rgb_path_ + ss_filename.str(), rgb_ptr->image);
     ROS_INFO("RGB %s saved", ss_filename.str().c_str());
 
     cv::imshow("RGB", rgb_ptr->image);
@@ -118,7 +117,7 @@ void Logger::RGBDCallback(
   if (id_< n_depth_)
   {
     cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depth_msg);
-    cv::imwrite(ss_depth_path_.str() + ss_filename.str(), depth_ptr->image);
+    cv::imwrite(depth_path_ + ss_filename.str(), depth_ptr->image);
     ROS_INFO("Depth %s saved", ss_filename.str().c_str());
     
     cv::imshow("Depth", depth_ptr->image);

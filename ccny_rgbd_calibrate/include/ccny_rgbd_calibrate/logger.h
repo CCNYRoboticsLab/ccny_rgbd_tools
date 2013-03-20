@@ -33,12 +33,12 @@ class Logger
        
     ImageSubFilter      sub_depth_;
     ImageSubFilter      sub_rgb_;
-    ros::Subscriber      sub_ir_;
+    ros::Subscriber     sub_ir_;
     CameraInfoSubFilter sub_info_;
 
-    std::stringstream ss_rgb_path_;
-    std::stringstream ss_depth_path_;
-    std::stringstream ss_ir_path_;
+    std::string rgb_path_;
+    std::string depth_path_;
+    std::string ir_path_;
 
     int id_;
 
@@ -46,8 +46,9 @@ class Logger
     int n_rgb_;
     int n_depth_;
     int n_ir_;
-    std::string sequence_;
-
+   
+    std::string path_;
+    
     void prepareDirectories();
 };
 

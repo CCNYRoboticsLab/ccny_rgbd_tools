@@ -1,1 +1,46 @@
-rosrun ccny_rgbd avg_logger_node _n_depth:=300 _id:=1 
+Calibrate RGB camera intrinsics
+=====================================
+
+1.Run calibration
+
+rosrun camera_calibration cameracalibrator.py --size 9x6 --square 0.100 image:=/camera/rgb/image_color camera:=/camera/rgb
+
+2. Open ~/.ros/camera_info/rgb.yaml
+
+3. Add %YAML:1.0 to top line
+
+4. Add dt: d to all camera matrices, like this:
+
+camera_matrix:
+  rows: 3
+  cols: 3
+  dt: d
+  data: [271.03215934492, 0, 160.306788443714, 0, 270.281513819706, 122.475950903498, 0, 0, 1]
+
+
+Calibrate IR camera intrinsics
+=====================================
+
+1. Cover with IR projector with a piece of paper
+
+2. Run calibration
+
+rosrun camera_calibration cameracalibrator.py --size 9x6 --square 0.042 image:=/camera/ir/image_raw camera:=/camera/ir
+
+3. add changes as in RGB .yaml
+
+
+Calibrate extrinsics [??????]
+=====================================
+
+1. Record data
+
+rosrun ccny_rgbd_calibrate logger_node _path:=/home/idyanov/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_asus_qvga _n_ir:=1 _id:=0
+
+rosrun ccny_rgbd_calibrate logger_node _path:=/home/idyanov/ros/ccny-ros-pkg/ccny_rgbd_data/images/ext_calib_asus_qvga _n_rgb:=1 _id:=0
+
+
+Calibrate depth warp
+=====================================
+
+roslaunch ccny_rgbd_calibrate warp+unc_logging.launch 
