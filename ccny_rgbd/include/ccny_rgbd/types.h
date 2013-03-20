@@ -94,6 +94,10 @@ typedef message_filters::sync_policies::ApproximateTime<ImageMsg, ImageMsg, Came
 typedef message_filters::Synchronizer<RGBDSyncPolicy3> RGBDSynchronizer3;
 typedef message_filters::Synchronizer<RGBDSyncPolicy4> RGBDSynchronizer4;
 
+// mono_vo
+typedef message_filters::sync_policies::ApproximateTime<ImageMsg, CameraInfoMsg> SyncPolicyMonoVO;
+typedef message_filters::Synchronizer<SyncPolicyMonoVO> SynchronizerMonoVO;
+
 // ROS dynamic reconfigure
 
 typedef dynamic_reconfigure::Server<FeatureDetectorConfig> FeatureDetectorConfigServer;
