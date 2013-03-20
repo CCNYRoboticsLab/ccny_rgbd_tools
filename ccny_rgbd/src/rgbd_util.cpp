@@ -45,7 +45,7 @@ tf::Transform tfFromEigen(const Eigen::Matrix4f& E)
             E(1,0),E(1,1),E(1,2),
             E(2,0),E(2,1),E(2,2));
   tf::Transform ret;
-  ret.setOrigin(tf::Vector3(trans(0,3),trans(1,3),trans(2,3)));
+  ret.setOrigin(tf::Vector3(E(0,3),E(1,3),E(2,3)));
   ret.setBasis(btm);
   return ret;
 }
