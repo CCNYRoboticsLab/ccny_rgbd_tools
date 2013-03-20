@@ -5,6 +5,9 @@
 
   <!-- Parameters -->
   <arg name="bag_name" />
+  <arg name="bag_rate"  default="1.0" />
+  <arg name="bag_start" default="0.0" />
+  
   <arg name="manager_name" default="rgbd_manager"/>
   <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   <arg name="unwarp" default="true"/> 
@@ -19,6 +22,8 @@
   <!-- RGBD playback -->
   <include file="$(find ccny_openni_launch)/launch/include/play.launch">       
      <arg name="bag_name" value="$(arg bag_name)" />
+     <arg name="bag_rate" value="$(arg bag_rate)" />
+     <arg name="bag_start" value="$(arg bag_start)" />
   </include>
   
   <!-- RGBD processing -->
