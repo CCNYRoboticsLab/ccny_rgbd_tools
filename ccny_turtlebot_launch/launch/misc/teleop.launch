@@ -1,0 +1,21 @@
+<!--
+Launches the ROS joystick driver and the joystick teleop
+intefrace. The interface assumes a PS3 controller. If you want
+connect over bluetooth, you should execute start_ps3.sh in the
+quad_joy_teleop/launch folder prior to launching this.
+-->
+
+<launch>
+
+  <node pkg="joy" type="joy_node" name="joy_node" output="screen">
+    <param name="dev" value="/dev/input/js0"/>
+  </node>
+
+<!-- TODO: control it with some remote controller
+  <node pkg="quad_joy_teleop" type="quad_joy_teleop_node" name="quad_joy_teleop_node" 
+    output="screen">
+-->
+
+  </node>
+
+</launch>

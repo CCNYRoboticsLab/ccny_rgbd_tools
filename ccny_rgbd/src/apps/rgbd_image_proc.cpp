@@ -338,7 +338,7 @@ void RGBDImageProc::reconfigCallback(ProcConfig& config, uint32_t level)
 {
   boost::mutex::scoped_lock(mutex_);
   bool old_publish_cloud = publish_cloud_;
-      publish_cloud_ = config.publish_cloud;
+  publish_cloud_ = config.publish_cloud;
   if(!old_publish_cloud && publish_cloud_)
   {
     cloud_publisher_ = nh_.advertise<PointCloudT>(
