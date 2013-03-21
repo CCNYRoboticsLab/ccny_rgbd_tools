@@ -590,7 +590,6 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     keyframe.constructDensePointCloud(*cloud_unf, max_range_, max_stdev_);
   
     // perform filtering for max z
-
     pcl::transformPointCloud(*cloud_unf, *cloud_unf, eigenFromTf(keyframe.pose));
     PointCloudT cloud;
     pcl::PassThrough<PointT> pass;
