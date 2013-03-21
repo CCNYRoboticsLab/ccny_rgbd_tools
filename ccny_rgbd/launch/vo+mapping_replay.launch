@@ -5,7 +5,7 @@ recorded in a bag file.
 
 <launch>
 
-  # arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/hallway_01.bag"/
+  # arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_apt_01.bag"/
   
   <arg name="PATH_TO_BAG" default="$(env HOME)/ros/bags/rgbd" />
   <arg name="BAG_NAME" default="carlos_apt_01" />  # Bag name only (Without extension)
@@ -18,8 +18,9 @@ recorded in a bag file.
     <arg name="bag_name" value="$(arg FULL_BAG_NAME).bag" />
     <arg name="calib_path" value="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
     <arg name="publish_cloud" value="true" />
-    <arg name="unwarp" default="true"/>
-    <arg name="scale" default="1.0"/> # 0.5 is half the size, etc.
+    <arg name="unwarp"        value="true"/>
+    <arg name="scale"         value="1.0"/> # 0.5 is half the size, etc.
+    <arg name="verbose"       value="true"/> 
     <arg name="manager_name" value="rgbd_manager"/>
   </include>
  
@@ -53,8 +54,8 @@ recorded in a bag file.
     #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/detector_type"       value="$(arg detector_type)"/> 
     <param name="feature/smooth"              value="0"/>
-    <param name="feature/max_range"           value="7.0"/>
-    <param name="feature/max_stdev"           value="$0.15"/>
+    <param name="feature/max_range"           value="5.0"/>
+    <param name="feature/max_stdev"           value="$0.03"/>
     <param name="feature/show_keypoints"      value="true"/>
     <param name="feature/publish_cloud"       value="true"/>
     <param name="feature/publish_covariances" value="false"/>
@@ -98,8 +99,9 @@ recorded in a bag file.
     <param name="kf_angle_eps" value="0.35"/> # 20 deg
     <param name="full_map_res" value="0.01"/>
 
-    <param name="max_range" value="10"/>
-    <param name="max_stdev" value="0.15"/>
+    <param name="max_range" value="7"/>
+    <param name="max_stdev" value="0.10"/>
+    <param name="max_map_z" value="2.0"/>  # In order to cut the ceiling in the PCD and octomap models
 
   </node>
 

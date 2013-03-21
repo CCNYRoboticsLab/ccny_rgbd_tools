@@ -29,6 +29,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/filters/passthrough.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
@@ -261,6 +262,7 @@ class KeyframeMapper
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
     bool octomap_with_color_; ///< whetehr to save Octomaps with color info      
+    double max_map_z_;   ///< maximum z (in fixed frame) when exporting maps.
           
     // state vars
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested

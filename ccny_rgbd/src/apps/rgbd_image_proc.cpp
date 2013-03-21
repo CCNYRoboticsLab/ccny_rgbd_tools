@@ -41,6 +41,8 @@ RGBDImageProc::RGBDImageProc(
     scale_ = 1.0;
   if (!nh_private_.getParam("unwarp", unwarp_))
     unwarp_ = true;
+  if (!nh_private_.getParam("verbose", verbose_))
+    verbose_ = false;
   if (!nh_private_.getParam("publish_cloud", publish_cloud_))
     publish_cloud_ = true;
   if (!nh_private_.getParam("verbose", verbose_))
@@ -327,7 +329,6 @@ void RGBDImageProc::RGBDCallback(
              dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
              dur_total);
   }
-
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);
   depth_publisher_.publish(depth_out_msg);

@@ -3,10 +3,10 @@
          
   <arg name="manager_name" />
   <arg name="calib_path"   /> 
-  <arg name="publish_cloud" default="false"/>
-  <arg name="scale" default="1.0"/>
-  <arg name="unwarp" default="true"/>
-  <arg name="verbose" default="false"/> 
+  <arg name="publish_cloud" />
+  <arg name="scale" />
+  <arg name="unwarp" />
+  <arg name="verbose" /> 
   
   <!-- Debayered images -->
   <node pkg="nodelet" type="nodelet" name="debayer"
