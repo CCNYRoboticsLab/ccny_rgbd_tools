@@ -122,6 +122,7 @@ class DepthCalibrator
       std::vector<double>& coeff);
 
     void testDepthCalibration();
+    double getRMSError(const cv::Mat& g, const cv::Mat& m);
 };
 
 } //namespace ccny_rgbd
