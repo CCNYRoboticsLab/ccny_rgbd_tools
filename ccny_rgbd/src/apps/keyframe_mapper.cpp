@@ -115,7 +115,8 @@ void KeyframeMapper::initParams()
     max_range_  = 5.5;
   if (!nh_private_.getParam ("max_stdev", max_stdev_))
     max_stdev_  = 0.03;
-
+  if (!nh_private_.getParam ("max_map_z", max_map_z_))
+    max_map_z_  = std::numeric_limits<double>::infinity();
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -514,10 +515,13 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
     *aggregate_cloud += cloud_tf;
   }
 
-  // filter cloud
+  // filter cloud using voxel grid, and for max z
   pcl::VoxelGrid<PointT> vgf;
   vgf.setInputCloud(aggregate_cloud);
   vgf.setLeafSize(pcd_map_res_, pcd_map_res_, pcd_map_res_);
+  vgf.setFilterFieldName("z");
+  vgf.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
+
   vgf.filter(map_cloud);
 }
 
@@ -581,9 +585,18 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     ROS_INFO("Processing keyframe %u", kf_idx);
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
-    PointCloudT cloud;
-    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+    // construct the cloud
+    PointCloudT::Ptr cloud_unf(new PointCloudT());
+    keyframe.constructDensePointCloud(*cloud_unf, max_range_, max_stdev_);
 
+    // perform filtering for max z
+    PointCloudT cloud;
+    pcl::PassThrough<PointT> pass;
+    pass.setInputCloud (cloud_unf);
+    pass.setFilterFieldName ("z");
+    pass.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
+    pass.filter(cloud);
+    
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
     
     // build octomap cloud from pcl cloud
