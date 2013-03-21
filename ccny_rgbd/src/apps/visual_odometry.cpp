@@ -148,7 +148,7 @@ void VisualOdometry::initParams()
     fprintf(p_time_file_, "%s, %s, %s, %s, %s, %s, %s, %s\n",
             "Frame count",
             "RGBDFrame delay",
-            "All eatures", "Valid features",
+            "All features", "Valid features",
             "Feat extr. delay",
             "Model points", "Registration delay",
             "Total delay");
