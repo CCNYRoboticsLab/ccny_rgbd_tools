@@ -6,12 +6,16 @@ recorded in a bag file.
 <launch>
 
   # arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/hallway_01.bag"/
-  <arg name="bag_name" value="$(env HOME)/ros/bags/rgbd/carlos_apt_01.bag"/>
+  
+  <arg name="PATH_TO_BAG" default="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" default="carlos_apt_01" />  # Bag name only (Without extension)
+  <arg name="FULL_BAG_NAME" default="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
+
 
   #### Data Playback #########################################################
 
   <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
-    <arg name="bag_name" value="$(arg bag_name)" />
+    <arg name="bag_name" value="$(arg FULL_BAG_NAME).bag" />
     <arg name="calib_path" value="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
     <arg name="publish_cloud" value="true" />
     <arg name="unwarp" default="true"/>
@@ -38,13 +42,18 @@ recorded in a bag file.
     <param name="publish_tf"  value="true"/>
     <param name="fixed_frame" value="/odom"/>
     <param name="base_frame"  value="/camera_link"/>
+    
+    # BENCHMARK I/O:
+    <param name="save_times_to_file" value="false"/>       # Whether saving results to file
+    <param name="times_file_name" value="$(arg FULL_BAG_NAME)-times-$(arg detector_type).csv"/>  
+    
        
     #### features #####################################
     
     #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/detector_type"       value="$(arg detector_type)"/> 
     <param name="feature/smooth"              value="0"/>
-    <param name="feature/max_range"           value="10.0"/>
+    <param name="feature/max_range"           value="7.0"/>
     <param name="feature/max_stdev"           value="$0.15"/>
     <param name="feature/show_keypoints"      value="true"/>
     <param name="feature/publish_cloud"       value="true"/>
@@ -52,8 +61,8 @@ recorded in a bag file.
 
     #### features: GFT ################################
 
-    <param name="feature/GFT/n_features"   value = "400"/>
-    <param name="feature/GFT/min_distance" value = "2.0"/>
+    <param name="feature/GFT/n_features"   value = "300"/>
+    <param name="feature/GFT/min_distance" value = "1.0"/>
 
     #### features: SURF ###############################
   

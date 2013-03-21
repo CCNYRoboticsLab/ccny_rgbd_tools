@@ -3,11 +3,6 @@
 
   <param name="use_sim_time" value="true"/>
     
-  <arg name="path"     default="$(env HOME)/ros/bags/rgbd" />
-  <arg name="bag_name" default="rgbd.bag" />
-  <arg name="play_delay" default="2.0" />
-  <arg name="rate" default="1" />
-
   <!-- Parameters -->
   <arg name="bag_name" />
   <arg name="bag_rate"  default="1.0" />
