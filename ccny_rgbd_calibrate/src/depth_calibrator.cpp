@@ -35,8 +35,8 @@ DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   calib_extr_filename_ = path_ + "/extr.yml";
   calib_warp_filename_ = path_ + "/warp.yml";
 
-  depth_test_filename_ = test_path_ + "/depth/0000.png";
-  rgb_test_filename_   = test_path_ + "/rgb/0000.png";
+  depth_test_filename_ = test_path_ + "/depth/0052.png";
+  rgb_test_filename_   = test_path_ + "/rgb/0052.png";
 
   // perform calibration and test it
   calibrate();
@@ -572,13 +572,31 @@ void DepthCalibrator::testDepthCalibration()
   rgb_img   = cv::imread(rgb_test_filename_);
   depth_img = cv::imread(depth_test_filename_, -1);
   
-  // rectify
+  // ********************************************************
+
+  cv::Mat depth_img_g, depth_img_m;
+  processTrainingImagePair(
+    9999, rgb_img, depth_img, depth_img_g, depth_img_m);
+ 
+  // measured and unwarped
+  cv::Mat depth_img_mu = depth_img_m.clone();
+  unwarpDepthImage(depth_img_mu, coeff0, coeff1, coeff2, fit_mode_);
+  
+  double rms_warped   = getRMSError(depth_img_g, depth_img_m);
+  double rms_unwarped = getRMSError(depth_img_g, depth_img_mu);
+
+  printf("RMS (warped): %f RMS (unwarped): %f\n", 
+    rms_warped, rms_unwarped);
+  
+  // ********************************************************
+ 
+   // rectify
   start = ros::WallTime::now();
   cv::Mat rgb_img_rect, depth_img_rect; 
   cv::remap(rgb_img,   rgb_img_rect,   map_rgb_1_, map_rgb_2_, cv::INTER_LINEAR);
   cv::remap(depth_img, depth_img_rect, map_ir_1_,  map_ir_2_,  cv::INTER_NEAREST);
   ROS_INFO("Rectifying: %.1fms", getMsDuration(start));
- 
+  
   // reproject warped
   cv::Mat depth_img_warped = depth_img_rect.clone(); 
   cv::Mat depth_img_rect_warped_reg;
@@ -620,4 +638,31 @@ void DepthCalibrator::testDepthCalibration()
   ROS_INFO("Done.");
 }
 
+double DepthCalibrator::getRMSError(
+  const cv::Mat& g,
+  const cv::Mat& m)
+{
+  double s_error = 0.0;
+  int count = 0;
+
+  for (int v = 0; v < g.cols; ++v)
+  for (int u = 0; u < g.rows; ++u)
+  {
+    uint8_t z_g = g.at<uint8_t>(v, u); 
+    uint8_t z_m = m.at<uint8_t>(v, u); 
+    
+    if (z_g != 0 && z_m != 0)
+    {
+      count++;
+      s_error += (z_g - z_m) * (z_g - z_m);
+    }
+  }
+  
+  double ms_error = s_error / (double) count;
+  double rms_error = sqrt(ms_error);
+  
+  return rms_error;
+}
+  
 } //namespace ccny_rgbd
+

@@ -20,11 +20,13 @@ include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
+link_libraries(${OPENCV_LIBRARIES})
 
 # gsl
-pkg_check_modules(GSL REQUIRED gsl)
-include_directories(${GSL_INCLUDE_DIRS})
-link_directories(${GSL_LIBRARY_DIRS})
+pkg_check_modules(gsl REQUIRED)
+include_directories(${gsl_INCLUDE_DIRS})
+link_directories(${gsl_LIBRARY_DIRS})
+link_libraries(${gsl_LIBRARIES})
 
 # boost
 rosbuild_add_boost_directories()
@@ -32,20 +34,27 @@ rosbuild_add_boost_directories()
 rosbuild_add_library(ccny_rgbd_calibrate
   src/calib_util.cpp)
 
-#rosbuild_add_executable(depth_calibrator_node 
-#  src/depth_calibrator_node.cpp
-#  src/depth_calibrator.cpp)
-  
-#target_link_libraries (depth_calibrator_node 
-#  ${OPENCV_LIBRARIES}
-#  ${GSL_LIBRARIES}
-#  ccny_rgbd_util
-#  ccny_rgbd_calibrate
-#  ccny_rgbd_proc_util
-#  boost_signals 
-#  boost_system
-#  boost_filesystem)
+message('GSL: ${gsl_INCLUDE_DIRS}')
+message('GSL: ${gsl_LIBRARIES}')
 
+#################################
+# depth calibrator
+
+rosbuild_add_executable(depth_calibrator_node 
+  src/depth_calibrator_node.cpp
+  src/depth_calibrator.cpp)
+  
+target_link_libraries (depth_calibrator_node 
+  ${OPENCV_LIBRARIES}
+  ${GSL_LIBRARIES}
+  ccny_rgbd_util
+  ccny_rgbd_calibrate
+  ccny_rgbd_proc_util
+  boost_signals 
+  boost_system
+  boost_filesystem)
+
+######################
 rosbuild_add_executable(extrinsics_calibrator_node 
   src/extrinsics_calibrator_node.cpp
   src/extrinsics_calibrator.cpp)
@@ -75,38 +84,38 @@ target_link_libraries (logger_node
   ${OPENCV_LIBRARIES}
 )
 
-rosbuild_add_executable(avg_logger_node 
-  src/avg_logger_node.cpp
-  src/avg_logger.cpp)
+#rosbuild_add_executable(avg_logger_node 
+#  src/avg_logger_node.cpp
+#  src/avg_logger.cpp)
 
-target_link_libraries (avg_logger_node
-  ccny_rgbd_structures 
-  ccny_rgbd_util
-  boost_signals 
-  boost_system
-  boost_filesystem
-  ${OPENCV_LIBRARIES}
-)
+#target_link_libraries (avg_logger_node
+#  ccny_rgbd_structures 
+#  ccny_rgbd_util
+#  boost_signals 
+#  boost_system
+#  boost_filesystem
+#  ${OPENCV_LIBRARIES}
+#)
 
 ################################################################
 # Build comparator app
 ################################################################
 
-rosbuild_add_executable(uncertainty_comparator_node 
-  src/uncertainty_comparator_node.cpp
-  src/uncertainty_comparator.cpp)
+#rosbuild_add_executable(uncertainty_comparator_node 
+#  src/uncertainty_comparator_node.cpp
+#  src/uncertainty_comparator.cpp)
   
-target_link_libraries (uncertainty_comparator_node
-  ccny_rgbd_util
-  boost_signals 
-  boost_system
-  boost_filesystem
-  ${OPENCV_LIBRARIES})
-  
+#target_link_libraries (uncertainty_comparator_node
+#  ccny_rgbd_util
+#  boost_signals 
+#  boost_system
+#  boost_filesystem
+#  ${OPENCV_LIBRARIES})
+#  
 rosbuild_add_compile_flags(ccny_rgbd_calibrate '-Wno-unknown-pragmas')  
 rosbuild_add_compile_flags(extrinsics_calibrator_node  '-Wno-unknown-pragmas')  
       
-rosbuild_add_compile_flags(uncertainty_comparator_node '-Wno-unknown-pragmas')  
-rosbuild_add_compile_flags(avg_logger_node '-Wno-unknown-pragmas')  
+#rosbuild_add_compile_flags(uncertainty_comparator_node '-Wno-unknown-pragmas')  
+#rosbuild_add_compile_flags(avg_logger_node '-Wno-unknown-pragmas')  
 rosbuild_add_compile_flags(logger_node '-Wno-unknown-pragmas')  
       
