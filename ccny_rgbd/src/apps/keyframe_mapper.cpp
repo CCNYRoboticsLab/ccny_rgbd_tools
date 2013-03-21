@@ -116,7 +116,7 @@ void KeyframeMapper::initParams()
   if (!nh_private_.getParam ("max_stdev", max_stdev_))
     max_stdev_  = 0.03;
   if (!nh_private_.getParam ("max_map_z", max_map_z_))
-    max_map_z_  = std::numeric_limits<double>::infinity();
+    max_map_z_ = std::numeric_limits<double>::infinity();
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -584,18 +584,21 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
   {
     ROS_INFO("Processing keyframe %u", kf_idx);
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    
+       
     // construct the cloud
     PointCloudT::Ptr cloud_unf(new PointCloudT());
     keyframe.constructDensePointCloud(*cloud_unf, max_range_, max_stdev_);
-
+  
     // perform filtering for max z
+
+    pcl::transformPointCloud(*cloud_unf, *cloud_unf, eigenFromTf(keyframe.pose));
     PointCloudT cloud;
     pcl::PassThrough<PointT> pass;
     pass.setInputCloud (cloud_unf);
     pass.setFilterFieldName ("z");
     pass.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
     pass.filter(cloud);
+    pcl::transformPointCloud(cloud, cloud, eigenFromTf(keyframe.pose.inverse()));
     
     octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
     
