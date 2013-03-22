@@ -5,6 +5,8 @@ namespace ccny_rgbd {
 DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private):
   nh_(nh), nh_private_(nh_private)
 {  
+  std::string test_name;
+  
   // parameters
   if (!nh_private_.getParam ("fit_window_size", fit_window_size_))
     fit_window_size_ = 10;
@@ -18,7 +20,9 @@ DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
     ROS_ERROR("square_size needs to be set");
   if (!nh_private_.getParam ("path", path_))
     ROS_ERROR("path param needs to be set");
-
+  if (!nh_private_.getParam ("testname", test_name))
+    test_name = "";
+  
   patternsize_ = cv::Size(n_cols_, n_rows_);
  
   // directories
@@ -35,12 +39,15 @@ DepthCalibrator::DepthCalibrator(ros::NodeHandle nh, ros::NodeHandle nh_private)
   calib_extr_filename_ = path_ + "/extr.yml";
   calib_warp_filename_ = path_ + "/warp.yml";
 
-  depth_test_filename_ = test_path_ + "/depth/0052.png";
-  rgb_test_filename_   = test_path_ + "/rgb/0052.png";
+  depth_test_filename_ = test_path_ + "/depth/" + test_name + ".png";
+  rgb_test_filename_   = test_path_ + "/rgb/" + test_name + ".png";
 
+  printf("test_name : %s\n", rgb_test_filename_.c_str());
+  
   // perform calibration and test it
-  calibrate();
-  testDepthCalibration();
+  //calibrate();
+  //testDepthCalibration();
+  testDepthCalibrationRMS();
 }
 
 DepthCalibrator::~DepthCalibrator()
@@ -74,6 +81,38 @@ bool DepthCalibrator::loadCalibrationImagePair(
   // construct the rgb and ir file paths
   std::string rgb_filename   = train_path_ + "/rgb/"   + ss_filename.str();
   std::string depth_filename = train_path_ + "/depth/" + ss_filename.str();
+
+  // check that both exist
+  if (!boost::filesystem::exists(rgb_filename))
+  {
+    ROS_INFO("%s does not exist", rgb_filename.c_str());
+    return false;
+  }
+  if (!boost::filesystem::exists(depth_filename))
+  {
+    ROS_INFO("%s does not exist", depth_filename.c_str());
+    return false;
+  }
+  
+  // load the images 
+  rgb_img   = cv::imread(rgb_filename);
+  depth_img = cv::imread(depth_filename, -1);
+
+  return true;
+}
+
+bool DepthCalibrator::loadTestImagePair(
+  int idx,
+  cv::Mat& rgb_img,
+  cv::Mat& depth_img)
+{
+  // construct the filename image index
+  std::stringstream ss_filename;
+  ss_filename << std::setw(4) << std::setfill('0') << idx << ".png";
+
+  // construct the rgb and ir file paths
+  std::string rgb_filename   = test_path_ + "/rgb/"   + ss_filename.str();
+  std::string depth_filename = test_path_ + "/depth/" + ss_filename.str();
 
   // check that both exist
   if (!boost::filesystem::exists(rgb_filename))
@@ -185,6 +224,7 @@ void DepthCalibrator::calibrate()
     }
     
     // process the images
+    ROS_INFO("Processing image pair [ %.4d ]", img_idx);
     cv::Mat depth_img_g, depth_img_m;
     bool result = processTrainingImagePair(
       img_idx, rgb_img, depth_img, depth_img_g, depth_img_m);
@@ -294,9 +334,7 @@ bool DepthCalibrator::processTrainingImagePair(
   const cv::Mat& depth_img,
   cv::Mat& depth_img_g,
   cv::Mat& depth_img_m)
-{
-  ROS_INFO("Processing image pair [ %.4d ]", img_idx);
-  
+{ 
   depth_img_g = cv::Mat::zeros(depth_img.size(), CV_16UC1);
   depth_img_m = cv::Mat::zeros(depth_img.size(), CV_16UC1);
   
@@ -547,6 +585,71 @@ void DepthCalibrator::quadraticFit(
   gsl_vector_free(c);
 }
 
+void DepthCalibrator::testDepthCalibrationRMS()
+{                
+  loadCameraParams();
+  buildRectMaps();
+  build3dCornerVector();
+  
+  // load warp calibration
+  cv::FileStorage fs_coeff(calib_warp_filename_,  cv::FileStorage::READ);
+  cv::Mat coeff0, coeff1, coeff2;
+  fs_coeff["c0"] >> coeff0;
+  fs_coeff["c1"] >> coeff1;
+  fs_coeff["c2"] >> coeff2;
+ 
+  printf("----------------------------------\n");
+  printf("RMS (warped): \t RMS (unwarped):  \n"); 
+  printf("----------------------------------\n"); 
+  
+  int img_idx = 0;
+  while(true)
+  {
+    cv::Mat rgb_img, depth_img;
+    bool load_result = loadTestImagePair(img_idx, rgb_img, depth_img);  
+    if (!load_result)
+    {
+      ROS_INFO("Images %d not found. Assuming end of test sequence", img_idx);
+      break;
+    }
+       
+    cv::Mat depth_img_g, depth_img_m;
+    bool process_result = processTrainingImagePair(
+      img_idx, rgb_img, depth_img, depth_img_g, depth_img_m);
+  
+    if (process_result)
+    { 
+      // measured and unwarped
+      cv::Mat depth_img_mu = depth_img_m.clone();
+      unwarpDepthImage(depth_img_mu, coeff0, coeff1, coeff2, fit_mode_);
+      
+      double rms_warped   = getRMSError(depth_img_g, depth_img_m);
+      double rms_unwarped = getRMSError(depth_img_g, depth_img_mu);
+
+      // calculate average z
+      double sum = 0.0;
+      uint count = 0;
+      for (int v = 0; v < depth_img_mu.rows; ++v)
+      for (int u = 0; u < depth_img_mu.cols; ++u)
+      {
+        uint16_t z = depth_img_mu.at<uint16_t>(v, u); 
+        
+        if (z != 0)
+        {
+          sum += z; 
+          count++;
+        }
+      }
+      double av_z = sum / (double)count;
+      
+      printf("%d, %.2f, %.2f, %.2f\n", img_idx, av_z, rms_warped, rms_unwarped);
+    }
+    
+    // increment image index
+    img_idx++;
+  }
+}
+
 void DepthCalibrator::testDepthCalibration()
 {
   // load calirbration matrices
@@ -570,25 +673,7 @@ void DepthCalibrator::testDepthCalibration()
   ROS_INFO("Loading test images...");
   cv::Mat depth_img, rgb_img;
   rgb_img   = cv::imread(rgb_test_filename_);
-  depth_img = cv::imread(depth_test_filename_, -1);
-  
-  // ********************************************************
-
-  cv::Mat depth_img_g, depth_img_m;
-  processTrainingImagePair(
-    9999, rgb_img, depth_img, depth_img_g, depth_img_m);
- 
-  // measured and unwarped
-  cv::Mat depth_img_mu = depth_img_m.clone();
-  unwarpDepthImage(depth_img_mu, coeff0, coeff1, coeff2, fit_mode_);
-  
-  double rms_warped   = getRMSError(depth_img_g, depth_img_m);
-  double rms_unwarped = getRMSError(depth_img_g, depth_img_mu);
-
-  printf("RMS (warped): %f RMS (unwarped): %f\n", 
-    rms_warped, rms_unwarped);
-  
-  // ********************************************************
+  depth_img = cv::imread(depth_test_filename_, -1); 
  
    // rectify
   start = ros::WallTime::now();
@@ -645,21 +730,25 @@ double DepthCalibrator::getRMSError(
   double s_error = 0.0;
   int count = 0;
 
-  for (int v = 0; v < g.cols; ++v)
-  for (int u = 0; u < g.rows; ++u)
+  for (int v = 0; v < g.rows; ++v)
+  for (int u = 0; u < g.cols; ++u)
   {
-    uint8_t z_g = g.at<uint8_t>(v, u); 
-    uint8_t z_m = m.at<uint8_t>(v, u); 
+    uint16_t z_g = g.at<uint16_t>(v, u); 
+    uint16_t z_m = m.at<uint16_t>(v, u); 
     
     if (z_g != 0 && z_m != 0)
     {
+      double e = z_g - z_m;
       count++;
-      s_error += (z_g - z_m) * (z_g - z_m);
+      s_error += e * e;
+      //printf("[%d %d %d] ", (int)z_g, (int)z_m, (int)e);
     }
   }
-  
+  //printf("\n");
   double ms_error = s_error / (double) count;
   double rms_error = sqrt(ms_error);
+  
+  //printf("cont: %d\n", count);
   
   return rms_error;
 }

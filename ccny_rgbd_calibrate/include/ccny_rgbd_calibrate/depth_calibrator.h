@@ -82,12 +82,18 @@ class DepthCalibrator
     bool loadCameraParams();
 
     void testExtrinsicCalibration();
+    void testDepthCalibrationRMS();
     
     bool loadCalibrationImagePair(
       int idx,
       cv::Mat& rgb_img,
       cv::Mat& depth_img);
     
+    bool loadTestImagePair(
+      int idx,
+      cv::Mat& rgb_img,
+      cv::Mat& depth_img);
+        
     void testPlaneDetection(
       const cv::Mat& rgb_img_rect,
       const cv::Mat& depth_img_rect,

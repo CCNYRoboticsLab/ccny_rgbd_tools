@@ -11,6 +11,7 @@
     <param name="n_rows"      value="6"/>
     <param name="square_size" value="100.0"/>  
     <param name="fit_mode"    value="2"/>
-
+    
+    <param name="testname" type="string"  value="0017"/>
   </node>
 </launch>
