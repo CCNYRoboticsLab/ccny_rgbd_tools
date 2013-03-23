@@ -1,0 +1,22 @@
+<!-- Default frames for Kinect/PSDK5 devices
+     Places depth and RGB cameras in the same plane with 2.5cm baseline.
+     Calibration may improve results, but these defaults are reasonably accurate.
+-->
+<launch>
+
+  <arg name="pi/2" value="1.5707963267948966" />
+  <arg name="optical_rotate" value="0 0 0 -$(arg pi/2) 0 -$(arg pi/2)" />
+
+  <node pkg="tf" type="static_transform_publisher" name="openni_camera"
+        args="0 -0.02  0 0 0 0  /openni_camera /openni_depth_frame 40" />  
+        
+  <node pkg="tf" type="static_transform_publisher" name="openni_camera_base_link1"
+        args="0 -0.045 0 0 0 0  /openni_camera /openni_rgb_frame 40" />  
+        
+  <node pkg="tf" type="static_transform_publisher" name="openni_camera_base_link2"
+        args="$(arg optical_rotate) /openni_depth_frame /openni_depth_optical_frame  40" />  
+        
+  <node pkg="tf" type="static_transform_publisher" name="openni_camera_base_link3"
+        args="$(arg optical_rotate) /openni_rgb_frame /openni_rgb_optical_frame 40" />  
+</launch>
+

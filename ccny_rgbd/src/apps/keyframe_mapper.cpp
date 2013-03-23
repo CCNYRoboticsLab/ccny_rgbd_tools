@@ -129,12 +129,13 @@ void KeyframeMapper::RGBDCallback(
 
   try{
     tf_listener_.waitForTransform(
-     fixed_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.1));
+     fixed_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.33));
     tf_listener_.lookupTransform(
       fixed_frame_, rgb_msg->header.frame_id, time, transform);  
   }
-  catch(...)
+  catch(tf::TransformException& ex)
   {
+    ROS_WARN("Could not receive transform. Skipping image: %s", ex.what());
     return;
   }
   RGBDFrame frame(rgb_msg, depth_msg, info_msg);
