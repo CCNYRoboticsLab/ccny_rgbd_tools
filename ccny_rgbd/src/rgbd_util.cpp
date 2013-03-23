@@ -369,7 +369,8 @@ void projectCloudToImage(const PointCloudT& cloud,
       color_rgb[0] = point.b;  
       color_rgb[1] = point.g;
       color_rgb[2] = point.r;
-          
+
+      // Depth buffers:
       if (depth_img.at<uint16_t>(v,u) == 0)
       {
         rgb_img.at<cv::Vec3b>(v,u) = color_rgb;           
