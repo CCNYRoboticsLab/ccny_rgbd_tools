@@ -226,12 +226,12 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable (greedy_projection src/greedy_projection.cpp)
-target_link_libraries (greedy_projection 
-                            ${PCL_LIBRARIES}
-                            ccny_rgbd_util
-                            # open_gl                       
-                        )
+#add_executable (greedy_projection src/greedy_projection.cpp)
+#target_link_libraries (greedy_projection 
+#                            # ${PCL_LIBRARIES}
+#                            # ccny_rgbd_util
+#                            # # open_gl                       
+#                        # )
 
 
 ################################################################

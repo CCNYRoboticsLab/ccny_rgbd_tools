@@ -37,7 +37,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <cv_bridge/cv_bridge.h>
-
+#include <nav_msgs/Path.h>
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
@@ -70,6 +70,12 @@ class MonocularVisualOdometry
     // **** Publishers
     ros::Publisher odom_publisher_;
     ros::Publisher pub_model_; ///< Publisher for the point cloud model (sparse map)
+    ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
+
+    /** @brief publishes the path of f2b_ (fixed-to-base) transform as an Path message
+     * @param header header of the incoming message, used to stamp things correctly
+     */
+    void publishPath(const std_msgs::Header& header);
 
     boost::shared_ptr<SynchronizerMonoVO> sync_;
     image_geometry::PinholeCameraModel cam_model_;
@@ -102,6 +108,7 @@ class MonocularVisualOdometry
     bool visualize_correspondences_; ///< To indicate whether correspondeces (matched points) will be vizualized in the frame
     int  frame_count_;
     ros::Time init_time_;
+    nav_msgs::Path path_msg_;    /// < contains a vector of positions of the camera (not base) pose
 
     // PnP parameters
     int max_ransac_iterations_;

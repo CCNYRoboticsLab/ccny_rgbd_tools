@@ -91,6 +91,9 @@ void MonocularVisualOdometry::initParams()
   if (!nh_private_.getParam ("base_frame", base_frame_))
     base_frame_ = "/camera_link";
 
+  // FIXME: use a para for the frame name
+  path_pub_ = nh_.advertise<nav_msgs::Path>("/mono_path", 5);
+
   if (!nh_private_.getParam ("apps/mono_vo/detector_type", detector_type_))
     detector_type_ = "SURF";
   if (!nh_private_.getParam ("apps/mono_vo/descriptor_type", descriptor_type_))
@@ -435,6 +438,22 @@ void MonocularVisualOdometry::publishTransform(const tf::Transform &source2targe
   odom.header.frame_id = source_frame_id;
   tf::poseTFToMsg(source2target_transform, odom.pose.pose);
   odom_publisher_.publish(odom);
+
+  publishPath(odom.header);
+}
+
+void MonocularVisualOdometry::publishPath(const std_msgs::Header& header)
+{
+  path_msg_.header.stamp = header.stamp;
+  path_msg_.header.frame_id = fixed_frame_;
+
+  geometry_msgs::PoseStamped pose_stamped;
+  pose_stamped.header.stamp = header.stamp;
+  pose_stamped.header.frame_id = fixed_frame_;
+  tf::poseTFToMsg(f2b_, pose_stamped.pose);
+
+  path_msg_.poses.push_back(pose_stamped);
+  path_pub_.publish(path_msg_);
 }
 
 bool MonocularVisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
