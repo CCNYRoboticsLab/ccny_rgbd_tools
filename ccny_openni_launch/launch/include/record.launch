@@ -1,0 +1,12 @@
+<!-- Launch file to record unprocessed OpenNI data -->
+<launch>
+
+  <arg name="bag_name" />
+
+  <node pkg="rosbag" type="record" name="record" output="screen"
+    args="/camera/depth/camera_info 
+          /camera/depth/image_raw 
+          /camera/rgb/camera_info 
+          /camera/rgb/image_raw
+          -O $(arg bag_name)"/>
+</launch>

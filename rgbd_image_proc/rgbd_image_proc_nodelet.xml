@@ -1,9 +1,0 @@
-<!-- Imu Filter nodelet publisher -->
-<library path="lib/librgbd_image_proc_nodelet">
-  <class name="rgbd_image_proc/RGBDImageProcNodelet" type="RGBDImageProcNodelet" 
-    base_class_type="nodelet::Nodelet">
-    <description>
-      RGBD Image Proc nodelet publisher.
-    </description>
-  </class>
-</library>

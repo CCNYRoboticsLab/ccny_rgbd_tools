@@ -1,0 +1,24 @@
+<!--
+Launches the entire CityTurtle system, and records the unprocessed
+data to a bag file.
+-->
+
+<launch>
+
+  <arg name="bag_name" value="lobby_01.bag"/>
+
+  #### Data Aquisition #########################################################
+  <include file="$(find ccny_turtlebot_launch)/launch/live/livedata.launch"/>
+
+  #### Data Recording ##########################################################
+  <include file="$(find ccny_turtlebot_launch)/launch/misc/record_pose+rgbd_data.launch">
+    <arg name="bag_name" value="$(arg bag_name)" />
+  </include>
+
+  #### Data Processing #########################################################
+  <include file="$(find ccny_turtlebot_launch)/launch/proc/procdata.launch"/>
+
+</launch>
+
+
+

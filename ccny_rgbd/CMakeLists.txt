@@ -16,25 +16,39 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
-# services
+# Generate services
 rosbuild_gensrv()
+
+# Generate dynamic parameters
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()
 
 # opencv
 pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
+# Octomap
+find_package(octomap REQUIRED)
+include_directories(${OCTOMAP_INCLUDE_DIRS})
+link_directories(${OCTOMAP_LIBRARY_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
+
 # boost
 rosbuild_add_boost_directories()
-
-# TORO
-add_library(toro3d STATIC IMPORTED)
-rosbuild_find_ros_package(ccny_toro)
-set_property(TARGET toro3d PROPERTY IMPORTED_LOCATION ${ccny_toro_PACKAGE_PATH}/lib/libtoro3d.a)
 
 ################################################################
 # Build libraries
 ################################################################
+
+rosbuild_add_library (ccny_rgbd_util
+  src/rgbd_util.cpp
+)
+
+rosbuild_add_library (ccny_rgbd_proc_util
+  src/proc_util.cpp
+)
 
 rosbuild_add_library (ccny_rgbd_structures
   src/structures/rgbd_frame.cpp
@@ -50,34 +64,40 @@ rosbuild_add_library (ccny_rgbd_features
   src/features/star_detector.cpp
 )
 
+target_link_libraries(ccny_rgbd_features
+  ${OPENCV_LIBRARIES})
+
 rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation.cpp
   src/registration/motion_estimation_icp.cpp
   src/registration/motion_estimation_icp_prob_model.cpp
-  src/registration/motion_prediction_imu.cpp
 )
+
+target_link_libraries(ccny_rgbd_registration
+  ccny_rgbd_util)
 
 rosbuild_add_library (ccny_rgbd_mapping
-  src/mapping/keyframe_generator.cpp
-  src/mapping/keyframe_loop_detector.cpp
-  src/mapping/keyframe_loop_solver.cpp
-  src/mapping/keyframe_loop_solver_sba.cpp
-  src/mapping/keyframe_loop_solver_toro.cpp
-  src/mapping/octree_pointcloud_storage.cpp
+  src/mapping/keyframe_graph_detector.cpp
+  #src/mapping/keyframe_graph_detector_rt.cpp
+  src/mapping/keyframe_graph_solver.cpp
+  src/mapping/keyframe_graph_solver_g2o.cpp
 )
 
+target_link_libraries(ccny_rgbd_mapping
+  ccny_rgbd_util
+  boost_regex
+  cholmod
+  g2o_core
+  g2o_stuff
+  g2o_solver_cholmod
+  g2o_solver_csparse
+  g2o_types_slam3d)
+
+# TODO: use OpenGL
 # rosbuild_add_library (open_gl
   # GL 
   # glut
 # )
-
-rosbuild_add_library (ccny_rgbd_util
-  src/rgbd_util.cpp
-)
-
-# will link using full path
-target_link_libraries(ccny_rgbd_mapping toro3d) 
-target_link_libraries(ccny_rgbd_mapping ccny_gicp) 
 
 ################################################################
 # Build visual odometry application
@@ -91,9 +111,7 @@ target_link_libraries (visual_odometry_node
   ccny_rgbd_structures
   ccny_rgbd_features
   ccny_rgbd_registration
-  ccny_rgbd_mapping
   ccny_rgbd_util
-  ${OPENCV_LIBRARIES}
   boost_signals 
   boost_system
 )
@@ -107,6 +125,7 @@ rosbuild_add_executable(keyframe_mapper_node
   src/apps/keyframe_mapper.cpp)
 
 target_link_libraries (keyframe_mapper_node
+  ${OCTOMAP_LIBRARIES}
   ccny_rgbd_structures 
   ccny_rgbd_mapping
   ccny_rgbd_util
@@ -115,67 +134,42 @@ target_link_libraries (keyframe_mapper_node
 )
 
 ################################################################
-# Build keyframe loop mapper application
+# Build feature viewer application
 ################################################################
 
-rosbuild_add_executable(keyframe_loop_mapper_node 
-  src/node/keyframe_loop_mapper_node.cpp
-  src/apps/keyframe_mapper.cpp
-  src/apps/keyframe_loop_mapper.cpp)
+rosbuild_add_executable(feature_viewer_node 
+  src/node/feature_viewer_node.cpp
+  src/apps/feature_viewer.cpp)
 
-target_link_libraries (keyframe_loop_mapper_node
+target_link_libraries (feature_viewer_node
   ccny_rgbd_structures 
-  ccny_rgbd_mapping
+  ccny_rgbd_features
   ccny_rgbd_util
   boost_signals 
   boost_system
 )
 
 ################################################################
-# Build octree mapper application
+# Build image proc application
 ################################################################
 
-rosbuild_add_executable(octree_mapper_node 
-  src/node/octree_mapper_node.cpp
-  src/apps/octree_mapper.cpp)
-
-target_link_libraries (octree_mapper_node
-  ccny_rgbd_structures 
-  ccny_rgbd_mapping
+rosbuild_add_library(rgbd_image_proc_app src/apps/rgbd_image_proc.cpp)
+  
+target_link_libraries (rgbd_image_proc_app
   ccny_rgbd_util
-  boost_signals 
-  boost_system
-)
-
-################################################################
-# Build logger applications
-################################################################
-
-rosbuild_add_executable(logger_node 
-  src/node/logger_node.cpp
-  src/apps/logger.cpp)
-
-target_link_libraries (logger_node
-  ccny_rgbd_structures 
-  ccny_rgbd_util
+  ccny_rgbd_proc_util
   boost_signals 
   boost_system
   boost_filesystem
   ${OPENCV_LIBRARIES}
 )
+  
+rosbuild_add_executable(rgbd_image_proc_node src/node/rgbd_image_proc_node.cpp)
 
-rosbuild_add_executable(avg_logger_node 
-  src/node/avg_logger_node.cpp
-  src/apps/avg_logger.cpp)
-
-target_link_libraries (avg_logger_node
-  ccny_rgbd_structures 
-  ccny_rgbd_util
-  boost_signals 
-  boost_system
-  boost_filesystem
-  ${OPENCV_LIBRARIES}
-)
+rosbuild_add_library(rgbd_image_proc_nodelet src/nodelet/rgbd_image_proc_nodelet.cpp)
+  
+target_link_libraries(rgbd_image_proc_node    rgbd_image_proc_app)
+target_link_libraries(rgbd_image_proc_nodelet rgbd_image_proc_app)
 
 ################################################################
 # Build Monocular visual odometry application
@@ -233,7 +227,6 @@ add_definitions(${PCL_DEFINITIONS})
 #                            # # open_gl                       
 #                        # )
 
-
 ################################################################
 # test projection function
 ################################################################
@@ -249,3 +242,20 @@ add_definitions(${PCL_DEFINITIONS})
 #  boost_filesystem
 #  ${OPENCV_LIBRARIES}
 #)
+
+#######################################################
+#supress pcl-1.6 pragma warnings
+#######################################################
+rosbuild_add_compile_flags(ccny_rgbd_structures '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_util '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_registration '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_mapping '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_features '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(keyframe_mapper_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(rgbd_image_proc_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(rgbd_image_proc_nodelet '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(visual_odometry_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(feature_viewer_node  '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(mono_vo_node  '-Wno-unknown-pragmas')
+# Temp stuff:
+#rosbuild_add_compile_flags(test_projection  '-Wno-unknown-pragmas')

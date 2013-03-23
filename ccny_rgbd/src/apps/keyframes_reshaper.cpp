@@ -75,9 +75,13 @@ bool KeyFramesReshaper::reshapeSingleKeyFrame(int keyframe_number)
   PointCloudFilteredT::Ptr cloud_in(new PointCloudFilteredT);
   if(load_as_keyframes_)
   {
-    current_success = loadKeyframe(current_keyframe, current_keyframe_path);
+    current_success = RGBDKeyframe::load(current_keyframe, current_keyframe_path);
 #ifdef USE_RGB_COLOR
-    cloud_in.reset(new PointCloudFilteredT(current_keyframe.cloud));
+    double max_z = 5.5; // TODO: parametrize
+    double max_stdev_z = 0.03; // TODO: parametrize
+    PointCloudT cloud_rgb;
+    current_keyframe.constructDensePointCloud(cloud_rgb, max_z, max_stdev_z);
+    cloud_in.reset(new PointCloudFilteredT(cloud_rgb));
 #endif
   }
   else

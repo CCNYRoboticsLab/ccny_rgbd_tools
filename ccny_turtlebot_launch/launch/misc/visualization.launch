@@ -1,0 +1,14 @@
+<!--
+Launches RVIZ, with remapped goal topic to mav namespace
+-->
+
+<launch>
+
+  <node pkg="rviz" type="rviz" name="rviz" output="screen"
+    args="-d $(find ccny_turtlebot_launch)/launch/misc/config.rviz">
+
+    <remap from="/goal" to="/mav/goal2D_rviz"/>
+
+  </node>
+
+</launch>

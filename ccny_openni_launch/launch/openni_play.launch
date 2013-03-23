@@ -1,24 +1,44 @@
-<!-- Entry point for using OpenNI devices -->
+<!-- Play raw OpenNI data from a bag and process it-->
 <launch>
-  <param name="use_sim_time" value="true"/>
 
+  <param name="use_sim_time" value="true"/>
+    
   <arg name="path"     default="$(env HOME)/ros/bags/rgbd" />
   <arg name="bag_name" default="rgbd.bag" />
   <arg name="play_delay" default="2.0" />
   <arg name="rate" default="1" />
 
-  <!-- Play the bagged data -->
+  <!-- Parameters -->
+  <arg name="bag_name" />
+  <arg name="bag_rate"  default="1.0" />
+  <arg name="bag_start" default="0.0" />
+  
+  <arg name="manager_name" default="rgbd_manager"/>
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="unwarp" default="true"/> 
+  <arg name="scale" default="1.0"/>
+  <arg name="publish_cloud" default="false"/>
+  <arg name="verbose" default="false"/>  # for rgbd_image_proc messages
+  
+  <!-- Nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager"
+        output="screen"/>
 
-  <include file="$(find ccny_openni_launch)/launch/includes/play_data.launch" >
-    <arg name="path"     value="$(arg path)"/>
-    <arg name="bag_name" value="$(arg bag_name)"/>
-    <arg name="delay" value="$(arg play_delay)"/>
-    <arg name="rate" value="$(arg rate)"/>
+  <!-- RGBD playback -->
+  <include file="$(find ccny_openni_launch)/launch/include/play.launch">       
+     <arg name="bag_name" value="$(arg bag_name)" />
+     <arg name="bag_rate" value="$(arg bag_rate)" />
+     <arg name="bag_start" value="$(arg bag_start)" />
   </include>
-
-  <!-- Load reasonable defaults for the relative pose between cameras  -->
-  <include file="$(find openni_launch)/launch/kinect_frames.launch">
-    <arg name="camera" value="camera" />
+  
+  <!-- RGBD processing -->
+  <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
+     <arg name="manager_name"  value="$(arg manager_name)" />
+     <arg name="calib_path"    value="$(arg calib_path)" />
+     <arg name="unwarp"        value="$(arg unwarp)" />
+     <arg name="scale"        value="$(arg scale)" />
+     <arg name="publish_cloud" value="$(arg publish_cloud)" />
+     <arg name="verbose"       value="$(arg verbose)"/>  
   </include>
-
+           
 </launch>

@@ -1,6 +1,0 @@
-int32 a
-int32 b
-float32 max_eucl_dist
-float32 max_desc_dist
-float32 min_inlier_ratio
----

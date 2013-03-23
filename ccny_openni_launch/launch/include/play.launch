@@ -1,0 +1,11 @@
+<!-- Launch file to play back unprocessed OpenNI data -->
+<launch>
+
+  <arg name="bag_name" />
+  <arg name="bag_rate"  default="1.0" />
+  <arg name="bag_start" default="0.0" />
+
+  <node pkg="rosbag" type="play" name="play" output="screen"
+    args="$(arg bag_name) --clock --start=$(arg bag_start) --queue=1000 --rate=$(arg bag_rate)"/>
+
+</launch>

@@ -1,0 +1,18 @@
+<!--
+Launches the entire CityTurtle system.
+-->
+
+<launch>
+
+  #### Data Aquisition #########################################################
+
+  <include file="$(find ccny_turtlebot_launch)/launch/live/livedata.launch"/>
+
+  #### Data Processing #########################################################
+
+  <include file="$(find ccny_turtlebot_launch)/launch/proc/procdata.launch"/>
+
+</launch>
+
+
+
