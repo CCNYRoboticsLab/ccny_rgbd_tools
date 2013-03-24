@@ -29,12 +29,26 @@ pkg_check_modules(OPENCV REQUIRED opencv)
 include_directories(${OPENCV_INCLUDE_DIRS})
 link_directories(${OPENCV_LIBRARY_DIRS})
 
+# Octomap
+find_package(octomap REQUIRED)
+include_directories(${OCTOMAP_INCLUDE_DIRS})
+link_directories(${OCTOMAP_LIBRARY_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
+
 # boost
 rosbuild_add_boost_directories()
 
 ################################################################
 # Build libraries
 ################################################################
+
+rosbuild_add_library (ccny_rgbd_util
+  src/rgbd_util.cpp
+)
+
+rosbuild_add_library (ccny_rgbd_proc_util
+  src/proc_util.cpp
+)
 
 rosbuild_add_library (ccny_rgbd_structures
   src/structures/rgbd_frame.cpp
@@ -60,24 +74,21 @@ rosbuild_add_library (ccny_rgbd_registration
   src/registration/motion_estimation_klt_prob_model.cpp
 )
 
+target_link_libraries(ccny_rgbd_registration
+  ccny_rgbd_util)
+
 rosbuild_add_library (ccny_rgbd_mapping
   src/mapping/keyframe_graph_detector.cpp
   src/mapping/keyframe_graph_solver.cpp
   src/mapping/keyframe_graph_solver_g2o.cpp
 )
 
-rosbuild_add_library (ccny_rgbd_util
-  src/rgbd_util.cpp
-)
-
-rosbuild_add_library (ccny_rgbd_proc_util
-  src/proc_util.cpp
-)
-
 target_link_libraries(ccny_rgbd_mapping
+  ccny_rgbd_util
   boost_regex
   cholmod
   g2o_core
+  g2o_stuff
   g2o_solver_cholmod
   g2o_solver_csparse
   g2o_types_slam3d)
@@ -108,6 +119,7 @@ rosbuild_add_executable(keyframe_mapper_node
   src/apps/keyframe_mapper.cpp)
 
 target_link_libraries (keyframe_mapper_node
+  ${OCTOMAP_LIBRARIES}
   ccny_rgbd_structures 
   ccny_rgbd_mapping
   ccny_rgbd_util
@@ -153,3 +165,14 @@ rosbuild_add_library(rgbd_image_proc_nodelet src/nodelet/rgbd_image_proc_nodelet
 target_link_libraries(rgbd_image_proc_node    rgbd_image_proc_app)
 target_link_libraries(rgbd_image_proc_nodelet rgbd_image_proc_app)
 
+#supress pcl-1.6 pragma warnings
+rosbuild_add_compile_flags(ccny_rgbd_structures '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_util '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_registration '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_mapping '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(ccny_rgbd_features '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(keyframe_mapper_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(rgbd_image_proc_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(rgbd_image_proc_nodelet '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(visual_odometry_node '-Wno-unknown-pragmas')
+rosbuild_add_compile_flags(feature_viewer_node  '-Wno-unknown-pragmas')

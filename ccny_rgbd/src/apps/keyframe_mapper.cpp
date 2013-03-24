@@ -39,18 +39,7 @@ KeyframeMapper::KeyframeMapper(
   graph_solver_ = new KeyframeGraphSolverG2O(nh, nh_private);
   
   // **** params
-
-  if (!nh_private_.getParam ("queue_size", queue_size_))
-    queue_size_ = 5;
-  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
-    fixed_frame_ = "/odom";
-  if (!nh_private_.getParam ("full_map_res", full_map_res_))
-    full_map_res_ = 0.01;
-  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
-    kf_dist_eps_  = 0.10;
-  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
-    kf_angle_eps_  = 10.0 * M_PI / 180.0;
-    
+  initParams();
   // **** publishers
 
   keyframes_pub_ = nh_.advertise<PointCloudT>(
@@ -59,7 +48,8 @@ KeyframeMapper::KeyframeMapper(
     "keyframe_poses", queue_size_);
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_associations", queue_size_);
-  
+  path_pub_ = nh_.advertise<PathMsg>( 
+    "keyframe_path", queue_size_);
   // **** services
 
   pub_keyframe_service_ = nh_.advertiseService(
@@ -70,8 +60,13 @@ KeyframeMapper::KeyframeMapper(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
   load_kf_service_ = nh_.advertiseService(
     "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
-  save_full_service_ = nh_.advertiseService(
-    "save_full_map", &KeyframeMapper::saveFullSrvCallback, this);
+    
+  save_pcd_map_service_ = nh_.advertiseService(
+    "save_pcd_map", &KeyframeMapper::savePcdMapSrvCallback, this);
+
+  save_octomap_service_ = nh_.advertiseService(
+    "save_octomap", &KeyframeMapper::saveOctomapSrvCallback, this);
+    
   add_manual_keyframe_service_ = nh_.advertiseService(
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
   generate_graph_service_ = nh_.advertiseService(
@@ -98,6 +93,29 @@ KeyframeMapper::KeyframeMapper(
 KeyframeMapper::~KeyframeMapper()
 {
   delete graph_solver_;
+}
+
+void KeyframeMapper::initParams()
+{
+  if (!nh_private_.getParam ("queue_size", queue_size_))
+    queue_size_ = 5;
+  if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
+    fixed_frame_ = "/odom";
+  if (!nh_private_.getParam ("pcd_map_res", pcd_map_res_))
+    pcd_map_res_ = 0.01;
+  if (!nh_private_.getParam ("octomap_res", octomap_res_))
+    octomap_res_ = 0.05;
+  if (!nh_private_.getParam ("octomap_with_color", octomap_with_color_))
+   octomap_with_color_ = true;
+  if (!nh_private_.getParam ("kf_dist_eps", kf_dist_eps_))
+    kf_dist_eps_  = 0.10;
+  if (!nh_private_.getParam ("kf_angle_eps", kf_angle_eps_))
+    kf_angle_eps_  = 10.0 * M_PI / 180.0;
+  if (!nh_private_.getParam ("max_range", max_range_))
+    max_range_  = 5.5;
+  if (!nh_private_.getParam ("max_stdev", max_stdev_))
+    max_stdev_  = 0.03;
+
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -145,7 +163,11 @@ bool KeyframeMapper::processFrame(
       result = false;
   }
 
-  if (result) addKeyframe(frame, pose);
+  if (result)
+  {
+    addKeyframe(frame, pose);
+    publishPath();
+  }
   return result;
 }
 
@@ -153,11 +175,9 @@ void KeyframeMapper::addKeyframe(
   const RGBDFrame& frame, 
   const tf::Transform& pose)
 {
-  //ROS_INFO("Adding frame");
   RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
-  keyframe.constructDensePointCloud();
-
+  
   if (manual_add_)
   {
     ROS_INFO("Adding frame manually");
@@ -223,14 +243,17 @@ void KeyframeMapper::publishKeyframeData(int i)
 {
   RGBDKeyframe& keyframe = keyframes_[i];
 
-  // data transformed to the fixed frame
-  PointCloudT keyframe_data_ff; 
-  pcl::transformPointCloud(
-    keyframe.cloud, keyframe_data_ff, eigenFromTf(keyframe.pose));
+  // construct a cloud from the images
+  PointCloudT cloud;
+  keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+  
+  // cloud transformed to the fixed frame
+  PointCloudT cloud_ff; 
+  pcl::transformPointCloud(cloud, cloud_ff, eigenFromTf(keyframe.pose));
 
-  keyframe_data_ff.header.frame_id = fixed_frame_;
+  cloud_ff.header.frame_id = fixed_frame_;
 
-  keyframes_pub_.publish(keyframe_data_ff);
+  keyframes_pub_.publish(cloud_ff);
 }
 
 void KeyframeMapper::publishKeyframeAssociations()
@@ -374,7 +397,12 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
 {
   ROS_INFO("Saving keyframes...");
   std::string path = request.filename;
-  return saveKeyframes(keyframes_, path);
+  bool result = saveKeyframes(keyframes_, path);
+  
+  if (result) ROS_INFO("Keyframes saved to %s", path.c_str());
+  else ROS_ERROR("Keyframe saving failed!");
+  
+  return result;
 }
 
 bool KeyframeMapper::loadKeyframesSrvCallback(
@@ -383,49 +411,40 @@ bool KeyframeMapper::loadKeyframesSrvCallback(
 {
   ROS_INFO("Loading keyframes...");
   std::string path = request.filename;
-  return loadKeyframes(keyframes_, path);
+  bool result = loadKeyframes(keyframes_, path);
+  
+  if (result) ROS_INFO("Keyframes loaded successfully");
+  else ROS_ERROR("Keyframe loading failed!");
+  
+  return result;
 }
 
-bool KeyframeMapper::saveFullSrvCallback(
+bool KeyframeMapper::savePcdMapSrvCallback(
   Save::Request& request,
   Save::Response& response)
 {
-  ROS_INFO("Saving full map...");
-  std::string path = request.filename;
-  return saveFullMap(path);
+  ROS_INFO("Saving map as pcd...");
+  const std::string& path = request.filename; 
+  bool result = savePcdMap(path);
+  
+  if (result) ROS_INFO("Pcd map saved to %s", path.c_str());
+  else ROS_ERROR("Pcd map saving failed");
+  
+  return result;
 }
 
-bool KeyframeMapper::saveFullMap(const std::string& path)
+bool KeyframeMapper::saveOctomapSrvCallback(
+  Save::Request& request,
+  Save::Response& response)
 {
-  double full_map_res_ = 0.01;
-
-  PointCloudT::Ptr full_map(new PointCloudT());
-  full_map->header.frame_id = fixed_frame_;
-
-  // aggregate all frames into single cloud
-  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
-  {
-    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
-
-    PointCloudT cloud_tf;
-    pcl::transformPointCloud(keyframe.cloud, cloud_tf, eigenFromTf(keyframe.pose));
-    cloud_tf.header.frame_id = fixed_frame_;
-
-    *full_map += cloud_tf;
-  }
-
-  // filter cloud
-  PointCloudT full_map_f;
-  pcl::VoxelGrid<PointT> vgf;
-  vgf.setInputCloud(full_map);
-  vgf.setLeafSize(full_map_res_, full_map_res_, full_map_res_);
-  vgf.filter(full_map_f);
-
-  // write out
-  pcl::PCDWriter writer;
-  int result_pcd = writer.writeBinary<PointT>(path + ".pcd", full_map_f);  
-
-  return result_pcd;
+  ROS_INFO("Saving map as Octomap...");
+  const std::string& path = request.filename;
+  bool result = saveOctomap(path);
+    
+  if (result) ROS_INFO("Octomap saved to %s", path.c_str());
+  else ROS_ERROR("Octomap saving failed");
+    
+  return result;
 }
 
 bool KeyframeMapper::addManualKeyframeSrvCallback(
@@ -462,5 +481,158 @@ bool KeyframeMapper::solveGraphSrvCallback(
   return true;
 }
 
+bool KeyframeMapper::savePcdMap(const std::string& path)
+{
+  PointCloudT pcd_map;
+  buildPcdMap(pcd_map);
+  
+  // write out
+  pcl::PCDWriter writer;
+  int result_pcd = writer.writeBinary<PointT>(path, pcd_map);  
+
+  if (result_pcd < 0) return false;
+  else return true;
+}
+
+void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
+{
+  PointCloudT::Ptr aggregate_cloud(new PointCloudT());
+  aggregate_cloud->header.frame_id = fixed_frame_;
+
+  // aggregate all frames into single cloud
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    
+    PointCloudT cloud;   
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+
+    PointCloudT cloud_tf;
+    pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    cloud_tf.header.frame_id = fixed_frame_;
+
+    *aggregate_cloud += cloud_tf;
+  }
+
+  // filter cloud
+  pcl::VoxelGrid<PointT> vgf;
+  vgf.setInputCloud(aggregate_cloud);
+  vgf.setLeafSize(pcd_map_res_, pcd_map_res_, pcd_map_res_);
+  vgf.filter(map_cloud);
+}
+
+bool KeyframeMapper::saveOctomap(const std::string& path)
+{
+  bool result;
+
+  if (octomap_with_color_)
+  {
+    octomap::ColorOcTree tree(octomap_res_);   
+    buildColorOctomap(tree);
+    result = tree.write(path);
+  }
+  else
+  {
+    octomap::OcTree tree(octomap_res_);   
+    buildOctomap(tree);
+    result = tree.write(path);
+  }
+  
+  return result;
+}
+
+void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
+{
+  ROS_INFO("Building Octomap...");
+  
+  octomap::point3d sensor_origin(0.0, 0.0, 0.0);  
+
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    ROS_INFO("Processing keyframe %u", kf_idx);
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    
+    PointCloudT cloud;
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+           
+    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+
+    // build octomap cloud from pcl cloud
+    octomap::Pointcloud octomap_cloud;
+    for (unsigned int pt_idx = 0; pt_idx < cloud.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud.points[pt_idx];
+      if (!std::isnan(p.z))
+        octomap_cloud.push_back(p.x, p.y, p.z);
+    }
+    
+    tree.insertScan(octomap_cloud, sensor_origin, frame_origin);
+  }
+}
+
+void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
+{
+  ROS_INFO("Building Octomap with color...");
+
+  octomap::point3d sensor_origin(0.0, 0.0, 0.0);  
+
+  for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
+  {
+    ROS_INFO("Processing keyframe %u", kf_idx);
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    
+    PointCloudT cloud;
+    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+
+    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+    
+    // build octomap cloud from pcl cloud
+    octomap::Pointcloud octomap_cloud;
+    for (unsigned int pt_idx = 0; pt_idx < cloud.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud.points[pt_idx];
+      if (!std::isnan(p.z))
+        octomap_cloud.push_back(p.x, p.y, p.z);
+    }
+    
+    // insert scan (only xyz considered, no colors)
+    tree.insertScan(octomap_cloud, sensor_origin, frame_origin);
+    
+    // insert colors
+    PointCloudT cloud_tf;
+    pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    for (unsigned int pt_idx = 0; pt_idx < cloud_tf.points.size(); ++pt_idx)
+    {
+      const PointT& p = cloud_tf.points[pt_idx];
+      if (!std::isnan(p.z))
+      {
+        octomap::point3d endpoint(p.x, p.y, p.z);
+        octomap::ColorOcTreeNode* n = tree.search(endpoint);
+        if (n) n->setColor(p.r, p.g, p.b); 
+      }
+    }
+    
+    tree.updateInnerOccupancy();
+  }
+}
+
+void KeyframeMapper::publishPath()
+{
+  path_msg_.header.frame_id = fixed_frame_; 
+  path_msg_.poses.clear();
+  path_msg_.poses.resize(keyframes_.size());
+  
+  for(unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++ kf_idx)
+  {
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
+    
+    pose_stamped.header.stamp = keyframe.header.stamp;
+    pose_stamped.header.frame_id = fixed_frame_;
+    tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
+  }
+
+  path_pub_.publish(path_msg_);
+}
 
 } // namespace ccny_rgbd

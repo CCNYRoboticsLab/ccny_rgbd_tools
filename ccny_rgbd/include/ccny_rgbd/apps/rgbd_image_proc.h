@@ -142,7 +142,8 @@ class RGBDImageProc
      * See \ref DepthFitMode
      */
     int fit_mode_;        
-    cv::Size size_in_, size_out_;
+    
+    cv::Size size_in_; ///< Size of the incoming images. 
     
     /** @brief depth unwarp polynomial coefficient matrices */
     cv::Mat coeff_0_, coeff_1_, coeff_2_;   

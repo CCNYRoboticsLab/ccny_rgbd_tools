@@ -56,12 +56,6 @@ class RGBDKeyframe: public RGBDFrame
   
     tf::Transform pose; ///< pose of the camera, in some fixed frame
     
-    /** @brief Dense point cloud from RGBD data.
-     * 
-     * Note that the data is epxressed in the camera frame.
-     */
-    PointCloudT cloud; 
-
     bool manually_added; ///< Whether the frame was added manually by the user
 
     /** @brief path length, in meters, of the camera trajectory at the moment 
@@ -74,16 +68,7 @@ class RGBDKeyframe: public RGBDFrame
      */ 
     double path_length_angular;
 
-    /** @brief constructs the point cloud from the RGB and depth images
-     * @param max_z [m] points with z bigger than this will be marked as NaN
-     * @param max_stdev_z [m] points with std_dev(z) bigger than this 
-     *        will be marked as NaN
-     * 
-     * @todo do we want default values? or ROS parameters here)
-     * 
-     */ 
-    void constructDensePointCloud(double max_z = 5.5,
-                                  double max_stdev_z = 0.03);
+
     
     /** @brief Saves the RGBD keyframe to disk. 
     * 

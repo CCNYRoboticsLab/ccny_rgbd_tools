@@ -32,6 +32,9 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/regex.hpp>
+#include <octomap/octomap.h>
+#include <octomap/OcTree.h>
+#include <octomap/ColorOcTree.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/structures/rgbd_frame.h"
@@ -77,6 +80,10 @@ class KeyframeMapper
      */
     virtual ~KeyframeMapper();
 
+    /** @brief Initializes all the parameters from the ROS param server
+     */
+    void initParams();
+
     /** @brief ROS callback to publish keyframes as point clouds
      * 
      * The argument should be a regular expression string matching the
@@ -113,17 +120,29 @@ class KeyframeMapper
       Save::Response& response);
 
     /** @brief ROS callback to create an aggregate 3D map and save it to 
-     * file.
+     * pcd file.
      * 
-     * The resolution of the map can be controlled via the \ref full_map_res_
+     * The resolution of the map can be controlled via the \ref pcd_map_res_
      * parameter.
      * 
-     * The argument should be an integer with the idnex of the keyframe
+     * The argument should be the path to the .pcd file
      */
-    bool saveFullSrvCallback(
+    bool savePcdMapSrvCallback(
       Save::Request& request,
       Save::Response& response);
-
+    
+    /** @brief ROS callback to create an Octomap and save it to
+     * file.
+     * 
+     * The resolution of the map can be controlled via the \ref octomap_res_
+     * parameter.
+     * 
+     * The argument should be the path to the .bt file
+     */
+    bool saveOctomapSrvCallback(
+      Save::Request& request,
+      Save::Response& response);
+    
     /** @brief ROS callback load keyframes from disk
      * 
      * The argument should be a string with the directory pointing to 
@@ -158,12 +177,15 @@ class KeyframeMapper
   protected:
 
     ros::NodeHandle nh_;          ///< public nodehandle
-    ros::NodeHandle nh_private_;  ///< private nodehandle
+    ros::NodeHandle nh_private_;  ///< private nodepcdhandle
     
     std::string fixed_frame_;     ///< the fixed frame (usually "odom")
     
     int queue_size_;  ///< Subscription queue size
     
+    double max_range_;  ///< Maximum threshold for  range (in the z-coordinate of the camera frame)
+    double max_stdev_;  ///< Maximum threshold for range (z-coordinate) standard deviation
+
     KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages
@@ -181,6 +203,7 @@ class KeyframeMapper
     ros::Publisher keyframes_pub_;    ///< ROS publisher for the keyframe point clouds
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
+    ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
@@ -197,8 +220,11 @@ class KeyframeMapper
     /** @brief ROS service to save all keyframes to disk */
     ros::ServiceServer save_kf_service_;
     
-    /** @brief ROS service to save the full map to disk */
-    ros::ServiceServer save_full_service_;
+    /** @brief ROS service to save the entire map as pcd to disk */
+    ros::ServiceServer save_pcd_map_service_;
+    
+    /** @brief ROS service to save octomap to disk */
+    ros::ServiceServer save_octomap_service_;
     
     /** @brief ROS service to load all keyframes from disk */
     ros::ServiceServer load_kf_service_;
@@ -227,9 +253,11 @@ class KeyframeMapper
     CameraInfoSubFilter sub_info_;
     
     // params
-    double full_map_res_; ///< downsampling resolution of full map
+    double pcd_map_res_; ///< downsampling resolution of pcd map (in meters)
+    double octomap_res_;  ///< tree resolution for octomap (in meters)
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
+    bool octomap_with_color_; ///< whetehr to save Octomaps with color info      
           
     // state vars
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested
@@ -238,6 +266,8 @@ class KeyframeMapper
     KeyframeGraphSolver * graph_solver_;    ///< optimizes the graph for global alignement
 
     KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
+    
+    PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
     
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted
@@ -273,14 +303,72 @@ class KeyframeMapper
      */
     void publishKeyframePoses();
     
-    /** @brief Save the full (downsampled) map to disk.
+    /** @brief Publishes all the path message
+     */
+    void publishPath();
+    
+    /** @brief Save the full map to disk as pcd
      * @param path path to save the map to
      * @retval true save was successful
      * @retval false save failed.
      */
-    bool saveFullMap(const std::string& path);
+    bool savePcdMap(const std::string& path);
+           
+    /** @brief Builds an pcd map from all keyframes
+     * @param map_cloud the point cloud to be built
+     */
+    void buildPcdMap(PointCloudT& map_cloud);
+                   
+   /** @brief Save the full map to disk as octomap
+     * @param path path to save the map to
+     * @retval true save was successful
+     * @retval false save failed.
+     */
+    bool saveOctomap(const std::string& path);
+    
+    /** @brief Builds an octomap octree from all keyframes
+     * @param tree reference to the octomap octree
+     */
+    void buildOctomap(octomap::OcTree& tree);
+    
+    /** @brief Builds an octomap octree from all keyframes, with color
+     * @param tree reference to the octomap octree
+     */
+    void buildColorOctomap(octomap::ColorOcTree& tree);
+        
+    /** @brief Convert a tf pose to octomap pose
+     * @param poseTf the tf pose
+     * @return octomap pose
+     */
+    static inline octomap::pose6d poseTfToOctomap(
+      const tf::Pose& poseTf)
+    {
+      return octomap::pose6d(
+              pointTfToOctomap(poseTf.getOrigin()),
+              quaternionTfToOctomap(poseTf.getRotation()));
+    }
+   
+    /** @brief Convert a tf point to octomap point
+    * @param poseTf the tf point
+    * @return octomap point
+    */
+    static inline octomap::point3d pointTfToOctomap(
+      const tf::Point& ptTf)
+    {
+      return octomap::point3d(ptTf.x(), ptTf.y(), ptTf.z());
+    }
+   
+    /** @brief Convert a tf quaternion to octomap quaternion
+    * @param poseTf the tf quaternion
+    * @return octomap quaternion
+    */
+    static inline octomath::Quaternion quaternionTfToOctomap(
+      const tf::Quaternion& qTf)
+    {
+      return octomath::Quaternion(qTf.w(), qTf.x(), qTf.y(), qTf.z());
+    }
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_KEYFRAME_MAPPER_H

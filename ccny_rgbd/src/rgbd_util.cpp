@@ -472,4 +472,11 @@ void buildRegisteredDepthImage(
   }
 }
 
+void depthImageFloatTo16bit(
+  const cv::Mat& depth_image_in,
+  cv::Mat& depth_image_out)
+{
+  depth_image_in.convertTo(depth_image_out, CV_16UC1, 1000.0);
+}
+
 } //namespace ccny_rgbd

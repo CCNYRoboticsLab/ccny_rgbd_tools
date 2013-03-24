@@ -2,7 +2,15 @@
 <launch> 
          
   <arg name="manager_name" />      
-  <arg name="calib_path" />   
+  <arg name="calib_path" />
+    
+  <arg name="image_mode" />
+  <arg name="depth_mode" />
+  # modes: 
+  #             2 (640x480 VGA 30Hz)
+  #             5 (320x240 QVGA 30Hz)
+  #             8 (160x120 QQVGA 30Hz)
+   
   
   <arg name="rgb_camera_info_url"   value="file://$(arg calib_path)/rgb.yml"/>
   <arg name="depth_camera_info_url" value="file://$(arg calib_path)/depth.yml"/>
@@ -16,6 +24,9 @@
     <param name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
     <param name="rgb_frame_id"          value="/camera_rgb_optical_frame" />
     <param name="depth_frame_id"        value="/camera_depth_optical_frame" />
+
+    <param name="image_mode"         value="$(arg image_mode)" />
+    <param name="depth_mode"         value="$(arg depth_mode)" />
 
     <remap from="ir"    to="camera/ir" />
     <remap from="rgb"   to="camera/rgb" />

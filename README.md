@@ -55,7 +55,7 @@ start the driver and the processing nodelets.
 
     roslaunch ccny_openni_launch openni.launch 
 
-For best performace, consider using `dynamic reconfigure` to change the sampling rate of 
+For faster performace, consider using `dynamic reconfigure` to change the sampling rate of 
 the `rgbd_image_proc` nodelet. For example, setting it to to 0.5 will downsample the images by a factor of 2.
 
 Next, launch the visual odometry:
@@ -67,16 +67,6 @@ Finally, launch rviz.
     rosrun rviz rviz
 
 For convenience, you can load the `ccny_rgbd/launch/rviz.cfg` file.
-
-Configuration
-----------------------------------
-
-There are many paramters - the first ones you can try changing are:
- - resolution of the OpenNI camera, through `dynamic reconfigure`. 
-   QVGA is recommended, VGA is the default
- - in `ccny_rgbd/launch/visual_odometry.launch`: `feature/GFT/n_features`: 
-   the number of features to detect in each image. Default is 150, higher numbers
-   (try up to 500) might give more robust tracking)
 
 References
 -----------------------------------
@@ -90,10 +80,11 @@ Ivan Dryanovski, Roberto G. Valenti, Jizhong Xiao.
 More info
 -----------------------------------
 
-Coming soon:
+Documentation:
 
- - http://ros.org/wiki/ccny_rgbd_tools
+ * ROS wiki: http://ros.org/wiki/ccny_rgbd_tools
+ * API: http://ros.org/doc/fuerte/api/ccny_rgbd/html/
 
-Some videos:
-
- - http://youtu.be/XDKDDWIrWx0
+Videos:
+ * Visual odometry & 3D mapping: http://youtu.be/YE9eKgek5pI
+ * Feature viewer: http://youtu.be/kNkrPuBu8JA

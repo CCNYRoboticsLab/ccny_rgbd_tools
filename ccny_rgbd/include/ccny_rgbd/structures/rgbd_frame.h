@@ -40,8 +40,8 @@ namespace ccny_rgbd {
 
 /** @brief Auxiliarry class that holds together rgb and depth images.
  * 
- * The class also holds the detected keypoints and their 3D distributions
- * Keypoints, descriptos, and kp_* are index the same way and may include 
+ * The class also holds the detected keypoints and their 3D distributions.
+ * Keypoints, descriptos, and kp_* are indexed the same way and may include 
  * invalid points. An invalid keypoint occurs when:
  *  - no z data 
  *  - z > threshold
@@ -103,6 +103,19 @@ class RGBDFrame
      */  
     void constructFeaturePointCloud(PointCloudFeature& cloud);
 
+    /** @brief constructs a point cloud from the RGB and depth images
+     * @param cloud the reference to the point cloud to be constructed
+     * @param max_z [m] points with z bigger than this will be marked as NaN
+     * @param max_stdev_z [m] points with std_dev(z) bigger than this 
+     *        will be marked as NaN
+     * 
+     * @todo do we want default values? or ROS parameters here)
+     * 
+     */ 
+    void constructDensePointCloud(PointCloudT& cloud,
+                                  double max_z = 5.5,
+                                  double max_stdev_z = 0.03) const;
+    
     /** @brief Saves the RGBD frame to disk. 
     * 
     * Saves the RGB and depth images as png, and the header and intrinsic matrix
@@ -143,13 +156,13 @@ class RGBDFrame
      * @param z the z depth, in meters
      * @return the variance in z, in meters^2
      */
-    double getVarZ(double z);
+    double getVarZ(double z) const;
     
     /** @brief Calculates the std_dev(z) from z
      * @param z the z depth, in meters
      * @return the standard deviation in z, in meters
      */
-    double getStdDevZ(double z);
+    double getStdDevZ(double z) const;
 
     /** @brief Calculates the z distribution (mean and variance) for a given pixel
      * 
@@ -163,7 +176,7 @@ class RGBDFrame
      * @param z_mean the mean of the distribution (will be the same az the z of the pixel), in meters
      * @param z_var var(z), will a quadratic function of the mean, in meters^2
      */    
-    void getGaussianDistribution(int u, int v, double& z_mean, double& z_var);
+    void getGaussianDistribution(int u, int v, double& z_mean, double& z_var) const;
     
     /** @brief Calculates the GMM z distribution (mean and variance) for a given pixel
      * 
@@ -180,7 +193,7 @@ class RGBDFrame
      * @param z_mean the mean of the distribution (will be the same az the z of the pixel), in meters
      * @param z_var var(z), will a quadratic function of the mean, in meters^2
      */   
-    void getGaussianMixtureDistribution(int u, int v, double& z_mean, double& z_var);
+    void getGaussianMixtureDistribution(int u, int v, double& z_mean, double& z_var) const;
 };
 
 } // namespace ccny_rgbd

@@ -3,6 +3,7 @@
          
   <arg name="manager_name" />
   <arg name="calib_path"   /> 
+  <arg name="publish_cloud" default="false"/>
   
   <!-- Debayered images -->
   <node pkg="nodelet" type="nodelet" name="debayer"
@@ -18,9 +19,9 @@
     <!-- Resample by a factor of 2-->
     <param name="scale" value="1.0"/>
     <param name="unwarp" value="true"/>
-    <param name="publish_cloud" value="false"/>
+    <param name="publish_cloud" value="$(arg publish_cloud)"/>
     <param name="calib_path" value="$(arg calib_path)"/>
-        
+
   </node> 
 
   <!-- static transforms -->
