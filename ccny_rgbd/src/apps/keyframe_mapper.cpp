@@ -212,15 +212,28 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   PublishKeyframes::Request& request,
   PublishKeyframes::Response& response)
 {
-  // regex matching - try match the request string against each
-  // keyframe index
+  path_msg_.header.frame_id = fixed_frame_;
+  path_msg_.poses.clear();
+  path_msg_.poses.resize(keyframes_.size());
   
   bool found_match = false;
 
+  // regex matching - try match the request string against each
+  // keyframe index
   boost::regex expression(request.re);
   
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
+    // Recompute keyframes' path:
+    // **************************************************
+    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
+
+    pose_stamped.header.stamp = keyframe.header.stamp;
+    pose_stamped.header.frame_id = fixed_frame_;
+    tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
+    // ***************************************************
+
     std::stringstream ss;
     ss << kf_idx;
     std::string kf_idx_string = ss.str();
@@ -236,6 +249,8 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
       usleep(25000);
     }
   }
+
+  path_pub_.publish(path_msg_);  // Publish new keyframes' path
 
   return found_match;
 }
