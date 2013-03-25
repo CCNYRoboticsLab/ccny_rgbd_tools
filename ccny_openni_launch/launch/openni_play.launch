@@ -31,7 +31,7 @@
      <arg name="manager_name"  value="$(arg manager_name)" />
      <arg name="calib_path"    value="$(arg calib_path)" />
      <arg name="unwarp"        value="$(arg unwarp)" />
-     <arg name="scale"        value="$(arg scale)" />
+     <arg name="scale"         value="$(arg scale)" />
      <arg name="publish_cloud" value="$(arg publish_cloud)" />
      <arg name="verbose"       value="$(arg verbose)"/>  
   </include>

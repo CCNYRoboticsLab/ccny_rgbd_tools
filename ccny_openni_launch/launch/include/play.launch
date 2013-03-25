@@ -2,8 +2,8 @@
 <launch>
 
   <arg name="bag_name" />
-  <arg name="bag_rate"  default="1.0" />
-  <arg name="bag_start" default="0.0" />
+  <arg name="bag_rate" />
+  <arg name="bag_start"/>
 
   <node pkg="rosbag" type="play" name="play" output="screen"
     args="$(arg bag_name) --clock --start=$(arg bag_start) --queue=1000 --rate=$(arg bag_rate)"/>

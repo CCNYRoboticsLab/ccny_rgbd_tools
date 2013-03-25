@@ -35,13 +35,15 @@ KeyframeMapper::KeyframeMapper(
   ROS_INFO("Starting RGBD Keyframe Mapper");
  
   // **** init variables
-
+  
   graph_solver_ = new KeyframeGraphSolverG2O(nh, nh_private);
   
   // **** params
+  
   initParams();
+  
   // **** publishers
-
+  
   keyframes_pub_ = nh_.advertise<PointCloudT>(
     "keyframes", queue_size_);
   poses_pub_ = nh_.advertise<visualization_msgs::Marker>( 
@@ -50,8 +52,9 @@ KeyframeMapper::KeyframeMapper(
     "keyframe_associations", queue_size_);
   path_pub_ = nh_.advertise<PathMsg>( 
     "keyframe_path", queue_size_);
+  
   // **** services
-
+  
   pub_keyframe_service_ = nh_.advertiseService(
     "publish_keyframe", &KeyframeMapper::publishKeyframeSrvCallback, this);
   pub_keyframes_service_ = nh_.advertiseService(
@@ -225,14 +228,12 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     // Recompute keyframes' path:
-    // **************************************************
     const RGBDKeyframe& keyframe = keyframes_[kf_idx];
     geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
 
     pose_stamped.header.stamp = keyframe.header.stamp;
     pose_stamped.header.frame_id = fixed_frame_;
     tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
-    // ***************************************************
 
     std::stringstream ss;
     ss << kf_idx;

@@ -86,11 +86,11 @@ class VisualOdometry
     ros::Publisher cloud_publisher_;          ///< ROS feature cloud publisher
     ros::Publisher path_pub_;                 ///< ROS publisher for the VO path
 
-    // I/O benchmark-related member variables:
-    FILE * p_time_file_;
-    std::string times_file_name_;  ///< File name for time recording statistics
-    bool save_times_to_file_; ///< indicates whether to save results to file or print to screen
-
+    FILE * diagnostics_file_;           ///< File for time recording statistics
+    std::string diagnostics_file_name_; ///< File name for time recording statistics
+    bool save_diagnostics_;              ///< indicates whether to save results to file or print to screen
+    bool verbose_;                      ///< indicates whether to print diagnostics to screen
+    
     GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
     StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
     SurfDetectorConfigServerPtr surf_config_server_;  ///< ROS dynamic reconfigure server for SURF params
@@ -232,12 +232,13 @@ class VisualOdometry
      */
     void orbReconfigCallback(OrbDetectorConfig& config, uint32_t level);
 
-    /*
+    /**
      * @brief Saves computed running times to file (or print on screen)
      * @return 1 if write to file was successful
      */
-    int saveTimesToFile(int n_features, int n_valid_features, int n_model_pts,
-                          double d_frame, double d_features, double d_reg, double d_total);
+    void diagnostics(
+      int n_features, int n_valid_features, int n_model_pts,
+      double d_frame, double d_features, double d_reg, double d_total);
 
 };
 

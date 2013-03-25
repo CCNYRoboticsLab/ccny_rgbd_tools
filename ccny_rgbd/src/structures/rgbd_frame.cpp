@@ -229,12 +229,6 @@ void RGBDFrame::computeDistributions(
     kp_covariance(2,0) = s_zx; // xz-
     kp_covariance(2,1) = s_zy; // yz
     kp_covariance(2,2) = s_zz; // zz
-
-    /// FIXME: HACK
-    double factor = 0.025;
-    double factor_s = 1.0 + factor * (std::abs(umcx) / 160) + factor * (std::abs(vmcy) / 120);
-    kp_mean(2,0) = z * factor_s;
-
   }
 }
 
@@ -294,11 +288,6 @@ void RGBDFrame::constructDensePointCloud(
         p.x = z * (u - cx) * constant_x;
         p.y = z * (v - cy) * constant_y;
         p.z = z;
-
-        /// FIXME: HACK
-        double factor = 0.025;
-        double factor_s = 1.0 + factor * (std::abs(u - cx) / 160) + factor * (std::abs(v - cy) / 120);
-        p.z = z * factor_s;
       }
       else
       {

@@ -72,9 +72,7 @@ VisualOdometry::VisualOdometry(
 
 VisualOdometry::~VisualOdometry()
 {
-  fclose(p_time_file_);
-  ROS_INFO("Closed file %s", times_file_name_.c_str());
-
+  fclose(diagnostics_file_);
   ROS_INFO("Destroying RGBD Visual Odometry"); 
 }
 
@@ -130,28 +128,32 @@ void VisualOdometry::initParams()
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
 
-  // File I/O
-  if (!nh_private_.getParam("times_file_name", times_file_name_))
-    times_file_name_ = "times.csv";
-  if (!nh_private_.getParam("save_times_to_file", save_times_to_file_))
-    save_times_to_file_ = false;
-  if(save_times_to_file_)
-  {
-    p_time_file_ = fopen(times_file_name_.c_str(), "w");
 
-    if (p_time_file_ == NULL)
+  if (!nh_private_.getParam("verbose", verbose_))
+    verbose_ = true;
+  if (!nh_private_.getParam("save_diagnostics", save_diagnostics_))
+    save_diagnostics_ = false;
+  if (!nh_private_.getParam("diagnostics_file_name", diagnostics_file_name_))
+    diagnostics_file_name_ = "diagnostics.csv";
+  
+  if(save_diagnostics_)
+  {
+    diagnostics_file_ = fopen(diagnostics_file_name_.c_str(), "w");
+
+    if (diagnostics_file_ == NULL)
     {
-      printf("saveErrorToFile: Can't create %s\n", times_file_name_.c_str());
+      ROS_ERROR("Can't create diagnostic file %s\n", diagnostics_file_name_.c_str());
       return;
     }
 
-    fprintf(p_time_file_, "%s, %s, %s, %s, %s, %s, %s, %s\n",
-            "Frame count",
-            "RGBDFrame delay",
-            "All features", "Valid features",
-            "Feat extr. delay",
-            "Model points", "Registration delay",
-            "Total delay");
+    // print header
+    fprintf(diagnostics_file_, "%s, %s, %s, %s, %s, %s, %s, %s\n",
+      "Frame id",
+      "Frame dur.",
+      "All features", "Valid features",
+      "Feat extr. dur.",
+      "Model points", "Registration dur.",
+      "Total dur.");
   }
 }
 
@@ -273,6 +275,8 @@ void VisualOdometry::RGBDCallback(
 
   ros::WallTime end = ros::WallTime::now();
 
+  frame_count_++;
+  
   int n_features = frame.keypoints.size();
   int n_valid_features = frame.n_valid_keypoints;
   int n_model_pts = motion_estimation_->getModelSize();
@@ -282,9 +286,8 @@ void VisualOdometry::RGBDCallback(
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
-
-  frame_count_+= saveTimesToFile( n_features,  n_valid_features,  n_model_pts,
-                                  d_frame,  d_features,  d_reg,  d_total);
+  diagnostics(n_features, n_valid_features, n_model_pts,
+              d_frame, d_features, d_reg, d_total);
 }
 
 void VisualOdometry::publishTf(const std_msgs::Header& header)
@@ -393,34 +396,25 @@ void VisualOdometry::orbReconfigCallback(OrbDetectorConfig& config, uint32_t lev
   orb_detector->setNFeatures(config.n_features);
 }
 
-
-/*
- * @brief Saves computed running times to file (or print on screen)
- * @return 1 if write to file was successful
- */
-int VisualOdometry::saveTimesToFile(int n_features, int n_valid_features, int n_model_pts,
-                                    double d_frame, double d_features, double d_reg, double d_total)
+void VisualOdometry::diagnostics(
+  int n_features, int n_valid_features, int n_model_pts,
+  double d_frame, double d_features, double d_reg, double d_total)
 {
-
-  if(save_times_to_file_)
+  if(save_diagnostics_ && diagnostics_file_ != NULL)
   {
-    if (p_time_file_ == NULL)
-      {
-        printf("saveErrorToFile: Can't create %s\n", times_file_name_.c_str());
-        return 0;
-      }
-     fprintf(p_time_file_, "%d, %2.1f, %d, %d, %3.1f, %d, %4.1f, %4.1f\n",
-             frame_count_,
-             d_frame,
-             n_features, n_valid_features,
-             d_features,
-             n_model_pts, d_reg,
-             d_total);
+    // print to file
+    fprintf(diagnostics_file_, "%d, %2.1f, %d, %d, %3.1f, %d, %4.1f, %4.1f\n",
+      frame_count_,
+      d_frame,
+      n_features, n_valid_features,
+      d_features,
+      n_model_pts, d_reg,
+      d_total);
   }
-  else
+  if (verbose_)
   {
     // Print to screen
-    printf("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s[%d] %4.1f TOTAL %4.1f\n",
+    ROS_INFO("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s[%d] %4.1f TOTAL %4.1f\n",
       frame_count_,
       d_frame,
       detector_type_.c_str(), n_features, n_valid_features, d_features,
@@ -428,7 +422,7 @@ int VisualOdometry::saveTimesToFile(int n_features, int n_valid_features, int n_
       d_total);
   }
 
-  return 1;
+  return;
 }
 
 } // namespace ccny_rgbd

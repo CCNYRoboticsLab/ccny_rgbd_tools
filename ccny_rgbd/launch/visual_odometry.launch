@@ -21,6 +21,10 @@
     
     -->
     
+    #### diagnostics ##################################
+        
+    <param name="verbose"     value="true"/>    
+    
     #### frames and tf output #########################
     
     <param name="publish_tf"  value="true"/>
