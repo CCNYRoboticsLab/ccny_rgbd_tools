@@ -26,6 +26,21 @@ MonocularVisualOdometry::MonocularVisualOdometry(ros::NodeHandle nh, ros::NodeHa
   // **** init parameters
   initParams();
   f2b_.setIdentity();
+ 
+    tf::Transform freiburg1;
+  freiburg1.setOrigin(tf::Vector3(-0.0552041697502, -0.415246917725, 1.66852389526));
+  freiburg1.setRotation(tf::Quaternion(-0.466079328013,
+                                        0.0598513320547,
+                                       -0.123544403938,
+                                        0.874027836116));
+  tf::Transform freiburg2;
+  freiburg2.setOrigin(tf::Vector3(-0.0112272525515, 0.0502554918469, -0.0574041954071));
+  freiburg2.setRotation(tf::Quaternion(0.129908557896,
+                                      -0.141388223098,
+                                       0.681948549539,
+                                       0.705747343414));
+  
+  f2b_ = freiburg1 * freiburg2;
   
   // **** publishers
   if(publish_cloud_model_)
@@ -143,6 +158,7 @@ void MonocularVisualOdometry::getVirtualImageFromKeyframe(
 
   projectCloudToImage(cloud, rmat, tvec, intrinsic, image_width_, image_height_, rgb_img_projected, depth_img_projected);
 
+  
   holeFilling2(rgb_img_projected, depth_img_projected, virtual_image_fill_, virtual_rgb_img, virtual_depth_img);
 
   //cv::medianBlur(rgb_img,rgb_img, 3);
@@ -168,6 +184,26 @@ bool MonocularVisualOdometry::readPointCloudFromPCDFile()
       << " data points from " << pcd_filename_ << " with header = " <<   model_ptr_->header.frame_id
       << std::endl;
 
+  // ****** HACK FOR FREIBURG BAG
+  tf::Transform freiburg1;
+  freiburg1.setOrigin(tf::Vector3(-0.0552041697502, -0.415246917725, 1.66852389526));
+  freiburg1.setRotation(tf::Quaternion(-0.466079328013,
+                                        0.0598513320547,
+                                       -0.123544403938,
+                                        0.874027836116));
+  tf::Transform freiburg2;
+  freiburg2.setOrigin(tf::Vector3(-0.0112272525515, 0.0502554918469, -0.0574041954071));
+  freiburg2.setRotation(tf::Quaternion(0.129908557896,
+                                      -0.141388223098,
+                                       0.681948549539,
+                                       0.705747343414));
+  freiburg1 * freiburg2;
+      
+  pcl_ros::transformPointCloud<PointT>(
+    *model_ptr_, *model_ptr_, (freiburg1 * freiburg2));
+  
+  pub_model_.publish(*model_ptr_);
+  
   return true;
 }
 
@@ -366,7 +402,7 @@ void MonocularVisualOdometry::estimatePose(
     rvec, tvec, false,
     max_ransac_iterations_, max_reproj_error_, 
     min_inliers_count_, inliers_indices,
-    CV_EPNP);
+    CV_ITERATIVE);
   
   if(draw_inlier_matches)
   {
@@ -390,7 +426,7 @@ void MonocularVisualOdometry::estimatePose(
 
     cv::namedWindow("Inlier matches", 0);
     cv::imshow("Inlier matches", matches_result_img);
-    cv::waitKey(1);
+    cv::waitKey(0);
   }
 
   cv::Rodrigues(rvec, rmat);
