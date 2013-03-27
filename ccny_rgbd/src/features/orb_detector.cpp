@@ -27,13 +27,20 @@ namespace ccny_rgbd {
 
 OrbDetector::OrbDetector(): FeatureDetector(),
   n_features_(400),
-  threshold_(31.0)
+  threshold_(31.0),
+  n_cells_(1)
 {
   mutex_.lock();
   
+  /*
   orb_detector_.reset(
     new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
   
+  grid_detector_.reset(
+    new(cv::GridAdaptedFeatureDetector(orb_detector_, n_features_, n_cells_, n_cells_)));
+    */
+  
+  detector_ = cv::FeatureDetector::create("GridORB");  
   mutex_.unlock();
 }
 
@@ -49,6 +56,7 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
   cv::Mat mask(frame.depth_img.size(), CV_8UC1);
   frame.depth_img.convertTo(mask, CV_8U);
 
+  /*
   // adaptive thresholding
   double cur_threshold = threshold_;
   while (cur_threshold > 5.0)
@@ -56,7 +64,10 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
     frame.keypoints.clear();
 
     orb_detector_.reset(
-      new cv::OrbFeatureDetector(n_features_, 1.2f, 8, cur_threshold, 0, 2, 0, 31));
+      new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
+  
+    grid_detector_.reset(
+      new(cv::GridAdaptedFeatureDetector(orb_detector_, n_cells_, n_cells_, n_features_)));
 
     orb_detector_->detect(input_img, frame.keypoints, mask); 
     
@@ -65,11 +76,14 @@ void OrbDetector::findFeatures(RGBDFrame& frame, const cv::Mat& input_img)
     cur_threshold = cur_threshold * 0.5;
     printf("redetecting, cur_threshold = %.1f\n", cur_threshold);
   }
-    
+  */
+   
+  detector_->detect(input_img, frame.keypoints, mask); 
+  
   if(compute_descriptors_)
     orb_descriptor_.compute(
       input_img, frame.keypoints, frame.descriptors);
-    
+  
   mutex_.unlock();
 }
 
@@ -79,10 +93,31 @@ void OrbDetector::setThreshold(int threshold)
   
   threshold_ = threshold;
 
+  /*
   orb_detector_.reset(
     new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
+
+  grid_detector_.reset(
+    new(cv::GridAdaptedFeatureDetector(orb_detector_, n_cells_, n_cells_, n_features_)));
+    */
   
   mutex_.unlock();
+}
+
+void OrbDetector::setNCells(int n_cells)
+{
+  mutex_.lock();
+  n_cells_ = n_cells;
+    
+    /*
+  orb_detector_.reset(
+    new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
+
+  grid_detector_.reset(
+    new(cv::GridAdaptedFeatureDetector(orb_detector_, n_cells_, n_cells_, n_features_)));
+    */
+  
+  mutex_.unlock(); 
 }
 
 void OrbDetector::setNFeatures(int n_features)
@@ -90,8 +125,13 @@ void OrbDetector::setNFeatures(int n_features)
   mutex_.lock();
   n_features_ = n_features;
 
+      /*
   orb_detector_.reset(
     new cv::OrbFeatureDetector(n_features_, 1.2f, 8, threshold_, 0, 2, 0, 31));
+
+  grid_detector_.reset(
+    new(cv::GridAdaptedFeatureDetector(orb_detector_, n_cells_, n_cells_, n_features_)));
+      */
   
   mutex_.unlock();
 }

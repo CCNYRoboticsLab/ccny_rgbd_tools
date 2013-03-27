@@ -32,8 +32,8 @@
     #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/detector_type"       value="$(arg detector_type)"/> 
     <param name="feature/smooth"              value="0"/>
-    <param name="feature/max_range"           value="7.0"/>
-    <param name="feature/max_stdev"           value="0.05"/>
+    <param name="feature/max_range"           value="30.0"/>
+    <param name="feature/max_stdev"           value="0.35"/>
     <param name="feature/show_keypoints"      value="false"/>
     <param name="feature/publish_cloud"       value="true"/>
     <param name="feature/publish_covariances" value="false"/>
@@ -49,7 +49,7 @@
 
     #### features: ORB ###############################
   
-    <param name="feature/ORB/n_features" value = "400"/>
+    <param name="feature/ORB/n_features" value = "10"/>
     <param name="feature/ORB/threshold"  value = "31"/>
 
     #### registration #################################

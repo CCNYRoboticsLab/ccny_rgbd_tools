@@ -60,13 +60,19 @@ class OrbDetector: public FeatureDetector
      */
     void setNFeatures(int n_features);
 
+    void setNCells(int n_cells);
+    
   private:
 
     int n_features_;        ///< number of desired features
     double threshold_;      ///< threshold for detection
     
+    int n_cells_;
+    
     cv::OrbDescriptorExtractor orb_descriptor_; ///< OpenCV feature detector object
-    boost::shared_ptr<cv::OrbFeatureDetector> orb_detector_; ///< OpenCV descriptor extractor object
+    boost::shared_ptr<cv::OrbFeatureDetector> orb_detector_; ///< OpenCV descriptor extractor object   
+    
+    cv::Ptr<cv::FeatureDetector> detector_;
 };
 
 typedef boost::shared_ptr<OrbDetector> OrbDetectorPtr;
