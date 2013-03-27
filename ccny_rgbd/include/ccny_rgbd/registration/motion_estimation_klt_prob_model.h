@@ -113,8 +113,10 @@ class MotionEstimationKLTProbModel: public MotionEstimation
       int& mah_nn_idx, double& mah_dist_sq,
       IntVector& indices, FloatVector& dists_sq);
 
-    void updateModelFromData(const Vector3fVector& data_means,
-                             const Matrix3fVector& data_covariances);
+    void updateModelFromData(
+      const Vector3fVector& data_means,
+      const Matrix3fVector& data_covariances,
+      const IntVector& model_indices);
   
     void initializeModelFromData(
       const Vector3fVector& data_means,
@@ -128,6 +130,66 @@ class MotionEstimationKLTProbModel: public MotionEstimation
     
     bool saveModel(const std::string& filename);
     bool loadModel(const std::string& filename);
+    
+    void projectModelToFeaures(
+      const RGBDFrame& frame,
+      std::vector<cv::Point2f>& virtual_points, 
+      std::vector<int>& virtual_point_indices);
+      
+    void showTrackingImage(
+      const RGBDFrame& frame,
+      const std::vector<cv::Point2f>& image_points, 
+      const std::vector<cv::Point2f>& virtual_points, 
+      const std::vector<uchar>& status);
+      
+    void detectFeatures(const RGBDFrame& frame);
+    
+    void ransacSVD(
+      const PointCloudFeature& data_cloud, 
+      const PointCloudFeature& model_cloud,
+      IntVector& best_inlier_indices,
+      tf::Transform& output_tf);
+    
+    void alignRansacSVD(
+      const Vector3fVector& data_means,  
+      const Matrix3fVector& data_covariances, 
+      const Vector3fVector& model_means, 
+      const Matrix3fVector& model_covariances, 
+      IntVector& best_inlier_indices, 
+      tf::Transform motion);
+
+    // produces k random numbers in the range [0, n).
+    // Monte-Carlo based random sampling
+    void getRandomIndices(
+      int k, int n, IntVector& output)
+    {
+      while ((int)output.size() < k)
+      {
+        int random_number = rand() % n;
+        bool duplicate = false;    
+
+        for (unsigned int i = 0; i < output.size(); ++i)
+        {
+          if (output[i] == random_number)
+          {
+            duplicate = true;
+            break;
+          }
+        }
+
+        if (!duplicate)
+          output.push_back(random_number);
+      }
+    }
+    
+      double distEuclideanSq(const PointFeature& a, const PointFeature& b)
+    {
+      float dx = a.x - b.x;
+      float dy = a.y - b.y;
+      float dz = a.z - b.z;
+      return dx*dx + dy*dy + dz*dz;
+    }
+ 
 };
 
 } // namespace ccny_rgbd
