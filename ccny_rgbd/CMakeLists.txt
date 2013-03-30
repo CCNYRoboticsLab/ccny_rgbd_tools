@@ -191,20 +191,20 @@ target_link_libraries (mono_vo_node
 
 
 ################################################################
-# test projection function
+
 ################################################################
 
-#rosbuild_add_executable(test_projection
-#  src/test_projection.cpp)
+rosbuild_add_executable(test_projection
+  src/test_projection.cpp)
 
-#target_link_libraries (test_projection
-#  ccny_rgbd_structures
-#  ccny_rgbd_util
-#  boost_signals
-#  boost_system
-#  boost_filesystem
-#  ${OPENCV_LIBRARIES}
-#)
+target_link_libraries (test_projection
+  ccny_rgbd_structures
+  ccny_rgbd_util
+  boost_signals
+  boost_system
+  boost_filesystem
+  ${OPENCV_LIBRARIES}
+)
 
 #######################################################
 #supress pcl-1.6 pragma warnings
