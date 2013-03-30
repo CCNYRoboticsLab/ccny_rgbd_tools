@@ -1,54 +1,49 @@
-<!-- RGB-D Visual odometry -->
+<!-- Launches RGB-D visual odometry in conjunction with a keyframe-based
+3D mapper-->
 
 <launch>
 
-  #### RGBD PROCESSING ####################################
-  
-  <!--include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch"/-->
-
   #### VISUAL ODOMETRY ####################################
 
-  # ORB, SURF, GTF, KLT
+  # ORB, SURF, GTF, STAR
   <arg name="detector_type" default="GFT"/> 
 
-  # ICP, ICPModel, RANSAC
+  # ICPProbModel, ICP
   <arg name="reg_type" default="ICPProbModel"/> 
-
+  
   <include file="$(find ccny_rgbd)/launch/visual_odometry.launch">
     <arg name="detector_type" value="$(arg detector_type)"/>
     <arg name="reg_type"      value="$(arg reg_type)"/>
   </include>
 
-  #### OCTREE MAPPING #####################################
-  <!--
-  <node pkg="ccny_rgbd" type="octree_mapper_node" name="octree_mapper_node" 
-    output="screen">
-    <param name="resolution" value="0.05"/>
-  </node>
-  -->
   #### KEYFRAME MAPPING ###################################
 
   <node pkg="ccny_rgbd" type="keyframe_mapper_node" name="keyframe_mapper_node" 
     output="screen">
-
-    <param name="kf_dist_eps"  value="0.15"/>
-    <param name="kf_angle_eps" value="0.15"/> 
-    <param name="full_map_res" value="0.005"/>
-
-  </node>
-
-  #### OCTOMAP MAPPING #####################################
-  <!--
-  <node pkg="octomap_server" name="octomap_server" type="octomap_server_node"
-    output="screen">
-  
-    <remap from="cloud_in" to="/rgbd/cloud"/>
     
-    <param name="frame_id"   value="odom"/>
-    <param name="resolution" value="0.05"/>
+    <!-- NOTE: if using data from OpenNI driver directly, (without 
+    ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
+    Also add these to visual_odometry in visual_odometry.launch.
+
+    <remap from="/rgbd/depth" to="/camera/depth_registered/image_rect_raw"/>
+    <remap from="/rgbd/rgb"   to="/camera/rgb/image_rect_color"/>
+    <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>   
+    
+    -->
+    
+    <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
+    <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->
+    <param name="full_map_res" value="0.01"/>
+    <param name="max_range" value="7.0"/>
+    <param name="max_stdev" value="0.05"/>
   </node>
-  -->
+
 </launch>
 
 
+<!-- further NOTE on depth topics:
 
+"/camera/depth_registered/image_rect_raw" should be in 16UC1
+"/camera/depth_registered/image_rect" (in 32FC1) is also supported. 
+
+-->

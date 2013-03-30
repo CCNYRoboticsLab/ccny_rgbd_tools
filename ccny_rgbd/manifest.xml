@@ -1,15 +1,13 @@
 <package>
   <description brief="ccny_rgbd">
 
-     RGB-D tools form visual odometry and mapping
+     Tools for fast visual odometry and mapping from RGB-D data.
 
   </description>
   <author>Ivan Dryanovski</author>
-  <license>BSD</license>
+  <license>GPL</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd</url>
-  <depend package="roscpp"/>
-
   <depend package="roscpp"/>
   <depend package="pcl"/>
   <depend package="ccny_g2o"/>
@@ -27,7 +25,8 @@
   <depend package="nodelet"/>
 
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib/"/>
+    <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib/ -Wl,-rpath,${prefix}/lib -lros"/>
+    <nodelet plugin="${prefix}/nodelets/rgbd_image_proc_nodelet.xml" />
   </export>
 
 </package>

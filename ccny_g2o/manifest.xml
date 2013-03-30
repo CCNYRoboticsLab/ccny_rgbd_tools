@@ -1,14 +1,16 @@
 <package>
   <description brief="ccny_g2o">
 
-     Local install of g2o
+     Local install of g2o: A General Framework for Graph Optimization (Rainer Kuemmerle; Giorgio Grisetti; Hauke Strasdat; Kurt Konolige; Wolfram Burgard).
 
   </description>
   <author>Ivan Dryanovski</author>
-  <license>BSD</license>
+  <license>LGPLv3</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_g2o</url>
-
+  
+  <rosdep name="suitesparse"/>
+  
   <export>
     <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>
   </export>

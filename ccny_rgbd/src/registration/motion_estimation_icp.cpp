@@ -1,9 +1,33 @@
+/**
+ *  @file motion_estimation_icp.cpp
+ *  @author Ivan Dryanovski <ivan.dryanovski@gmail.com>
+ * 
+ *  @section LICENSE
+ * 
+ *  Copyright (C) 2013, City University of New York
+ *  CCNY Robotics Lab <http://robotics.ccny.cuny.edu>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "ccny_rgbd/registration/motion_estimation_icp.h"
 
-namespace ccny_rgbd
-{
+namespace ccny_rgbd {
 
-MotionEstimationICP::MotionEstimationICP(ros::NodeHandle nh, ros::NodeHandle nh_private):
+MotionEstimationICP::MotionEstimationICP(
+  const ros::NodeHandle& nh, 
+  const ros::NodeHandle& nh_private):
   MotionEstimation(nh, nh_private)
 {
   // *** init params  
@@ -25,7 +49,7 @@ MotionEstimationICP::MotionEstimationICP(ros::NodeHandle nh, ros::NodeHandle nh_
     min_correspondences_ = 15; 
   if (!nh_private_.getParam ("reg/ICP/max_corresp_dist_eucl", max_corresp_dist_eucl_))
     max_corresp_dist_eucl_ = 0.15;
-  if (!nh_private_.getParam ("reg/ICP/publish_model", publish_model_))
+  if (!nh_private_.getParam ("reg/ICP/publish_model_cloud", publish_model_))
     publish_model_ = false;
   if (!nh_private_.getParam ("reg/ICP/history_size", history_size))
     history_size = 5;
@@ -48,7 +72,7 @@ MotionEstimationICP::MotionEstimationICP(ros::NodeHandle nh, ros::NodeHandle nh_
   if (publish_model_)
   {
     model_publisher_ = nh_.advertise<PointCloudFeature>(
-      "model", 1);
+      "model/cloud", 1);
   }
 }
 
@@ -62,7 +86,7 @@ bool MotionEstimationICP::getMotionEstimationImpl(
   const tf::Transform& prediction,
   tf::Transform& motion)
 {
-  // TODO: ignores prediction
+  /// @todo ignores prediction
   bool result;
  
   // **** create a data cloud from the means
@@ -129,7 +153,7 @@ bool MotionEstimationICP::alignICPEuclidean(
   const Vector3fVector& data_means,
   tf::Transform& correction)
 {
-  pcl::registration::TransformationEstimationSVD<PointFeature, PointFeature> svd;
+  TransformationEstimationSVD svd;
 
   // create a point cloud from the means
   PointCloudFeature data_cloud;
