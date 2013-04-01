@@ -27,8 +27,11 @@ int main(int argc, char** argv)
     {
       if (j >= keyframes.size()) continue;
       
-      PointCloudT temp;
-      pcl::transformPointCloud(keyframes[j].cloud, temp, eigenFromTf(keyframes[j].pose));
+      PointCloudT kf_cloud;
+      keyframes[j].constructDensePointCloud(kf_cloud);
+      
+      PointCloudT temp;    
+      pcl::transformPointCloud(kf_cloud, temp, eigenFromTf(keyframes[j].pose));
       *agr += temp;
     }
     
@@ -49,9 +52,12 @@ int main(int argc, char** argv)
     {
       if (j >= keyframes.size()) continue;
 
+      PointCloudT kf_cloud;
+      keyframes[j].constructDensePointCloud(kf_cloud);
+      
       PointCloudT temp;
-      pcl::transformPointCloud(keyframes[j].cloud, temp, eigenFromTf(keyframes[j].pose));    
-      pcl::transformPointCloud(temp, keyframes[j].cloud, eigenFromTf(tf));
+      pcl::transformPointCloud(kf_cloud, temp, eigenFromTf(keyframes[j].pose));    
+      pcl::transformPointCloud(temp, kf_cloud, eigenFromTf(tf));
     }
   }
   

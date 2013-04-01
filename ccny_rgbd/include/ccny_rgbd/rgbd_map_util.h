@@ -6,6 +6,8 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/normal_3d.h>
 
+#include <opencv2/nonfree/features2d.hpp>
+
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/structures/rgbd_keyframe.h"
@@ -57,6 +59,49 @@ void filterCloudByHeight(
   pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_out,
   double min_z,
   double max_z);
+
+void buildSURFAssociationMatrix(
+  const KeyframeVector& keyframes,
+  cv::Mat& association_matrix);
+
+void buildDenseAssociationMatrix(
+  const KeyframeVector& keyframes,
+  cv::Mat& association_matrix);
+
+void buildBruteForceSURFAssociationMatrix(
+  const KeyframeVector& keyframes,
+  cv::Mat& association_matrix);
+
+void trainSURFMatcher(
+  const KeyframeVector& keyframes,
+  cv::FlannBasedMatcher& matcher);
+
+void floatMatrixToUintMatrix(
+  const cv::Mat& mat_in, 
+  cv::Mat& mat_out, 
+  float scale = 0);
+
+void thresholdMatrix(
+  const cv::Mat& mat_in, 
+  cv::Mat& mat_out,
+  float threshold);
+
+void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
+
+void pairwiseMatchingRANSAC(
+  const RGBDFrame& frame_a, const RGBDFrame& frame_b,
+  double max_eucl_dist_sq, 
+  double max_desc_dist,
+  double sufficient_inlier_ratio,
+  int max_ransac_iterations,
+  std::vector<cv::DMatch>& all_matches,
+  std::vector<cv::DMatch>& best_inlier_matches,
+  Eigen::Matrix4f& best_transformation);
+
+void getRandomIndices(
+  int k, int n, IntVector& output);
+
+double distEuclideanSq(const PointFeature& a, const PointFeature& b);
 
 } // namespace ccny_rgbd
 

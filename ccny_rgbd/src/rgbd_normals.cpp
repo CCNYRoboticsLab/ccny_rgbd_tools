@@ -148,9 +148,11 @@ bool analyzeKeyframe(
   double degrees_per_bin = 0.25;
 
   // rotate point cloud into global frame
+  PointCloudT kf_cloud;
+  keyframe.constructDensePointCloud(kf_cloud);
   PointCloudT::Ptr cloud_tf;
   cloud_tf.reset(new PointCloudT());
-  pcl::transformPointCloud(keyframe.cloud, *cloud_tf, eigenFromTf(keyframe.pose));
+  pcl::transformPointCloud(kf_cloud, *cloud_tf, eigenFromTf(keyframe.pose));
 
   // filter cloud
   printf("Filtering cloud\n");
