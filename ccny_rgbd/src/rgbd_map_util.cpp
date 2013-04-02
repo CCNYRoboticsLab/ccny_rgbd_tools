@@ -26,9 +26,12 @@ void buildBruteForceSURFAssociationMatrix(
 {  
   // params
   float max_corresp_dist_eucl = 0.03;
-  float max_corresp_dist_desc = 1.00;
+  float max_corresp_dist_desc = 0.5;
   float sufficient_ransac_inlier_ratio = 1.0;
   int max_ransac_iterations = 1000;
+  
+  bool save_ransac_results = true; 
+  std::string ransac_results_path = "/home/idryanov/ros/images/ransac";  
     
   float max_corresp_dist_eucl_sq = max_corresp_dist_eucl * max_corresp_dist_eucl;
     
@@ -60,6 +63,18 @@ void buildBruteForceSURFAssociationMatrix(
         max_corresp_dist_eucl_sq, max_corresp_dist_desc, 
         sufficient_ransac_inlier_ratio, max_ransac_iterations,
         all_matches, inlier_matches, transformation);
+    
+      if (save_ransac_results && inlier_matches.size() > 30)
+      {
+        cv::Mat img_matches;
+        cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                        keyframe_a.rgb_img, keyframe_a.keypoints, 
+                        inlier_matches, img_matches);
+
+        std::stringstream ss1;
+        ss1 << kf_idx_a << "_to_" << kf_idx_b;
+        cv::imwrite(ransac_results_path + "/" + ss1.str() + ".png", img_matches);
+      }
     
       // both entries in matrix
       association_matrix.at<float>(kf_idx_a, kf_idx_b) = inlier_matches.size();
@@ -637,73 +652,75 @@ void pairwiseMatchingRANSAC(
   double max_desc_dist,
   double sufficient_inlier_ratio,
   int max_ransac_iterations,
-  std::vector<cv::DMatch>& mmatches,
+  std::vector<cv::DMatch>& all_matches,
   std::vector<cv::DMatch>& best_inlier_matches,
   Eigen::Matrix4f& best_transformation)
 {
+  // params
+  bool use_ratio_test = true;
+  float max_desc_ratio = 0.75;
+
   // constants
   int min_sample_size = 3;
 
   cv::FlannBasedMatcher matcher;          // for SURF
   TransformationEstimationSVD svd;
 
+  std::vector<cv::DMatch> candidate_matches;
+
   // **** build candidate matches ***********************************
-  /*
   // assumes detectors and distributions are computed
   // establish all matches from b to a
-  matcher.match(frame_b.descriptors, frame_a.descriptors, all_matches);
 
-  // remove bad matches - too far away in descriptor space,
-  //                    - nan, too far, or cov. too big
-  std::vector<cv::DMatch> candidate_matches;
-  for (unsigned int m_idx = 0; m_idx < all_matches.size(); ++m_idx)
+  if (use_ratio_test)
   {
-    const cv::DMatch& match = all_matches[m_idx];
-    int idx_b = match.queryIdx;
-    int idx_a = match.trainIdx; 
-
-    if (match.distance < max_desc_dist && 
-        frame_a.kp_valid[idx_a] && 
-        frame_b.kp_valid[idx_b])
-    {
-      candidate_matches.push_back(all_matches[m_idx]);
-    }
-  }*/
-
-  // **** build candidate matches with ratio test
-
-  // assumes detectors and distributions are computed
-  // establish all matches from b to a
     std::vector<std::vector<cv::DMatch> > all_matches2;
-  
-  matcher.knnMatch(
-    frame_b.descriptors, frame_a.descriptors, all_matches2, 2);
+    
+    matcher.knnMatch(
+      frame_b.descriptors, frame_a.descriptors, all_matches2, 2);
 
-  // remove bad matches - too far away in descriptor space,
-  //                    - nan, too far, or cov. too big
-  std::vector<cv::DMatch> candidate_matches;
-  for (unsigned int m_idx = 0; m_idx < all_matches2.size(); ++m_idx)
-  {
-    const cv::DMatch& match1 = all_matches2[m_idx][0];
-    const cv::DMatch& match2 = all_matches2[m_idx][1];
-    
-    double ratio =  match1.distance / match2.distance;
-    
-    if (ratio < 0.6)
+    for (unsigned int m_idx = 0; m_idx < all_matches2.size(); ++m_idx)
     {
-      int idx_b = match1.queryIdx;
-      int idx_a = match1.trainIdx; 
-
-      if (frame_a.kp_valid[idx_a] && 
-          frame_b.kp_valid[idx_b])
+      const cv::DMatch& match1 = all_matches2[m_idx][0];
+      const cv::DMatch& match2 = all_matches2[m_idx][1];
+      
+      double ratio =  match1.distance / match2.distance;
+      
+      // remove bad matches - ratio test, valid keypoints
+      if (ratio < max_desc_ratio)
       {
-        candidate_matches.push_back(match1);
+        int idx_b = match1.queryIdx;
+        int idx_a = match1.trainIdx; 
+
+        if (frame_a.kp_valid[idx_a] && frame_b.kp_valid[idx_b])
+          candidate_matches.push_back(match1);
+      }
+    }
+  }
+  else
+  {
+    matcher.match(
+      frame_b.descriptors, frame_a.descriptors, all_matches);
+
+    for (unsigned int m_idx = 0; m_idx < all_matches.size(); ++m_idx)
+    {
+      const cv::DMatch& match = all_matches[m_idx];
+
+      // remove bad matches - descriptor distance, valid keypoints
+      if (match.distance < max_desc_dist)
+      {      
+        int idx_b = match.queryIdx;
+        int idx_a = match.trainIdx; 
+        
+        if (frame_a.kp_valid[idx_a] && frame_b.kp_valid[idx_b])
+          candidate_matches.push_back(match);
       }
     }
   }
 
   int size = candidate_matches.size();
-
+  //printf("size: %d\n", size);
+  
   if (size < min_sample_size) return;
   
   // **** build 3D features for SVD ********************************

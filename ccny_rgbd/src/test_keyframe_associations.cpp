@@ -47,7 +47,7 @@ int main(int argc, char** argv)
    
   // show thresholded
   cv::Mat bf_surf_association_matrix_thresholded;
-  thresholdMatrix(bf_surf_association_matrix, bf_surf_association_matrix_thresholded, 50);
+  thresholdMatrix(bf_surf_association_matrix, bf_surf_association_matrix_thresholded, 30);
   cv::namedWindow("BF SURF association matrix T", 0);
   cv::imshow("BF SURF association matrix T", bf_surf_association_matrix_thresholded);
 
