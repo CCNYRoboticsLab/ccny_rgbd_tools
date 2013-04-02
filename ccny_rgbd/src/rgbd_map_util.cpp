@@ -637,7 +637,7 @@ void pairwiseMatchingRANSAC(
   double max_desc_dist,
   double sufficient_inlier_ratio,
   int max_ransac_iterations,
-  std::vector<cv::DMatch>& all_matches,
+  std::vector<cv::DMatch>& mmatches,
   std::vector<cv::DMatch>& best_inlier_matches,
   Eigen::Matrix4f& best_transformation)
 {
@@ -648,7 +648,7 @@ void pairwiseMatchingRANSAC(
   TransformationEstimationSVD svd;
 
   // **** build candidate matches ***********************************
-  
+  /*
   // assumes detectors and distributions are computed
   // establish all matches from b to a
   matcher.match(frame_b.descriptors, frame_a.descriptors, all_matches);
@@ -667,6 +667,38 @@ void pairwiseMatchingRANSAC(
         frame_b.kp_valid[idx_b])
     {
       candidate_matches.push_back(all_matches[m_idx]);
+    }
+  }*/
+
+  // **** build candidate matches with ratio test
+
+  // assumes detectors and distributions are computed
+  // establish all matches from b to a
+    std::vector<std::vector<cv::DMatch> > all_matches2;
+  
+  matcher.knnMatch(
+    frame_b.descriptors, frame_a.descriptors, all_matches2, 2);
+
+  // remove bad matches - too far away in descriptor space,
+  //                    - nan, too far, or cov. too big
+  std::vector<cv::DMatch> candidate_matches;
+  for (unsigned int m_idx = 0; m_idx < all_matches2.size(); ++m_idx)
+  {
+    const cv::DMatch& match1 = all_matches2[m_idx][0];
+    const cv::DMatch& match2 = all_matches2[m_idx][1];
+    
+    double ratio =  match1.distance / match2.distance;
+    
+    if (ratio < 0.6)
+    {
+      int idx_b = match1.queryIdx;
+      int idx_a = match1.trainIdx; 
+
+      if (frame_a.kp_valid[idx_a] && 
+          frame_b.kp_valid[idx_b])
+      {
+        candidate_matches.push_back(match1);
+      }
     }
   }
 

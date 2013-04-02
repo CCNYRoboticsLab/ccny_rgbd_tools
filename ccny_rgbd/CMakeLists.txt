@@ -231,19 +231,18 @@ rosbuild_add_executable(test_keyframe_associations
 # keyframe yaw rotation test app
 ################################################################
 
-rosbuild_add_executable(keyframe_yaw_histogram_align
-  src/rgbd_normals.cpp
-  src/keyframe_yaw_histogram_align.cpp)
+#rosbuild_add_executable(keyframe_yaw_histogram_align
+#  src/rgbd_normals.cpp
+#  src/keyframe_yaw_histogram_align.cpp)
 
-  target_link_libraries (keyframe_yaw_histogram_align
-  ccny_rgbd_structures 
-  ccny_rgbd_util
-  ccny_rgbd_map_util
-  boost_signals 
-  boost_system
-  boost_filesystem
-  ${OPENCV_LIBRARIES}
-  )
+#  target_link_libraries (keyframe_yaw_histogram_align
+#  ccny_rgbd_structures 
+#  ccny_rgbd_util
+#  ccny_rgbd_map_util
+#  boost_signals 
+#  boost_system
+#  boost_filesystem
+#  ${OPENCV_LIBRARIES})
   
   
 ################################################################
