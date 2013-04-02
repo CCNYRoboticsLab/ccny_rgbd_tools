@@ -26,7 +26,7 @@ void buildBruteForceSURFAssociationMatrix(
 {  
   // params
   float max_corresp_dist_eucl = 0.03;
-  float max_corresp_dist_desc = 0.50;
+  float max_corresp_dist_desc = 1.00;
   float sufficient_ransac_inlier_ratio = 1.0;
   int max_ransac_iterations = 1000;
     
@@ -36,27 +36,35 @@ void buildBruteForceSURFAssociationMatrix(
   
   association_matrix = cv::Mat::zeros(kf_size, kf_size, CV_32FC1);
    
-  for (unsigned int kf_idx_a = 0;          kf_idx_a < kf_size; ++kf_idx_a)
-  for (unsigned int kf_idx_b = kf_idx_a+1; kf_idx_b < kf_size; ++kf_idx_b)
+  for (unsigned int kf_idx_a = 0; kf_idx_a < kf_size; ++kf_idx_a)
   {
-    printf("[%d %d]\n", kf_idx_a, kf_idx_b);
     const RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
-    const RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
+    
+    // self-association
+    // @todo actually this should only account for the "valid" keypoints
+    association_matrix.at<float>(kf_idx_a, kf_idx_a) = keyframe_a.keypoints.size();
+    
+    for (unsigned int kf_idx_b = kf_idx_a+1; kf_idx_b < kf_size; ++kf_idx_b)
+    {
+      printf("[%d %d]\n", kf_idx_a, kf_idx_b);
 
-    std::vector<cv::DMatch> all_matches;
-    std::vector<cv::DMatch> inlier_matches;
+      const RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
 
-    // perform ransac matching, b onto a
-    Eigen::Matrix4f transformation;
+      std::vector<cv::DMatch> all_matches;
+      std::vector<cv::DMatch> inlier_matches;
 
-    pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
-      max_corresp_dist_eucl_sq, max_corresp_dist_desc, 
-      sufficient_ransac_inlier_ratio, max_ransac_iterations,
-      all_matches, inlier_matches, transformation);
-  
-    // both entries in matrix
-    association_matrix.at<float>(kf_idx_a, kf_idx_b) = inlier_matches.size();
-    association_matrix.at<float>(kf_idx_b, kf_idx_a) = inlier_matches.size();
+      // perform ransac matching, b onto a
+      Eigen::Matrix4f transformation;
+
+      pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
+        max_corresp_dist_eucl_sq, max_corresp_dist_desc, 
+        sufficient_ransac_inlier_ratio, max_ransac_iterations,
+        all_matches, inlier_matches, transformation);
+    
+      // both entries in matrix
+      association_matrix.at<float>(kf_idx_a, kf_idx_b) = inlier_matches.size();
+      association_matrix.at<float>(kf_idx_b, kf_idx_a) = inlier_matches.size();
+    }
   }
 }
   
