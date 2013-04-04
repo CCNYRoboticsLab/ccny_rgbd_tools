@@ -49,10 +49,18 @@ VisualOdometry::VisualOdometry(
     "vo", queue_size_);
   pose_stamped_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>(
     "pose", queue_size_);
-  cloud_publisher_ = nh_.advertise<PointCloudFeature>(
-    "feature/cloud", 1);
   path_pub_ = nh_.advertise<PathMsg>(
     "path", queue_size_);
+    
+  feature_cloud_publisher_ = nh_.advertise<PointCloudFeature>(
+    "feature/cloud", 1);
+  feature_cov_publisher_ = nh_.advertise<visualization_msgs::Marker>(
+    "feature/covariances", 1);
+    
+  model_cloud_publisher_ = nh_.advertise<PointCloudFeature>(
+    "model/cloud", 1);
+  model_cov_publisher_ = nh_.advertise<visualization_msgs::Marker>(
+    "model/covariances", 1);
   
   // **** subscribers
   
@@ -95,8 +103,10 @@ void VisualOdometry::initParams()
 
   // detector params
   
-  if (!nh_private_.getParam ("feature/publish_cloud", publish_cloud_))
-    publish_cloud_ = false;
+  if (!nh_private_.getParam ("feature/publish_feature_cloud", publish_feature_cloud_))
+    publish_feature_cloud_ = false;
+  if (!nh_private_.getParam ("feature/publish_feature_covariances", publish_feature_cov_))
+    publish_feature_cov_ = false;
   if (!nh_private_.getParam ("feature/detector_type", detector_type_))
     detector_type_ = "GFT";
   
@@ -118,13 +128,9 @@ void VisualOdometry::initParams()
   
   // registration params
   
-  if (!nh_private_.getParam ("reg/reg_type", reg_type_))
-    reg_type_ = "ICPProbModel";
-  
-  if (reg_type_ == "ICPProbModel")
-    motion_estimation_ = new rgbdtools::MotionEstimationICPProbModel();
-  else
-    ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
+  configureMotionEstimation();
+
+  // diagnostic params
 
   if (!nh_private_.getParam("verbose", verbose_))
     verbose_ = true;
@@ -152,6 +158,56 @@ void VisualOdometry::initParams()
       "Model points", "Registration dur.",
       "Total dur.");
   }
+}
+
+void VisualOdometry::configureMotionEstimation()
+{
+  int motion_constraint;
+
+  if (!nh_private_.getParam ("reg/motion_constraint", motion_constraint))
+    motion_constraint = 0;
+
+  motion_estimation_.setMotionConstraint(motion_constraint);
+
+  double tf_epsilon_linear;
+  double tf_epsilon_angular;
+  int max_iterations;
+  int min_correspondences;
+  int max_model_size;
+  double max_corresp_dist_eucl;
+  double max_assoc_dist_mah;
+  int n_nearest_neighbors;   
+
+  if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_linear", tf_epsilon_linear))
+    tf_epsilon_linear = 1e-4; // 1 mm
+  if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_angular", tf_epsilon_angular))
+    tf_epsilon_angular = 1.7e-3; // 1 deg
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_iterations", max_iterations))
+    max_iterations = 10;
+  if (!nh_private_.getParam ("reg/ICPProbModel/min_correspondences", min_correspondences))
+    min_correspondences = 15;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_model_size", max_model_size))
+    max_model_size = 3000;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_corresp_dist_eucl", max_corresp_dist_eucl))
+    max_corresp_dist_eucl = 0.15;
+  if (!nh_private_.getParam ("reg/ICPProbModel/max_assoc_dist_mah", max_assoc_dist_mah))
+    max_assoc_dist_mah = 10.0;
+  if (!nh_private_.getParam ("reg/ICPProbModel/n_nearest_neighbors", n_nearest_neighbors))
+    n_nearest_neighbors = 4;      
+    
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_cloud", publish_model_cloud_))
+    publish_model_cloud_ = false;
+  if (!nh_private_.getParam ("reg/ICPProbModel/publish_model_covariances", publish_model_cov_))
+    publish_model_cov_ = false; 
+    
+  motion_estimation_.setTfEpsilonLinear(tf_epsilon_linear);
+  motion_estimation_.setTfEpsilonAngular(tf_epsilon_angular);
+  motion_estimation_.setMaxIterations(max_iterations);
+  motion_estimation_.setMinCorrespondences(min_correspondences);
+  motion_estimation_.setMaxModelSize(max_model_size);
+  motion_estimation_.setMaxCorrespondenceDistEuclidean(max_corresp_dist_eucl);
+  motion_estimation_.setMaxAssociationDistMahalanobis(max_assoc_dist_mah);
+  motion_estimation_.setNNearestNeighbors(n_nearest_neighbors);
 }
 
 void VisualOdometry::resetDetector()
@@ -238,7 +294,7 @@ void VisualOdometry::RGBDCallback(
     init_time_ = rgb_msg->header.stamp;
     if (!initialized_) return;
 
-    motion_estimation_->setBaseToCameraTf(eigenAffineFromTf(b2c_));
+    motion_estimation_.setBaseToCameraTf(eigenAffineFromTf(b2c_));
   }
 
   // **** create frame *************************************************
@@ -257,7 +313,7 @@ void VisualOdometry::RGBDCallback(
   // **** registration *************************************************
   
   ros::WallTime start_reg = ros::WallTime::now();
-  AffineTransform m = motion_estimation_->getMotionEstimation(frame);
+  AffineTransform m = motion_estimation_.getMotionEstimation(frame);
   tf::Transform motion = tfFromEigenAffine(m);
   f2b_ = motion * f2b_;
   ros::WallTime end_reg = ros::WallTime::now();
@@ -268,7 +324,12 @@ void VisualOdometry::RGBDCallback(
   if (publish_odom_)  publishOdom(rgb_msg->header);
   if (publish_path_)  publishPath(rgb_msg->header);
   if (publish_pose_)  publishPoseStamped(rgb_msg->header);
-  if (publish_cloud_) publishFeatureCloud(frame);
+  
+  if (publish_feature_cloud_) publishFeatureCloud(frame);
+  if (publish_feature_cov_) publishFeatureCovariances(frame);
+  
+  if (publish_model_cloud_) publishModelCloud();
+  if (publish_model_cov_)   publishModelCovariances();
 
   // **** print diagnostics *******************************************
 
@@ -278,7 +339,7 @@ void VisualOdometry::RGBDCallback(
   
   int n_features = frame.keypoints.size();
   int n_valid_features = frame.n_valid_keypoints;
-  int n_model_pts = motion_estimation_->getModelSize();
+  int n_model_pts = motion_estimation_.getModelSize();
 
   double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
   double d_features = 1000.0 * (end_features - start_features).toSec();
@@ -367,13 +428,6 @@ void VisualOdometry::publishPath(const std_msgs::Header& header)
   path_pub_.publish(path_msg_);
 }
 
-void VisualOdometry::publishFeatureCloud(rgbdtools::RGBDFrame& frame)
-{
-  PointCloudFeature cloud; 
-  frame.constructFeaturePointCloud(cloud);   
-  cloud_publisher_.publish(cloud);
-}
-
 bool VisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
 {
   tf::StampedTransform tf_m;
@@ -458,6 +512,29 @@ void VisualOdometry::diagnostics(
   }
 
   return;
+}
+
+void VisualOdometry::publishFeatureCloud(rgbdtools::RGBDFrame& frame)
+{
+  PointCloudFeature feature_cloud; 
+  frame.constructFeaturePointCloud(feature_cloud);   
+  feature_cloud_publisher_.publish(feature_cloud);
+}
+
+void VisualOdometry::publishFeatureCovariances(rgbdtools::RGBDFrame& frame)
+{
+
+}
+
+void VisualOdometry::publishModelCloud()
+{
+  PointCloudFeature::Ptr model_cloud = motion_estimation_.getModel();
+  model_cloud_publisher_.publish(model_cloud);
+}
+
+void VisualOdometry::publishModelCovariances()
+{
+
 }
 
 } // namespace ccny_rgbd

@@ -27,6 +27,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <visualization_msgs/Marker.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <cv_bridge/cv_bridge.h>
@@ -76,9 +77,13 @@ class VisualOdometry
     tf::TransformBroadcaster tf_broadcaster_; ///< ROS transform broadcaster
     ros::Publisher odom_publisher_;           ///< ROS Odometry publisher
     ros::Publisher pose_stamped_publisher_;   ///< ROS pose stamped publisher
-    ros::Publisher cloud_publisher_;          ///< ROS feature cloud publisher
     ros::Publisher path_pub_;                 ///< ROS publisher for the VO path
 
+    ros::Publisher feature_cloud_publisher_;     
+    ros::Publisher feature_cov_publisher_;  
+    ros::Publisher model_cloud_publisher_;       
+    ros::Publisher model_cov_publisher_;         
+             
     FILE * diagnostics_file_;           ///< File for time recording statistics
     std::string diagnostics_file_name_; ///< File name for time recording statistics
     bool save_diagnostics_;              ///< indicates whether to save results to file or print to screen
@@ -116,6 +121,12 @@ class VisualOdometry
     bool publish_odom_;       ///< Parameter whether to publish an odom message
     bool publish_pose_;       ///< Parameter whether to publish a pose message
 
+    bool publish_feature_cloud_;
+    bool publish_feature_cov_; 
+
+    bool publish_model_cloud_;
+    bool publish_model_cov_;    
+    
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -153,7 +164,7 @@ class VisualOdometry
 
     boost::shared_ptr<rgbdtools::FeatureDetector> feature_detector_; ///< The feature detector object
 
-    rgbdtools::MotionEstimation * motion_estimation_; ///< The motion estimation object
+    rgbdtools::MotionEstimationICPProbModel motion_estimation_; ///< The motion estimation object
   
     PathMsg path_msg_; ///< contains a vector of positions of the Base frame.
 
@@ -204,6 +215,12 @@ class VisualOdometry
      */
     void publishFeatureCloud(rgbdtools::RGBDFrame& frame);
 
+    void publishFeatureCovariances(rgbdtools::RGBDFrame& frame);
+
+    void publishModelCloud();
+
+    void publishModelCovariances();
+
     /** @brief Caches the transform from the base frame to the camera frame
      * @param header header of the incoming message, used to stamp things correctly
      */
@@ -238,6 +255,8 @@ class VisualOdometry
       const ImageMsg::ConstPtr& depth_msg,
       const CameraInfoMsg::ConstPtr& info_msg,
       rgbdtools::RGBDFrame& frame);
+      
+    void configureMotionEstimation();
 };
 
 } // namespace ccny_rgbd
