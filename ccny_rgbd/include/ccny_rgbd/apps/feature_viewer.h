@@ -31,7 +31,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl_ros/point_cloud.h>
-
 #include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
@@ -195,6 +194,6 @@ class FeatureViewer
     void orbReconfigCallback(OrbDetectorConfig& config, uint32_t level);
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_FEATURE_VIEWER_H

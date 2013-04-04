@@ -29,8 +29,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
-#include <rgbdtools/rgbdtools.h>
 #include <pcl_ros/point_cloud.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/util.h"

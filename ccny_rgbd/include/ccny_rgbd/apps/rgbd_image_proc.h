@@ -30,7 +30,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <dynamic_reconfigure/server.h>
-
 #include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
