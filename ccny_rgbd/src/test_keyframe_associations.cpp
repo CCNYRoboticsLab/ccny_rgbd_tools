@@ -32,39 +32,32 @@ int main(int argc, char** argv)
   cv::imshow("Dense association matrix", dense_association_matrix_uint);
   cv::waitKey(0);
   */
+
+  // *********************************************************
   
   // build brute force surf association matrix
-  cv::Mat bf_surf_association_matrix;
-  buildBruteForceSURFAssociationMatrix(keyframes, bf_surf_association_matrix);
+  cv::Mat surf_association_matrix_bf;
+  buildSURFAssociationMatrixBruteForce(keyframes, surf_association_matrix_bf, 30);
+  cv::namedWindow("surf_association_matrix_bf", 0);
+  cv::imshow("surf_association_matrix_bf", surf_association_matrix_bf*255);
 
-    
-  // show uint
-  cv::Mat bf_surf_association_matrix_uint;
-  floatMatrixToUintMatrix(bf_surf_association_matrix, bf_surf_association_matrix_uint);
-  cv::namedWindow("BF SURF association matrix", 0);
-  cv::imshow("BF SURF association matrix", bf_surf_association_matrix_uint);
-
-   
-  // show thresholded
-  cv::Mat bf_surf_association_matrix_thresholded;
-  thresholdMatrix(bf_surf_association_matrix, bf_surf_association_matrix_thresholded, 30);
-  cv::namedWindow("BF SURF association matrix T", 0);
-  cv::imshow("BF SURF association matrix T", bf_surf_association_matrix_thresholded);
-
+  // *********************************************************
+  
+  // build kdtree surf association matrix
+  cv::Mat surf_association_matrix_tree;
+  buildSURFAssociationMatrixTree(keyframes, surf_association_matrix_tree, 15, 15, 30);
+  cv::namedWindow("surf_association_matrix_tree", 0);
+  cv::imshow("surf_association_matrix_tree", surf_association_matrix_tree*255);
+  
+  // *********************************************************
+  
+  int false_pos, false_neg,total;
+  compareAssociationMatrix(
+    surf_association_matrix_bf, surf_association_matrix_tree,
+    false_neg, false_pos, total);
+  
+  printf("Total: %d, FP: %d, FN: %d\n", total, false_pos, false_neg);
   cv::waitKey(0);
-    
-  /*
-  // build surf association matrix
-  cv::Mat surf_association_matrix;
-  buildSURFAssociationMatrix(keyframes, surf_association_matrix);
-  cv::Mat surf_association_matrix_uint;
-  floatMatrixToUintMatrix(surf_association_matrix, surf_association_matrix_uint);
-    
-  // show
-  cv::namedWindow("SURF association matrix", 0);
-  cv::imshow("SURF association matrix", surf_association_matrix_uint);
-  cv::waitKey(0);
-  */
   
   return 0;
 }

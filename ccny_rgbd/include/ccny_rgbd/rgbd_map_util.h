@@ -60,17 +60,38 @@ void filterCloudByHeight(
   double min_z,
   double max_z);
 
-void buildSURFAssociationMatrix(
-  const KeyframeVector& keyframes,
-  cv::Mat& association_matrix);
+// *** matching
 
 void buildDenseAssociationMatrix(
   const KeyframeVector& keyframes,
   cv::Mat& association_matrix);
 
-void buildBruteForceSURFAssociationMatrix(
+void buildSURFAssociationMatrixBruteForce(
   const KeyframeVector& keyframes,
-  cv::Mat& association_matrix);
+  cv::Mat& correspondence_matrix,
+  int threshold);
+
+void buildSURFAssociationMatrixTree(
+  const KeyframeVector& keyframes,
+  cv::Mat& correspondence_matrix,
+  int k_nearest_neighbors,
+  int n_candidates,
+  int threshold);
+
+void buildRANSACCorrespondenceMatrix(
+  const KeyframeVector& keyframes,
+  const cv::Mat& candidate_matrix,
+  cv::Mat& correspondence_matrix);
+
+void buildSURFCandidateMatrixTree(
+  const cv::Mat& match_matrix,
+  cv::Mat& candidate_matrix,
+  int n_candidates);
+
+void buildSURFMatchMatrixTree(
+  const KeyframeVector& keyframes,
+  cv::Mat& match_matrix,
+  int k_nearest_neighbors);
 
 void trainSURFMatcher(
   const KeyframeVector& keyframes,
@@ -85,6 +106,13 @@ void thresholdMatrix(
   const cv::Mat& mat_in, 
   cv::Mat& mat_out,
   float threshold);
+
+void compareAssociationMatrix(
+  const cv::Mat& a,
+  const cv::Mat& b,
+  int& false_pos,
+  int& false_neg,
+  int& total);
 
 void prepareFeaturesForRANSAC(KeyframeVector& keyframes);
 

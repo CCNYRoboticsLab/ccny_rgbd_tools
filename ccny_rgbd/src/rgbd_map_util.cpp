@@ -1,7 +1,49 @@
 #include "ccny_rgbd/rgbd_map_util.h"
 
 namespace ccny_rgbd {
-
+ 
+void buildSURFAssociationMatrixBruteForce(
+  const KeyframeVector& keyframes,
+  cv::Mat& association_matrix,
+  int threshold)
+{  
+  // create a candidate matrix which considers all posiible combinations
+  int size = keyframes.size();
+  cv::Mat candidate_matrix = cv::Mat::ones(size, size, CV_8UC1);
+  
+  // perfrom pairwise matching for all candidates
+  cv::Mat correspondence_matrix;
+  buildRANSACCorrespondenceMatrix(keyframes, candidate_matrix, correspondence_matrix);
+  
+  // threshold
+  thresholdMatrix(correspondence_matrix, association_matrix, threshold);
+}
+ 
+void buildSURFAssociationMatrixTree(
+  const KeyframeVector& keyframes,
+  cv::Mat& association_matrix,
+  int k_nearest_neighbors,
+  int n_candidates,
+  int threshold)
+{
+  // build a math knn matrix using a kdtree
+  cv::Mat match_matrix;
+  buildSURFMatchMatrixTree(keyframes, match_matrix, k_nearest_neighbors);
+   
+  // keep only the top n candidates
+  cv::Mat candidate_matrix;
+  buildSURFCandidateMatrixTree(match_matrix, candidate_matrix, k_nearest_neighbors);
+  cv::namedWindow("Candidate matrix", 0);
+  cv::imshow("Candidate matrix", candidate_matrix*255);
+  
+  // perfrom pairwise matching for all candidates
+  cv::Mat correspondence_matrix;
+  buildRANSACCorrespondenceMatrix(keyframes, candidate_matrix, correspondence_matrix); 
+  
+  // threshold
+  thresholdMatrix(correspondence_matrix, association_matrix, threshold);
+}
+ 
 void trainSURFMatcher(
   const KeyframeVector& keyframes,
   cv::FlannBasedMatcher& matcher)
@@ -19,11 +61,16 @@ void trainSURFMatcher(
   printf("Training feature matcher...\n");
   matcher.train();
 }
+ 
+void buildRANSACCorrespondenceMatrix(
+  const KeyframeVector& keyframes, 
+  const cv::Mat& candidate_matrix,
+  cv::Mat& correspondence_matrix)
+{
+  // check for square matrix
+  assert(candidate_matrix.rows == candidate_matrix.cols);
+  int size = candidate_matrix.rows;    
   
-void buildBruteForceSURFAssociationMatrix(
-  const KeyframeVector& keyframes,
-  cv::Mat& association_matrix)
-{  
   // params
   float max_corresp_dist_eucl = 0.03;
   float max_corresp_dist_desc = 0.5;
@@ -33,63 +80,113 @@ void buildBruteForceSURFAssociationMatrix(
   bool save_ransac_results = true; 
   std::string ransac_results_path = "/home/idryanov/ros/images/ransac";  
     
+  // derived params
   float max_corresp_dist_eucl_sq = max_corresp_dist_eucl * max_corresp_dist_eucl;
     
-  unsigned int kf_size = keyframes.size(); 
+  correspondence_matrix = cv::Mat::zeros(size, size, CV_32FC1);
   
-  association_matrix = cv::Mat::zeros(kf_size, kf_size, CV_32FC1);
-   
-  for (unsigned int kf_idx_a = 0; kf_idx_a < kf_size; ++kf_idx_a)
+  for (int kf_idx_a = 0; kf_idx_a < size; ++kf_idx_a)
   {
     const RGBDKeyframe& keyframe_a = keyframes[kf_idx_a];
     
     // self-association
     // @todo actually this should only account for the "valid" keypoints
-    association_matrix.at<float>(kf_idx_a, kf_idx_a) = keyframe_a.keypoints.size();
+    correspondence_matrix.at<float>(kf_idx_a, kf_idx_a) = keyframe_a.keypoints.size();
     
-    for (unsigned int kf_idx_b = kf_idx_a+1; kf_idx_b < kf_size; ++kf_idx_b)
+    for (int kf_idx_b = kf_idx_a+1; kf_idx_b < size; ++kf_idx_b)
     {
-      printf("[%d %d]\n", kf_idx_a, kf_idx_b);
-
-      const RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
-
-      std::vector<cv::DMatch> all_matches;
-      std::vector<cv::DMatch> inlier_matches;
-
-      // perform ransac matching, b onto a
-      Eigen::Matrix4f transformation;
-
-      pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
-        max_corresp_dist_eucl_sq, max_corresp_dist_desc, 
-        sufficient_ransac_inlier_ratio, max_ransac_iterations,
-        all_matches, inlier_matches, transformation);
-    
-      if (save_ransac_results && inlier_matches.size() > 30)
+      // skip non-candidates
+      if (candidate_matrix.at<uint8_t>(kf_idx_b, kf_idx_a) != 0 ||
+          candidate_matrix.at<uint8_t>(kf_idx_a, kf_idx_b) != 0)
       {
-        cv::Mat img_matches;
-        cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
-                        keyframe_a.rgb_img, keyframe_a.keypoints, 
-                        inlier_matches, img_matches);
+      
+        printf("[%d %d]\n", kf_idx_a, kf_idx_b);
 
-        std::stringstream ss1;
-        ss1 << kf_idx_a << "_to_" << kf_idx_b;
-        cv::imwrite(ransac_results_path + "/" + ss1.str() + ".png", img_matches);
+        const RGBDKeyframe& keyframe_b = keyframes[kf_idx_b];
+
+        std::vector<cv::DMatch> all_matches;
+        std::vector<cv::DMatch> inlier_matches;
+
+        // perform ransac matching, b onto a
+        Eigen::Matrix4f transformation;
+
+        pairwiseMatchingRANSAC(keyframe_a, keyframe_b, 
+          max_corresp_dist_eucl_sq, max_corresp_dist_desc, 
+          sufficient_ransac_inlier_ratio, max_ransac_iterations,
+          all_matches, inlier_matches, transformation);
+        
+        if (save_ransac_results && inlier_matches.size() > 30)
+        {
+          cv::Mat img_matches;
+          cv::drawMatches(keyframe_b.rgb_img, keyframe_b.keypoints, 
+                          keyframe_a.rgb_img, keyframe_a.keypoints, 
+                          inlier_matches, img_matches);
+
+          std::stringstream ss1;
+          ss1 << kf_idx_a << "_to_" << kf_idx_b;
+          cv::imwrite(ransac_results_path + "/" + ss1.str() + ".png", img_matches);
+        }
+      
+        // both entries in matrix
+        correspondence_matrix.at<float>(kf_idx_a, kf_idx_b) = inlier_matches.size();
+        correspondence_matrix.at<float>(kf_idx_b, kf_idx_a) = inlier_matches.size();
       }
+    }
+  }
+}  
+  
+/** @brief Takes in a matrix of matches from a SURF tree, and marks the top
+ * n candidates in each row.
+ */  
+void buildSURFCandidateMatrixTree(
+  const cv::Mat& match_matrix,
+  cv::Mat& candidate_matrix,
+  int n_candidates)
+{
+  // check for square matrix
+  assert(match_matrix.rows == match_matrix.cols);
+  
+  // check for validity of n_candidates argument
+  int size = match_matrix.rows;
+  assert(n_candidates <= size);
+  
+  // initialize candidate matrix as all 0
+  candidate_matrix = cv::Mat::zeros(match_matrix.size(), CV_8UC1);
+  
+  for (int v = 0; v < match_matrix.rows; ++v)
+  {
+    // create a vector from the current row
+    std::vector<std::pair<int, int> > values(match_matrix.cols);
+    for (int u = 0; u < match_matrix.cols; ++u)
+    {
+      int value = match_matrix.at<float>(v,u);
+      values[u] =  std::pair<int, int>(value, u);
+    }
     
-      // both entries in matrix
-      association_matrix.at<float>(kf_idx_a, kf_idx_b) = inlier_matches.size();
-      association_matrix.at<float>(kf_idx_b, kf_idx_a) = inlier_matches.size();
+    // sort the vector based on values, highest first
+    std::sort(values.begin(), values.end(), std::greater<std::pair<int, int> >());
+
+    // mark 1 for the top n_candidates
+    for (int u = 0; u < n_candidates; ++u)
+    {
+      unsigned int uc = values[u].second;     
+      candidate_matrix.at<uint8_t>(v,uc) = 1;
     }
   }
 }
   
-void buildSURFAssociationMatrix(
+ /** @brief Builds a matrix of nearest neighbor matches between keyframes 
+  * using a kdtree
+  * 
+  * match_matrix[query,train] = X correspondences
+  */  
+void buildSURFMatchMatrixTree(
   const KeyframeVector& keyframes,
-  cv::Mat& association_matrix)
+  cv::Mat& match_matrix,
+  int k_nearest_neighbors)
 {
   // extra params
-  int k_nearest_neighbors = 10;
-  float nn_radius_surf = 0.5;
+  //float nn_radius_surf = 0.5;
     
   unsigned int kf_size = keyframes.size(); 
   
@@ -100,7 +197,7 @@ void buildSURFAssociationMatrix(
   // lookup per frame
   printf("Keyframe lookups...\n");
 
-  association_matrix = cv::Mat::zeros(kf_size, kf_size, CV_32FC1);
+  match_matrix = cv::Mat::zeros(kf_size, kf_size, CV_32FC1);
   for (unsigned int kf_idx = 0; kf_idx < kf_size; ++kf_idx)
   {
     printf("[KF %d of %d]:\n", (int)kf_idx, (int)kf_size);
@@ -127,6 +224,7 @@ void buildSURFAssociationMatrix(
       }
     }
 
+    /*
     // sort - highest counts first
     std::sort(bins.begin(), bins.end(), std::greater<std::pair<int, int> >());
 
@@ -135,15 +233,16 @@ void buildSURFAssociationMatrix(
     for (int b = 0; b < bins.size(); ++b)
       printf("[%d(%d)] ", bins[b].second, bins[b].first);
     printf("\n");  
+    */
     
-    for (unsigned int b = 0; b < bins.size(); ++b)
+    for (unsigned int b = 0; b < kf_size; ++b)
     {
       unsigned int index_a = kf_idx;
       unsigned int index_b = bins[b].second;
       int corresp_count = bins[b].first;
       
       if (index_a != index_b)
-        association_matrix.at<float>(index_a, index_b) = corresp_count;
+        match_matrix.at<float>(index_a, index_b) = corresp_count;
     }
   }
 }
@@ -268,7 +367,7 @@ void thresholdMatrix(
   float threshold)
 {
   mat_out = cv::Mat(mat_in.size(), CV_8UC1);
-  cv::threshold(mat_in, mat_out, threshold, 255, cv::THRESH_BINARY);   
+  cv::threshold(mat_in, mat_out, threshold, 1, cv::THRESH_BINARY);   
 }
 
 void alignGlobalMap(
@@ -490,7 +589,7 @@ void normalizeHistogram(cv::Mat& histogram)
 {
   float sum = 0;
 
-  for (unsigned int u = 0; u < histogram.cols; ++u)
+  for (int u = 0; u < histogram.cols; ++u)
     sum += histogram.at<float>(0,u);
 
   histogram = histogram / sum;
@@ -852,4 +951,36 @@ double distEuclideanSq(const PointFeature& a, const PointFeature& b)
   float dz = a.z - b.z;
   return dx*dx + dy*dy + dz*dz;
 }
+
+void compareAssociationMatrix(
+  const cv::Mat& a,
+  const cv::Mat& b,
+  int& false_pos,
+  int& false_neg,
+  int& total)
+{
+  false_pos = 0;
+  false_neg = 0;
+  total = 0;
+  
+  // assert both matrices are square, and same size
+  assert(a.rows == a.cols);
+  assert(b.rows == b.cols);
+  assert(a.rows == b.rows);
+  
+  int size = a.rows;
+  
+  for (int u = 0; u < size; ++u)
+  for (int v = 0; v < size; ++v)
+  {
+    int val_a = a.at<uint8_t>(v,u);
+    int val_b = b.at<uint8_t>(v,u);
+    
+    if (val_a != 0 && val_b == 0) false_neg++;
+    if (val_a == 0 && val_b != 0) false_pos++;
+    
+    if (u !=v && val_a != 0) total++;
+  }
+}
+
 } // namespace ccny_rgbd
