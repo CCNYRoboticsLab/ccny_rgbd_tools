@@ -79,6 +79,9 @@ tf::Transform tfFromEigen(Eigen::Matrix4f trans);
  */
 Eigen::Matrix4f eigenFromTf(const tf::Transform& tf);
 
+tf::Transform tfFromEigenAffine(AffineTransform& trans);
+AffineTransform eigenAffineFromTf(const tf::Transform& tf);
+
 /** @brief Decomposes a tf into an Eigen 3x3 rotation matrix
  * and Eigen 3x1 rotation vector 
  *
@@ -157,122 +160,6 @@ void convertMatToCameraInfo(
  * @return duration (in ms) from start until now
  */
 double getMsDuration(const ros::WallTime& start);
-
-/** @brief Filters out a vector of means given a mask of valid 
- * entries
- * 
- * @param means input vector of 3x1 matrices
- * @param valid vector mask of valid flags
- * @param means_f output vector of 3x1 matrices
- */
-void removeInvalidMeans(
-  const Vector3fVector& means,
-  const BoolVector& valid,
-  Vector3fVector& means_f);
-
-/** @brief Filters out a vector of means and a vector of 
- * covariances given a mask of valid entries
- * 
- * @param means input vector of 3x1 matrices
- * @param covariances input vector of 3x3 matrices
- * @param valid vector mask of valid flags
- * @param means_f output vector of 3x1 matrices
- * @param covariances_f output vector of 3x1 matrices
- */
-void removeInvalidDistributions(
-  const Vector3fVector& means,
-  const Matrix3fVector& covariances,
-  const BoolVector& valid,
-  Vector3fVector& means_f,
-  Matrix3fVector& covariances_f);
-
-/** @brief Transforms a vector of means
- * 
- * @param means vector of 3x1 matrices of positions (3D means)
- * @param transform the tranformation to be applied to all the means
- */
-void transformMeans(
-  Vector3fVector& means,
-  const tf::Transform& transform);
-
-/** @brief Transforms a vector of means and covariances
- * 
- * @param means vector of 3x1 matrices of positions (3D means)
- * @param covariances vector of 3x3 covariance matrices
- * @param transform the transformation to be applied to all the means and covariances
- */
-void transformDistributions(
-  Vector3fVector& means,
-  Matrix3fVector& covariances,
-  const tf::Transform& transform);
-
-/** @brief Creates a pcl point cloud form a vector
- * of eigen matrix means
- * 
- * @param means vector of 3x1 matrices of positions (3D means)
- * @param cloud reference to the output cloud
- */
-void pointCloudFromMeans(
-  const Vector3fVector& means,
-  PointCloudFeature& cloud);
-
-/** @brief reprojects a depth image to another depth image,
- * registered in the rgb camera's frame. 
- * 
- * Both images need to be rectified first. ir2rgb is a matrix 
- * such that for any point P_IR in the depth camera frame
- * P_RGB = ir2rgb * P_IR
- *
- * @param intr_rect_ir intrinsic matrix of the rectified depth image
- * @param intr_rect_rgb intrinsic matrix of the rectified RGB image
- * @param ir2rgb extrinsic matrix between the IR(depth) and RGB cameras
- * @param depth_img_rect the input image: rectified depth image
- * @param depth_img_rect_reg the output image: rectified and registered into the 
- *        RGB frame
- */
-void buildRegisteredDepthImage(
-  const cv::Mat& intr_rect_ir,
-  const cv::Mat& intr_rect_rgb,
-  const cv::Mat& ir2rgb,
-  const cv::Mat& depth_img_rect,
-  cv::Mat& depth_img_rect_reg);
-
-/** @brief Constructs a point cloud, a depth image and intrinsic matrix
- * 
- * @param depth_img_rect rectified depth image (16UC1, in mm) 
- * @param intr_rect_ir intinsic matrix of the rectified depth image
- * @param cloud reference to teh output point cloud
- */
-void buildPointCloud(
-  const cv::Mat& depth_img_rect,
-  const cv::Mat& intr_rect_ir,
-  PointCloudT& cloud);
-
-/** @brief Constructs a point cloud with color
- * 
- * Prior to calling this functions, both images need to be rectified, 
- * and the depth image has to be registered into the frame of the RGB image.
- * 
- * @param depth_img_rect_reg rectified and registered depth image (16UC1, in mm) 
- * @param rgb_img_rect rectified rgb image (8UC3)
- * @param intr_rect_rgb intrinsic matrix
- * @param cloud reference to the output point cloud
- */
-void buildPointCloud(
-  const cv::Mat& depth_img_rect_reg,
-  const cv::Mat& rgb_img_rect,
-  const cv::Mat& intr_rect_rgb,
-  PointCloudT& cloud);
-
-/** @brief converts a 32FC1 depth image (in meters) to a
- * 16UC1 depth image (in mm).
- *
- * @param depth_image_in the input 32FC1 image
- * @param depth_image_out the output 16UC1 image
- */
-void depthImageFloatTo16bit(
-  const cv::Mat& depth_image_in,
-  cv::Mat& depth_image_out);
 
 } // namespace ccny_rgbd
 

@@ -29,19 +29,12 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <cv_bridge/cv_bridge.h>
+#include <rgbdtools/rgbdtools.h>
+#include <pcl_ros/point_cloud.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/features/feature_detector.h"
-#include "ccny_rgbd/features/orb_detector.h"
-#include "ccny_rgbd/features/surf_detector.h"
-#include "ccny_rgbd/features/gft_detector.h"
-#include "ccny_rgbd/features/star_detector.h"
-#include "ccny_rgbd/registration/motion_estimation.h"
-#include "ccny_rgbd/registration/motion_estimation_icp.h"
-#include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
-
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/FeatureDetectorConfig.h"
 #include "ccny_rgbd/GftDetectorConfig.h"
 #include "ccny_rgbd/StarDetectorConfig.h"
@@ -158,9 +151,9 @@ class VisualOdometry
     tf::Transform b2c_;  ///< Transform from the base to the camera frame, wrt base frame
     tf::Transform f2b_;  ///< Transform from the fixed to the base frame, wrt fixed frame
 
-    boost::shared_ptr<FeatureDetector> feature_detector_; ///< The feature detector object
+    boost::shared_ptr<rgbdtools::FeatureDetector> feature_detector_; ///< The feature detector object
 
-    MotionEstimation * motion_estimation_; ///< The motion estimation object
+    rgbdtools::MotionEstimation * motion_estimation_; ///< The motion estimation object
   
     PathMsg path_msg_; ///< contains a vector of positions of the Base frame.
 
@@ -209,7 +202,7 @@ class VisualOdometry
      * 
      * Note: this might decrease performance
      */
-    void publishFeatureCloud(RGBDFrame& frame);
+    void publishFeatureCloud(rgbdtools::RGBDFrame& frame);
 
     /** @brief Caches the transform from the base frame to the camera frame
      * @param header header of the incoming message, used to stamp things correctly
@@ -239,7 +232,12 @@ class VisualOdometry
     void diagnostics(
       int n_features, int n_valid_features, int n_model_pts,
       double d_frame, double d_features, double d_reg, double d_total);
-
+    
+    void createRGBDFrameFromROSMessages(
+      const ImageMsg::ConstPtr& rgb_msg,
+      const ImageMsg::ConstPtr& depth_msg,
+      const CameraInfoMsg::ConstPtr& info_msg,
+      rgbdtools::RGBDFrame& frame);
 };
 
 } // namespace ccny_rgbd

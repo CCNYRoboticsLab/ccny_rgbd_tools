@@ -48,7 +48,7 @@ VisualOdometry::VisualOdometry(
   odom_publisher_ = nh_.advertise<OdomMsg>(
     "vo", queue_size_);
   pose_stamped_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>(
-      "pose", queue_size_);
+    "pose", queue_size_);
   cloud_publisher_ = nh_.advertise<PointCloudFeature>(
     "feature/cloud", 1);
   path_pub_ = nh_.advertise<PathMsg>(
@@ -121,13 +121,10 @@ void VisualOdometry::initParams()
   if (!nh_private_.getParam ("reg/reg_type", reg_type_))
     reg_type_ = "ICPProbModel";
   
-  if      (reg_type_ == "ICP")
-    motion_estimation_ = new MotionEstimationICP(nh_, nh_private_);
-  else if (reg_type_ == "ICPProbModel")
-    motion_estimation_ = new MotionEstimationICPProbModel(nh_, nh_private_);
+  if (reg_type_ == "ICPProbModel")
+    motion_estimation_ = new rgbdtools::MotionEstimationICPProbModel();
   else
     ROS_FATAL("%s is not a valid registration type!", reg_type_.c_str());
-
 
   if (!nh_private_.getParam("verbose", verbose_))
     verbose_ = true;
@@ -167,7 +164,7 @@ void VisualOdometry::resetDetector()
   if (detector_type_ == "ORB")
   { 
     ROS_INFO("Creating ORB detector");
-    feature_detector_.reset(new OrbDetector());
+    feature_detector_.reset(new rgbdtools::OrbDetector());
     orb_config_server_.reset(new 
       OrbDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/ORB")));
     
@@ -179,7 +176,7 @@ void VisualOdometry::resetDetector()
   else if (detector_type_ == "SURF")
   {
     ROS_INFO("Creating SURF detector");
-    feature_detector_.reset(new SurfDetector());
+    feature_detector_.reset(new rgbdtools::SurfDetector());
     surf_config_server_.reset(new 
       SurfDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/SURF")));
     
@@ -191,7 +188,7 @@ void VisualOdometry::resetDetector()
   else if (detector_type_ == "GFT")
   {
     ROS_INFO("Creating GFT detector");
-    feature_detector_.reset(new GftDetector());
+    feature_detector_.reset(new rgbdtools::GftDetector());
     gft_config_server_.reset(new 
       GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
     
@@ -203,7 +200,7 @@ void VisualOdometry::resetDetector()
   else if (detector_type_ == "STAR")
   {
     ROS_INFO("Creating STAR detector");
-    feature_detector_.reset(new StarDetector());
+    feature_detector_.reset(new rgbdtools::StarDetector());
     star_config_server_.reset(new 
       StarDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/STAR")));
     
@@ -215,7 +212,7 @@ void VisualOdometry::resetDetector()
   else
   {
     ROS_FATAL("%s is not a valid detector type! Using GFT", detector_type_.c_str());
-    feature_detector_.reset(new GftDetector());
+    feature_detector_.reset(new rgbdtools::GftDetector());
     gft_config_server_.reset(new 
       GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
     
@@ -241,13 +238,14 @@ void VisualOdometry::RGBDCallback(
     init_time_ = rgb_msg->header.stamp;
     if (!initialized_) return;
 
-    motion_estimation_->setBaseToCameraTf(b2c_);
+    motion_estimation_->setBaseToCameraTf(eigenAffineFromTf(b2c_));
   }
 
   // **** create frame *************************************************
 
   ros::WallTime start_frame = ros::WallTime::now();
-  RGBDFrame frame(rgb_msg, depth_msg, info_msg);
+  rgbdtools::RGBDFrame frame;
+  createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
   ros::WallTime end_frame = ros::WallTime::now();
 
   // **** find features ************************************************
@@ -259,16 +257,17 @@ void VisualOdometry::RGBDCallback(
   // **** registration *************************************************
   
   ros::WallTime start_reg = ros::WallTime::now();
-  tf::Transform motion = motion_estimation_->getMotionEstimation(frame);
+  AffineTransform m = motion_estimation_->getMotionEstimation(frame);
+  tf::Transform motion = tfFromEigenAffine(m);
   f2b_ = motion * f2b_;
   ros::WallTime end_reg = ros::WallTime::now();
 
   // **** publish outputs **********************************************
   
-  if (publish_tf_)   publishTf(rgb_msg->header);
-  if (publish_odom_) publishOdom(rgb_msg->header);
-  if (publish_path_) publishPath(rgb_msg->header);
-  if (publish_pose_) publishPoseStamped(rgb_msg->header);
+  if (publish_tf_)    publishTf(rgb_msg->header);
+  if (publish_odom_)  publishOdom(rgb_msg->header);
+  if (publish_path_)  publishPath(rgb_msg->header);
+  if (publish_pose_)  publishPoseStamped(rgb_msg->header);
   if (publish_cloud_) publishFeatureCloud(frame);
 
   // **** print diagnostics *******************************************
@@ -288,6 +287,43 @@ void VisualOdometry::RGBDCallback(
 
   diagnostics(n_features, n_valid_features, n_model_pts,
               d_frame, d_features, d_reg, d_total);
+}
+
+void VisualOdometry::createRGBDFrameFromROSMessages(
+  const ImageMsg::ConstPtr& rgb_msg,
+  const ImageMsg::ConstPtr& depth_msg,
+  const CameraInfoMsg::ConstPtr& info_msg,
+  rgbdtools::RGBDFrame& frame)
+{
+  // prepate opencv rgb image matrix
+  cv::Mat rgb_img = cv_bridge::toCvShare(rgb_msg)->image;
+  
+  // prepate opencv depth image matrix
+  // handles 16UC1 natively
+  // 32FC1 need to be converted into 16UC1
+  cv::Mat depth_img;
+
+  const std::string& enc = depth_msg->encoding; 
+  if (enc.compare("16UC1") == 0)
+    depth_img = cv_bridge::toCvShare(depth_msg)->image;
+  else if (enc.compare("32FC1") == 0)
+    rgbdtools::depthImageFloatTo16bit(cv_bridge::toCvShare(depth_msg)->image, depth_img);
+    
+  // prepare opencv intrinsic matrix from incoming camera info
+  cv::Mat intr, dist;
+  convertCameraInfoToMats(info_msg, intr, dist);
+  /// @todo assert that distortion (dist) is 0
+  
+  // prepare rgbdtools header from incoming header
+  rgbdtools::Header header;
+  
+  header.seq        = rgb_msg->header.seq;
+  header.frame_id   = rgb_msg->header.frame_id;
+  header.stamp.sec  = rgb_msg->header.stamp.sec;
+  header.stamp.nsec = rgb_msg->header.stamp.nsec;
+    
+  // initialize the RGBDframe
+  frame = rgbdtools::RGBDFrame(rgb_img, depth_img, intr, header);
 }
 
 void VisualOdometry::publishTf(const std_msgs::Header& header)
@@ -331,10 +367,9 @@ void VisualOdometry::publishPath(const std_msgs::Header& header)
   path_pub_.publish(path_msg_);
 }
 
-void VisualOdometry::publishFeatureCloud(RGBDFrame& frame)
+void VisualOdometry::publishFeatureCloud(rgbdtools::RGBDFrame& frame)
 {
-  PointCloudFeature cloud;
-  cloud.header = frame.header;
+  PointCloudFeature cloud; 
   frame.constructFeaturePointCloud(cloud);   
   cloud_publisher_.publish(cloud);
 }
@@ -363,8 +398,8 @@ bool VisualOdometry::getBaseToCameraTf(const std_msgs::Header& header)
 
 void VisualOdometry::gftReconfigCallback(GftDetectorConfig& config, uint32_t level)
 {
-  GftDetectorPtr gft_detector = 
-    boost::static_pointer_cast<GftDetector>(feature_detector_);
+  rgbdtools::GftDetectorPtr gft_detector = 
+    boost::static_pointer_cast<rgbdtools::GftDetector>(feature_detector_);
     
   gft_detector->setNFeatures(config.n_features);
   gft_detector->setMinDistance(config.min_distance); 
@@ -372,8 +407,8 @@ void VisualOdometry::gftReconfigCallback(GftDetectorConfig& config, uint32_t lev
 
 void VisualOdometry::starReconfigCallback(StarDetectorConfig& config, uint32_t level)
 {
-  StarDetectorPtr star_detector = 
-    boost::static_pointer_cast<StarDetector>(feature_detector_);
+  rgbdtools::StarDetectorPtr star_detector = 
+    boost::static_pointer_cast<rgbdtools::StarDetector>(feature_detector_);
     
   star_detector->setThreshold(config.threshold);
   star_detector->setMinDistance(config.min_distance); 
@@ -381,16 +416,16 @@ void VisualOdometry::starReconfigCallback(StarDetectorConfig& config, uint32_t l
 
 void VisualOdometry::surfReconfigCallback(SurfDetectorConfig& config, uint32_t level)
 {
-  SurfDetectorPtr surf_detector = 
-    boost::static_pointer_cast<SurfDetector>(feature_detector_);
+  rgbdtools::SurfDetectorPtr surf_detector = 
+    boost::static_pointer_cast<rgbdtools::SurfDetector>(feature_detector_);
     
   surf_detector->setThreshold(config.threshold);
 }
     
 void VisualOdometry::orbReconfigCallback(OrbDetectorConfig& config, uint32_t level)
 {
-  OrbDetectorPtr orb_detector = 
-    boost::static_pointer_cast<OrbDetector>(feature_detector_);
+  rgbdtools::OrbDetectorPtr orb_detector = 
+    boost::static_pointer_cast<rgbdtools::OrbDetector>(feature_detector_);
     
   orb_detector->setThreshold(config.threshold);
   orb_detector->setNFeatures(config.n_features);

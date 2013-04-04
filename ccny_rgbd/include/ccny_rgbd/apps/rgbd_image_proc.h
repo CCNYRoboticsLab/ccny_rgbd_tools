@@ -32,8 +32,10 @@
 #include <pcl_ros/point_cloud.h>
 #include <dynamic_reconfigure/server.h>
 
+#include <rgbdtools/types.h>
+#include <rgbdtools/rgbd_util.h>
+
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/rgbd_util.h"
 #include "ccny_rgbd/proc_util.h"
 #include "ccny_rgbd/RGBDImageProcConfig.h"
 

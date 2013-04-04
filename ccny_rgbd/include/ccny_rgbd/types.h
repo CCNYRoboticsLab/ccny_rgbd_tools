@@ -51,6 +51,8 @@ namespace ccny_rgbd {
 
 typedef Eigen::Matrix3f Matrix3f;
 typedef Eigen::Vector3f Vector3f;
+typedef Eigen::Affine3f Pose;
+typedef Eigen::Affine3f AffineTransform;
 
 // Vector types
 
