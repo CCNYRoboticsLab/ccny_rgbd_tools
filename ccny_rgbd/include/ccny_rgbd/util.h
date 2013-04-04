@@ -30,6 +30,9 @@
 #include <tf/transform_datatypes.h>
 #include <pcl/filters/voxel_grid.h>
 #include <opencv2/opencv.hpp>
+#include <cv_bridge/cv_bridge.h>
+
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
 
@@ -160,6 +163,12 @@ void convertMatToCameraInfo(
  * @return duration (in ms) from start until now
  */
 double getMsDuration(const ros::WallTime& start);
+
+void createRGBDFrameFromROSMessages(
+  const ImageMsg::ConstPtr& rgb_msg,
+  const ImageMsg::ConstPtr& depth_msg,
+  const CameraInfoMsg::ConstPtr& info_msg,
+  rgbdtools::RGBDFrame& frame);
 
 } // namespace ccny_rgbd
 

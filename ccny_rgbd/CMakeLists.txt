@@ -40,7 +40,7 @@ link_libraries(${OCTOMAP_LIBRARIES})
 rosbuild_add_boost_directories()
 
 ################################################################
-# Build image proc application
+# Build visual odometry application
 ################################################################
 
 rosbuild_add_executable(visual_odometry_node 
@@ -49,6 +49,22 @@ rosbuild_add_executable(visual_odometry_node
   src/util.cpp)
   
 target_link_libraries (visual_odometry_node
+  rgbdtools
+  boost_signals
+  boost_system
+  boost_filesystem
+  ${OpenCV_LIBRARIES})
+  
+################################################################
+# Build feature viewer application
+################################################################
+
+rosbuild_add_executable(feature_viewer_node 
+  src/node/feature_viewer_node.cpp
+  src/apps/feature_viewer.cpp
+  src/util.cpp)
+  
+target_link_libraries (feature_viewer_node
   rgbdtools
   boost_signals
   boost_system

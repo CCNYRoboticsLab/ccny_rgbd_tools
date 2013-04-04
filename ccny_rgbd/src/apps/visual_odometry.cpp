@@ -289,43 +289,6 @@ void VisualOdometry::RGBDCallback(
               d_frame, d_features, d_reg, d_total);
 }
 
-void VisualOdometry::createRGBDFrameFromROSMessages(
-  const ImageMsg::ConstPtr& rgb_msg,
-  const ImageMsg::ConstPtr& depth_msg,
-  const CameraInfoMsg::ConstPtr& info_msg,
-  rgbdtools::RGBDFrame& frame)
-{
-  // prepate opencv rgb image matrix
-  cv::Mat rgb_img = cv_bridge::toCvShare(rgb_msg)->image;
-  
-  // prepate opencv depth image matrix
-  // handles 16UC1 natively
-  // 32FC1 need to be converted into 16UC1
-  cv::Mat depth_img;
-
-  const std::string& enc = depth_msg->encoding; 
-  if (enc.compare("16UC1") == 0)
-    depth_img = cv_bridge::toCvShare(depth_msg)->image;
-  else if (enc.compare("32FC1") == 0)
-    rgbdtools::depthImageFloatTo16bit(cv_bridge::toCvShare(depth_msg)->image, depth_img);
-    
-  // prepare opencv intrinsic matrix from incoming camera info
-  cv::Mat intr, dist;
-  convertCameraInfoToMats(info_msg, intr, dist);
-  /// @todo assert that distortion (dist) is 0
-  
-  // prepare rgbdtools header from incoming header
-  rgbdtools::Header header;
-  
-  header.seq        = rgb_msg->header.seq;
-  header.frame_id   = rgb_msg->header.frame_id;
-  header.stamp.sec  = rgb_msg->header.stamp.sec;
-  header.stamp.nsec = rgb_msg->header.stamp.nsec;
-    
-  // initialize the RGBDframe
-  frame = rgbdtools::RGBDFrame(rgb_img, depth_img, intr, header);
-}
-
 void VisualOdometry::publishTf(const std_msgs::Header& header)
 {
   tf::StampedTransform transform_msg(
