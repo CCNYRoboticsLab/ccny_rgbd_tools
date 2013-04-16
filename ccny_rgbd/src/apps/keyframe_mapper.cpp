@@ -29,15 +29,10 @@ KeyframeMapper::KeyframeMapper(
   const ros::NodeHandle& nh, 
   const ros::NodeHandle& nh_private):
   nh_(nh), 
-  nh_private_(nh_private),
-  graph_detector_(nh_, nh_private_)
+  nh_private_(nh_private)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
- 
-  // **** init variables
-  
-  graph_solver_ = new KeyframeGraphSolverG2O(nh, nh_private);
-  
+   
   // **** params
   
   initParams();
@@ -95,7 +90,7 @@ KeyframeMapper::KeyframeMapper(
 
 KeyframeMapper::~KeyframeMapper()
 {
-  delete graph_solver_;
+
 }
 
 void KeyframeMapper::initParams()
@@ -141,14 +136,16 @@ void KeyframeMapper::RGBDCallback(
   {
     return;
   }
-  RGBDFrame frame(rgb_msg, depth_msg, info_msg);
-  bool result = processFrame(frame, transform);
+  rgbdtools::RGBDFrame frame;
+  createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
+  
+  bool result = processFrame(frame, eigenAffineFromTf(transform));
   if (result) publishKeyframeData(keyframes_.size() - 1);
 }
 
 bool KeyframeMapper::processFrame(
-  const RGBDFrame& frame, 
-  const tf::Transform& pose)
+  const rgbdtools::RGBDFrame& frame, 
+  const AffineTransform& pose)
 {
   bool result; // if true, add new frame
 
@@ -159,7 +156,9 @@ bool KeyframeMapper::processFrame(
   else
   {
     double dist, angle;
-    getTfDifference(pose, keyframes_.back().pose, dist, angle);
+    getTfDifference(tfFromEigenAffine(pose), 
+                    tfFromEigenAffine(keyframes_.back().pose), 
+                    dist, angle);
 
     if (dist > kf_dist_eps_ || angle > kf_angle_eps_)
       result = true;
@@ -176,10 +175,10 @@ bool KeyframeMapper::processFrame(
 }
 
 void KeyframeMapper::addKeyframe(
-  const RGBDFrame& frame, 
-  const tf::Transform& pose)
+  const rgbdtools::RGBDFrame& frame, 
+  const AffineTransform& pose)
 {
-  RGBDKeyframe keyframe(frame);
+  rgbdtools::RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
   
   if (manual_add_)
@@ -228,12 +227,13 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     // Recompute keyframes' path:
-    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
     geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
 
-    pose_stamped.header.stamp = keyframe.header.stamp;
+    pose_stamped.header.stamp.sec = keyframe.header.stamp.sec ;
+    pose_stamped.header.stamp.nsec = keyframe.header.stamp.nsec ;
     pose_stamped.header.frame_id = fixed_frame_;
-    tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
+    tf::poseTFToMsg(tfFromEigenAffine(keyframe.pose), pose_stamped.pose);
 
     std::stringstream ss;
     ss << kf_idx;
@@ -258,7 +258,7 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
 
 void KeyframeMapper::publishKeyframeData(int i)
 {
-  RGBDKeyframe& keyframe = keyframes_[i];
+  rgbdtools::RGBDKeyframe& keyframe = keyframes_[i];
 
   // construct a cloud from the images
   PointCloudT cloud;
@@ -266,7 +266,7 @@ void KeyframeMapper::publishKeyframeData(int i)
   
   // cloud transformed to the fixed frame
   PointCloudT cloud_ff; 
-  pcl::transformPointCloud(cloud, cloud_ff, eigenFromTf(keyframe.pose));
+  pcl::transformPointCloud(cloud, cloud_ff, keyframe.pose);
 
   cloud_ff.header.frame_id = fixed_frame_;
 
@@ -289,26 +289,29 @@ void KeyframeMapper::publishKeyframeAssociations()
   for (unsigned int as_idx = 0; as_idx < associations_.size(); ++as_idx)
   {
     // set up shortcut references
-    const KeyframeAssociation& association = associations_[as_idx];
+    const rgbdtools::KeyframeAssociation& association = associations_[as_idx];
     int kf_idx_a = association.kf_idx_a;
     int kf_idx_b = association.kf_idx_b;
-    RGBDKeyframe& keyframe_a = keyframes_[kf_idx_a];
-    RGBDKeyframe& keyframe_b = keyframes_[kf_idx_b];
+    rgbdtools::RGBDKeyframe& keyframe_a = keyframes_[kf_idx_a];
+    rgbdtools::RGBDKeyframe& keyframe_b = keyframes_[kf_idx_b];
 
     int idx_start = as_idx*2;
     int idx_end   = as_idx*2 + 1;
 
+    tf::Transform keyframe_a_pose = tfFromEigenAffine(keyframe_a.pose);
+    tf::Transform keyframe_b_pose = tfFromEigenAffine(keyframe_b.pose);
+ 
     // start point for the edge
-    marker.points[idx_start].x = keyframe_a.pose.getOrigin().getX();  
-    marker.points[idx_start].y = keyframe_a.pose.getOrigin().getY();
-    marker.points[idx_start].z = keyframe_a.pose.getOrigin().getZ();
+    marker.points[idx_start].x = keyframe_a_pose.getOrigin().getX();  
+    marker.points[idx_start].y = keyframe_a_pose.getOrigin().getY();
+    marker.points[idx_start].z = keyframe_a_pose.getOrigin().getZ();
 
     // end point for the edge
-    marker.points[idx_end].x = keyframe_b.pose.getOrigin().getX();  
-    marker.points[idx_end].y = keyframe_b.pose.getOrigin().getY();
-    marker.points[idx_end].z = keyframe_b.pose.getOrigin().getZ();
+    marker.points[idx_end].x = keyframe_b_pose.getOrigin().getX();  
+    marker.points[idx_end].y = keyframe_b_pose.getOrigin().getY();
+    marker.points[idx_end].z = keyframe_b_pose.getOrigin().getZ();
 
-    if (association.type == KeyframeAssociation::VO)
+    if (association.type == rgbdtools::KeyframeAssociation::VO)
     {
       marker.ns = "VO";
       marker.scale.x = 0.002;
@@ -317,7 +320,7 @@ void KeyframeMapper::publishKeyframeAssociations()
       marker.color.g = 1.0;
       marker.color.b = 0.0;
     }
-    else if (association.type == KeyframeAssociation::RANSAC)
+    else if (association.type == rgbdtools::KeyframeAssociation::RANSAC)
     {
       marker.ns = "RANSAC";
       marker.scale.x = 0.002;
@@ -341,7 +344,7 @@ void KeyframeMapper::publishKeyframePoses()
 
 void KeyframeMapper::publishKeyframePose(int i)
 {
-  RGBDKeyframe& keyframe = keyframes_[i];
+  rgbdtools::RGBDKeyframe& keyframe = keyframes_[i];
 
   // **** publish camera pose
 
@@ -356,15 +359,16 @@ void KeyframeMapper::publishKeyframePose(int i)
   marker.points.resize(2);
 
   // start point for the arrow
-  marker.points[0].x = keyframe.pose.getOrigin().getX();
-  marker.points[0].y = keyframe.pose.getOrigin().getY();
-  marker.points[0].z = keyframe.pose.getOrigin().getZ();
+  tf::Transform keyframe_pose = tfFromEigenAffine(keyframe.pose);
+  marker.points[0].x = keyframe_pose.getOrigin().getX();
+  marker.points[0].y = keyframe_pose.getOrigin().getY();
+  marker.points[0].z = keyframe_pose.getOrigin().getZ();
 
   // end point for the arrow
   tf::Transform ep; 
   ep.setIdentity();
   ep.setOrigin(tf::Vector3(0.00, 0.00, 0.12)); // z = arrow length
-  ep = keyframe.pose * ep;
+  ep = keyframe_pose * ep;
 
   marker.points[1].x = ep.getOrigin().getX();
   marker.points[1].y = ep.getOrigin().getY();
@@ -390,7 +394,7 @@ void KeyframeMapper::publishKeyframePose(int i)
   marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
   marker_text.action = visualization_msgs::Marker::ADD;
 
-  tf::poseTFToMsg(keyframe.pose, marker_text.pose);
+  tf::poseTFToMsg(keyframe_pose, marker_text.pose);
 
   marker_text.pose.position.z -= 0.05;
 
@@ -490,7 +494,7 @@ bool KeyframeMapper::solveGraphSrvCallback(
   SolveGraph::Request& request,
   SolveGraph::Response& response)
 {
-  graph_solver_->solve(keyframes_, associations_);
+  graph_solver_.solve(keyframes_, associations_);
 
   publishKeyframePoses();
   publishKeyframeAssociations();
@@ -519,13 +523,13 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
   // aggregate all frames into single cloud
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
-    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;   
     keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
 
     PointCloudT cloud_tf;
-    pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    pcl::transformPointCloud(cloud, cloud_tf, keyframe.pose);
     cloud_tf.header.frame_id = fixed_frame_;
 
     *aggregate_cloud += cloud_tf;
@@ -570,12 +574,12 @@ void KeyframeMapper::buildOctomap(octomap::OcTree& tree)
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     ROS_INFO("Processing keyframe %u", kf_idx);
-    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
     PointCloudT cloud;
     keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
            
-    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+    octomap::pose6d frame_origin = poseTfToOctomap(tfFromEigenAffine(keyframe.pose));
 
     // build octomap cloud from pcl cloud
     octomap::Pointcloud octomap_cloud;
@@ -599,23 +603,23 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     ROS_INFO("Processing keyframe %u", kf_idx);
-    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
        
     // construct the cloud
     PointCloudT::Ptr cloud_unf(new PointCloudT());
     keyframe.constructDensePointCloud(*cloud_unf, max_range_, max_stdev_);
   
     // perform filtering for max z
-    pcl::transformPointCloud(*cloud_unf, *cloud_unf, eigenFromTf(keyframe.pose));
+    pcl::transformPointCloud(*cloud_unf, *cloud_unf, keyframe.pose);
     PointCloudT cloud;
     pcl::PassThrough<PointT> pass;
     pass.setInputCloud (cloud_unf);
     pass.setFilterFieldName ("z");
     pass.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
     pass.filter(cloud);
-    pcl::transformPointCloud(cloud, cloud, eigenFromTf(keyframe.pose.inverse()));
+    pcl::transformPointCloud(cloud, cloud, keyframe.pose.inverse());
     
-    octomap::pose6d frame_origin = poseTfToOctomap(keyframe.pose);
+    octomap::pose6d frame_origin = poseTfToOctomap(tfFromEigenAffine(keyframe.pose));
     
     // build octomap cloud from pcl cloud
     octomap::Pointcloud octomap_cloud;
@@ -631,7 +635,7 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
     
     // insert colors
     PointCloudT cloud_tf;
-    pcl::transformPointCloud(cloud, cloud_tf, eigenFromTf(keyframe.pose));
+    pcl::transformPointCloud(cloud, cloud_tf, keyframe.pose);
     for (unsigned int pt_idx = 0; pt_idx < cloud_tf.points.size(); ++pt_idx)
     {
       const PointT& p = cloud_tf.points[pt_idx];
@@ -655,12 +659,13 @@ void KeyframeMapper::publishPath()
   
   for(unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++ kf_idx)
   {
-    const RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
     geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
     
-    pose_stamped.header.stamp = keyframe.header.stamp;
+    pose_stamped.header.stamp.sec  = keyframe.header.stamp.sec;
+    pose_stamped.header.stamp.nsec = keyframe.header.stamp.nsec;
     pose_stamped.header.frame_id = fixed_frame_;
-    tf::poseTFToMsg(keyframe.pose, pose_stamped.pose);
+    tf::poseTFToMsg(tfFromEigenAffine(keyframe.pose), pose_stamped.pose);
   }
 
   path_pub_.publish(path_msg_);

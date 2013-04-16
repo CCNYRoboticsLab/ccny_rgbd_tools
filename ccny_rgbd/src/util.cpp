@@ -75,7 +75,7 @@ Eigen::Matrix4f eigenFromTf(const tf::Transform& tf)
 }
 
 
-tf::Transform tfFromEigenAffine(AffineTransform& t)
+tf::Transform tfFromEigenAffine(const AffineTransform& t) 
 { 
   tf::Transform tf;
   

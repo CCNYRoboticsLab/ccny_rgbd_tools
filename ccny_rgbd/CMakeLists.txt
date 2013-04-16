@@ -36,6 +36,16 @@ include_directories(${OCTOMAP_INCLUDE_DIRS})
 link_directories(${OCTOMAP_LIBRARY_DIRS})
 link_libraries(${OCTOMAP_LIBRARIES})
 
+#g2o
+
+set(G2O_LIBRARIES 
+  g2o_core 
+  g2o_stuff
+  g2o_solver_cholmod 
+  g2o_solver_csparse 
+  g2o_types_slam3d
+  cholmod)
+
 # boost
 rosbuild_add_boost_directories()
 
@@ -54,6 +64,23 @@ target_link_libraries (visual_odometry_node
   boost_system
   boost_filesystem
   ${OpenCV_LIBRARIES})
+  
+################################################################
+# Build keyframe mapper application
+################################################################
+
+rosbuild_add_executable(keyframe_mapper_node
+  src/node/keyframe_mapper_node.cpp
+  src/apps/keyframe_mapper.cpp
+  src/util.cpp)
+  
+target_link_libraries (keyframe_mapper_node
+  rgbdtools
+  boost_signals
+  boost_system
+  boost_filesystem
+  ${OpenCV_LIBRARIES}
+  ${G2O_LIBRARIES})
   
 ################################################################
 # Build feature viewer application

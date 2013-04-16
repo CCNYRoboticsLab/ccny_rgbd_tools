@@ -82,7 +82,7 @@ tf::Transform tfFromEigen(Eigen::Matrix4f trans);
  */
 Eigen::Matrix4f eigenFromTf(const tf::Transform& tf);
 
-tf::Transform tfFromEigenAffine(AffineTransform& trans);
+tf::Transform tfFromEigenAffine(const AffineTransform& trans);
 AffineTransform eigenAffineFromTf(const tf::Transform& tf);
 
 /** @brief Decomposes a tf into an Eigen 3x3 rotation matrix

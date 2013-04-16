@@ -36,13 +36,10 @@
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 #include <octomap/ColorOcTree.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd/mapping/keyframe_graph_detector.h"
-#include "ccny_rgbd/mapping/keyframe_graph_solver_g2o.h"
-
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/GenerateGraph.h"
 #include "ccny_rgbd/SolveGraph.h"
 #include "ccny_rgbd/AddManualKeyframe.h"
@@ -187,7 +184,7 @@ class KeyframeMapper
     double max_range_;  ///< Maximum threshold for  range (in the z-coordinate of the camera frame)
     double max_stdev_;  ///< Maximum threshold for range (z-coordinate) standard deviation
 
-    KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
+    rgbdtools::KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages
      * 
@@ -264,10 +261,10 @@ class KeyframeMapper
     // state vars
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested
 
-    KeyframeGraphDetector graph_detector_;  ///< builds graph from the keyframes
-    KeyframeGraphSolver * graph_solver_;    ///< optimizes the graph for global alignement
+    rgbdtools::KeyframeGraphDetector graph_detector_;  ///< builds graph from the keyframes
+    rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement
 
-    KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
+    rgbdtools::KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
     
     PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
     
@@ -278,14 +275,14 @@ class KeyframeMapper
      * @retval true a keyframe was inserted
      * @retval false no keyframe was inserted
      */
-    bool processFrame(const RGBDFrame& frame, const tf::Transform& pose);
+    bool processFrame(const rgbdtools::RGBDFrame& frame, const AffineTransform& pose);
     
     /** @brief creates a keyframe from an RGBD frame and inserts it in
      * the keyframe vector.
      * @param frame the incoming RGBD frame (image)
      * @param pose the pose of the base frame when RGBD image was taken
      */
-    void addKeyframe(const RGBDFrame& frame, const tf::Transform& pose);
+    void addKeyframe(const rgbdtools::RGBDFrame& frame, const AffineTransform& pose);
 
     /** @brief Publishes the point cloud associated with a keyframe
      * @param i the keyframe index
