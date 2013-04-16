@@ -39,11 +39,8 @@ link_libraries(${OCTOMAP_LIBRARIES})
 # boost
 rosbuild_add_boost_directories()
 
-message("Boost: ${BOOST_LIBRARIES}")
-message("OpenCV: ${OPENCV_LIBRARIES}")
-
 ################################################################
-# Build image proc application
+# Build visual odometry application
 ################################################################
 
 rosbuild_add_executable(visual_odometry_node 
@@ -59,17 +56,39 @@ target_link_libraries (visual_odometry_node
   ${OpenCV_LIBRARIES})
   
 ################################################################
+# Build feature viewer application
+################################################################
+
+rosbuild_add_executable(feature_viewer_node 
+  src/node/feature_viewer_node.cpp
+  src/apps/feature_viewer.cpp
+  src/util.cpp)
+  
+target_link_libraries (feature_viewer_node
+  rgbdtools
+  boost_signals
+  boost_system
+  boost_filesystem
+  ${OpenCV_LIBRARIES})
+  
+################################################################
 # Build image proc application
 ################################################################
 
+rosbuild_add_library(rgbd_image_proc_app 
+  src/apps/rgbd_image_proc.cpp
+  src/util.cpp)
 
-#rosbuild_add_library(rgbd_image_proc_app src/apps/rgbd_image_proc.cpp)
-
-#target_link_libraries (rgbd_image_proc_app  rgbdtools)
+target_link_libraries (rgbd_image_proc_app  
+  rgbdtools
+  boost_signals
+  boost_system
+  boost_filesystem
+  ${OpenCV_LIBRARIES})
   
-#rosbuild_add_executable(rgbd_image_proc_node src/node/rgbd_image_proc_node.cpp)
-#rosbuild_add_library(rgbd_image_proc_nodelet src/nodelet/rgbd_image_proc_nodelet.cpp)
+rosbuild_add_executable(rgbd_image_proc_node src/node/rgbd_image_proc_node.cpp)
+rosbuild_add_library(rgbd_image_proc_nodelet src/nodelet/rgbd_image_proc_nodelet.cpp)
   
-#target_link_libraries(rgbd_image_proc_node    rgbd_image_proc_app)
-#target_link_libraries(rgbd_image_proc_nodelet rgbd_image_proc_app)
+target_link_libraries(rgbd_image_proc_node    rgbd_image_proc_app)
+target_link_libraries(rgbd_image_proc_nodelet rgbd_image_proc_app)
 

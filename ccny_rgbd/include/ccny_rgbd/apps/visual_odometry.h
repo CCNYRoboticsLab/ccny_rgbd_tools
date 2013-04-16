@@ -30,9 +30,8 @@
 #include <visualization_msgs/Marker.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
-#include <cv_bridge/cv_bridge.h>
-#include <rgbdtools/rgbdtools.h>
 #include <pcl_ros/point_cloud.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/util.h"
@@ -249,12 +248,6 @@ class VisualOdometry
     void diagnostics(
       int n_features, int n_valid_features, int n_model_pts,
       double d_frame, double d_features, double d_reg, double d_total);
-    
-    void createRGBDFrameFromROSMessages(
-      const ImageMsg::ConstPtr& rgb_msg,
-      const ImageMsg::ConstPtr& depth_msg,
-      const CameraInfoMsg::ConstPtr& info_msg,
-      rgbdtools::RGBDFrame& frame);
       
     void configureMotionEstimation();
 };

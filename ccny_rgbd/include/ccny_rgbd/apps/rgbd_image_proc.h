@@ -27,16 +27,13 @@
 #include <ros/ros.h>
 #include <boost/filesystem.hpp>
 #include <opencv2/opencv.hpp>
-#include <cv_bridge/cv_bridge.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <dynamic_reconfigure/server.h>
-
-#include <rgbdtools/types.h>
-#include <rgbdtools/rgbd_util.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/proc_util.h"
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/RGBDImageProcConfig.h"
 
 namespace ccny_rgbd {

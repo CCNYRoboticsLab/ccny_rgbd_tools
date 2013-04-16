@@ -1,13 +1,13 @@
 <package>
-  <description brief="librgbdtools">
+  <description brief="lib_rgbdtools">
 
      Local install of rgbdtools library.
 
   </description>
   <author>Ivan Dryanovski</author>
-  <license>LGPLv3</license>
+  <license>GPL</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/librgbdtools</url>
+  <url>http://ros.org/wiki/lib_rgbdtools</url>
   
   <export>
     <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>

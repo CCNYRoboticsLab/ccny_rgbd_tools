@@ -277,7 +277,8 @@ void RGBDImageProc::RGBDCallback(
   if (unwarp_) 
   {    
     ros::WallTime start_unwarp = ros::WallTime::now();
-    unwarpDepthImage(depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
+    rgbdtools::unwarpDepthImage(
+      depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
     dur_unwarp = getMsDuration(start_unwarp);
   }
   else dur_unwarp = 0.0;
@@ -285,8 +286,8 @@ void RGBDImageProc::RGBDCallback(
   // **** reproject
   ros::WallTime start_reproject = ros::WallTime::now();
   cv::Mat depth_img_rect_reg;
-  buildRegisteredDepthImage(intr_rect_depth_, intr_rect_rgb_, ir2rgb_,
-                            depth_img_rect, depth_img_rect_reg);
+  rgbdtools::buildRegisteredDepthImage(
+    intr_rect_depth_, intr_rect_rgb_, ir2rgb_, depth_img_rect, depth_img_rect_reg);
   dur_reproject = getMsDuration(start_reproject);
 
   // **** point cloud
@@ -295,7 +296,8 @@ void RGBDImageProc::RGBDCallback(
     ros::WallTime start_cloud = ros::WallTime::now();
     PointCloudT::Ptr cloud_ptr;
     cloud_ptr.reset(new PointCloudT());
-    buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud_ptr);
+    rgbdtools::buildPointCloud(
+      depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud_ptr);
     cloud_ptr->header = rgb_info_msg->header;
     cloud_publisher_.publish(cloud_ptr);
     dur_cloud = getMsDuration(start_cloud);
