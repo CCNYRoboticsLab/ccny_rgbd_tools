@@ -13,4 +13,6 @@
   <depend stack="vision_opencv"/>
   <depend stack="image_common"/>
   <depend stack="nodelet_core"/>
+  
+  <rosdep name="octomap" />
 </stack>
