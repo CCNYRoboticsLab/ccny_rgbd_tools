@@ -1,7 +1,7 @@
 <package>
   <description brief="ccny_rgbd">
 
-     Tools for fast visual odometry and mapping from RGB-D data.
+     Ros applications for fast visual odometry and mapping from RGB-D data, built on top of the rgbdtools library.
 
   </description>
   <author>Ivan Dryanovski</author>
@@ -10,7 +10,6 @@
   <url>http://ros.org/wiki/ccny_rgbd</url>
   <depend package="roscpp"/>
   <depend package="pcl"/>
-  <depend package="ccny_g2o"/>
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>
