@@ -24,6 +24,10 @@ rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
+################################################################
+# Dependencies
+################################################################
+
 # OpenCV
 FIND_PACKAGE( OpenCV REQUIRED )
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -36,8 +40,13 @@ include_directories(${OCTOMAP_INCLUDE_DIRS})
 link_directories(${OCTOMAP_LIBRARY_DIRS})
 link_libraries(${OCTOMAP_LIBRARIES})
 
-#g2o
+# PCL
+find_package(PCL REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+link_libraries(${PCL_LIBRARIES})
 
+#g2o
 set(G2O_LIBRARIES 
   g2o_core 
   g2o_stuff
@@ -97,6 +106,7 @@ target_link_libraries (feature_viewer_node
   boost_signals
   boost_system
   boost_filesystem
+  ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES})
   
 ################################################################
