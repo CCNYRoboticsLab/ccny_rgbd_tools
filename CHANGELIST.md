@@ -6,6 +6,7 @@ current
  * seperated into ROS apps (ccny_rgbd) and stand-alone library (rgbdtools)
  * added range threshold parameters to keyframe_mapper
  * unadvertised cloud publishing topic from rgbd_image_proc if param is set to false. Otherwise, advertised.
+ * added flags for verbose output
 
 0.1.1         (3/1/2013)
 ------------------------

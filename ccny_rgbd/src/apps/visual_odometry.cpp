@@ -491,8 +491,9 @@ void VisualOdometry::publishFeatureCovariances(rgbdtools::RGBDFrame& frame)
 
 void VisualOdometry::publishModelCloud()
 {
-  PointCloudFeature::Ptr model_cloud = motion_estimation_.getModel();
-  model_cloud_publisher_.publish(model_cloud);
+  PointCloudFeature::Ptr model_cloud_ptr = motion_estimation_.getModel();
+  model_cloud_ptr->frame = fixed_frame_;
+  model_cloud_publisher_.publish(model_cloud_ptr);
 }
 
 void VisualOdometry::publishModelCovariances()
