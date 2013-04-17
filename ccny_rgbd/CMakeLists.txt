@@ -79,6 +79,7 @@ target_link_libraries (keyframe_mapper_node
   boost_signals
   boost_system
   boost_filesystem
+  boost_regex
   ${OpenCV_LIBRARIES}
   ${G2O_LIBRARIES})
   
