@@ -57,14 +57,11 @@ KeyframeMapper::KeyframeMapper(
   save_kf_service_ = nh_.advertiseService(
     "save_keyframes", &KeyframeMapper::saveKeyframesSrvCallback, this);
   load_kf_service_ = nh_.advertiseService(
-    "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);
-    
+    "load_keyframes", &KeyframeMapper::loadKeyframesSrvCallback, this);   
   save_pcd_map_service_ = nh_.advertiseService(
     "save_pcd_map", &KeyframeMapper::savePcdMapSrvCallback, this);
-
   save_octomap_service_ = nh_.advertiseService(
     "save_octomap", &KeyframeMapper::saveOctomapSrvCallback, this);
-    
   add_manual_keyframe_service_ = nh_.advertiseService(
     "add_manual_keyframe", &KeyframeMapper::addManualKeyframeSrvCallback, this);
   generate_graph_service_ = nh_.advertiseService(
@@ -115,6 +112,39 @@ void KeyframeMapper::initParams()
     max_stdev_  = 0.03;
   if (!nh_private_.getParam ("max_map_z", max_map_z_))
     max_map_z_ = std::numeric_limits<double>::infinity();
+   
+  // configure graph detection 
+    
+  int max_ransac_iterations;  
+  int n_ransac_candidates;
+  int k_nearest_neighbors;
+  int min_ransac_inliers;
+  int n_keypoints;
+  double max_corresp_dist_desc;
+  double max_corresp_dist_eucl;
+    
+  if (!nh_private_.getParam ("graph/max_ransac_iterations", max_ransac_iterations))
+    max_ransac_iterations = 2000;
+  if (!nh_private_.getParam ("graph/n_ransac_candidates", n_ransac_candidates))
+    n_ransac_candidates = 15;
+  if (!nh_private_.getParam ("graph/k_nearest_neighbors", k_nearest_neighbors))
+    k_nearest_neighbors = 15;
+  if (!nh_private_.getParam ("graph/min_ransac_inliers", min_ransac_inliers))
+    min_ransac_inliers = 30;
+  if (!nh_private_.getParam ("graph/max_corresp_dist_desc", max_corresp_dist_desc))
+    max_corresp_dist_desc = 1.0;
+  if (!nh_private_.getParam ("graph/max_corresp_dist_eucl", max_corresp_dist_eucl))
+    max_corresp_dist_eucl = 0.03;
+  if (!nh_private_.getParam ("graph/n_keypoints", n_keypoints))
+    n_keypoints = 200;
+    
+  graph_detector_.setMaxRansacIterations(max_ransac_iterations);    
+  graph_detector_.setNRansacCandidates(n_ransac_candidates);   
+  graph_detector_.setKNearestNeighbors(k_nearest_neighbors); 
+  graph_detector_.setMinRansacInliers(min_ransac_inliers);
+  graph_detector_.setNKeypoints(n_keypoints);
+  graph_detector_.setMaxCorrespDistDesc(max_corresp_dist_desc);
+  graph_detector_.setMaxCorrespDistEucl(max_corresp_dist_eucl);
 }
   
 void KeyframeMapper::RGBDCallback(
