@@ -455,22 +455,20 @@ void VisualOdometry::diagnostics(
   if(save_diagnostics_ && diagnostics_file_ != NULL)
   {
     // print to file
-    fprintf(diagnostics_file_, "%d, %2.1f, %d, %d, %3.1f, %d, %4.1f, %4.1f\n",
+    fprintf(diagnostics_file_, "%d, %2.1f, %d, %3.1f, %d, %4.1f, %4.1f\n",
       frame_count_,
       d_frame,
-      n_features, n_valid_features,
-      d_features,
+      n_valid_features, d_features,
       n_model_pts, d_reg,
       d_total);
   }
   if (verbose_)
   {
-    // Print to screen
-    ROS_INFO("[VO %d] Fr: %2.1f %s[%d][%d]: %3.1f %s[%d] %4.1f TOTAL %4.1f\n",
+    // print to screen
+    ROS_INFO("[VO %d] %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f\n",
       frame_count_,
-      d_frame,
-      detector_type_.c_str(), n_features, n_valid_features, d_features,
-      reg_type_.c_str(), n_model_pts, d_reg,
+      detector_type_.c_str(), n_valid_features, d_features,
+      n_model_pts, d_reg,
       d_total);
   }
 
@@ -486,19 +484,19 @@ void VisualOdometry::publishFeatureCloud(rgbdtools::RGBDFrame& frame)
 
 void VisualOdometry::publishFeatureCovariances(rgbdtools::RGBDFrame& frame)
 {
-
+  ///< @TODO publish feature covariances
 }
 
 void VisualOdometry::publishModelCloud()
 {
   PointCloudFeature::Ptr model_cloud_ptr = motion_estimation_.getModel();
-  model_cloud_ptr->frame = fixed_frame_;
+  model_cloud_ptr->header.frame_id = fixed_frame_;
   model_cloud_publisher_.publish(model_cloud_ptr);
 }
 
 void VisualOdometry::publishModelCovariances()
 {
-
+  ///< @TODO ppublish model covariances
 }
 
 } // namespace ccny_rgbd

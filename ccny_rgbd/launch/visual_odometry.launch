@@ -5,7 +5,7 @@
   # ORB, SURF, GTF, STAR
   <arg name="detector_type" default="GFT"/> 
 
-  # ICPProbModel, ICP
+  # ICPProbModel
   <arg name="reg_type" default="ICPProbModel"/> 
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
