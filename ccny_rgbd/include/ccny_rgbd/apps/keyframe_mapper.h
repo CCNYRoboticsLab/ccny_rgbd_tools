@@ -366,6 +366,12 @@ class KeyframeMapper
     {
       return octomath::Quaternion(qTf.w(), qTf.x(), qTf.y(), qTf.z());
     }
+    
+    //void updatePathFromKeyframePoses();
+
+    std::vector<AffineTransform> path_;
+    
+    int rgbd_frame_index_;
 };
 
 } // namespace ccny_rgbd

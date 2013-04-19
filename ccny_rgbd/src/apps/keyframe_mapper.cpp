@@ -29,7 +29,8 @@ KeyframeMapper::KeyframeMapper(
   const ros::NodeHandle& nh, 
   const ros::NodeHandle& nh_private):
   nh_(nh), 
-  nh_private_(nh_private)
+  nh_private_(nh_private),
+  rgbd_frame_index_(0)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
    
@@ -168,16 +169,39 @@ void KeyframeMapper::RGBDCallback(
   }
   rgbdtools::RGBDFrame frame;
   createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
+  frame.index = rgbd_frame_index_;
+  rgbd_frame_index_++;
   
   bool result = processFrame(frame, eigenAffineFromTf(transform));
   if (result) publishKeyframeData(keyframes_.size() - 1);
+  
+  publishPath();
 }
+
+
 
 bool KeyframeMapper::processFrame(
   const rgbdtools::RGBDFrame& frame, 
   const AffineTransform& pose)
 {
-  bool result; // if true, add new frame
+  /*
+  // add the frame pose to the path vector
+  geometry_msgs::PoseStamped frame_pose; 
+  tf::Transform frame_tf = tfFromEigenAffine(pose);
+  tf::poseTFToMsg(frame_tf, frame_pose.pose);
+ 
+  // update the header of the pose for the path
+  frame_pose.header.frame_id = fixed_frame_;
+  frame_pose.header.seq = frame.header.seq;
+  frame_pose.header.stamp.sec = frame.header.stamp.sec;
+  frame_pose.header.stamp.nsec = frame.header.stamp.nsec;
+    
+  path_msg_.poses.push_back(frame_pose);*/
+  
+  path_.push_back(pose);
+  
+  // determine if a new keyframe is needed
+  bool result; 
 
   if(keyframes_.empty() || manual_add_)
   {
@@ -199,7 +223,6 @@ bool KeyframeMapper::processFrame(
   if (result)
   {
     addKeyframe(frame, pose);
-    publishPath();
   }
   return result;
 }
@@ -217,7 +240,7 @@ void KeyframeMapper::addKeyframe(
     manual_add_ = false;
     keyframe.manually_added = true;
   }
-  keyframes_.push_back(keyframe);
+  keyframes_.push_back(keyframe); 
 }
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
@@ -243,11 +266,7 @@ bool KeyframeMapper::publishKeyframeSrvCallback(
 bool KeyframeMapper::publishKeyframesSrvCallback(
   PublishKeyframes::Request& request,
   PublishKeyframes::Response& response)
-{
-  path_msg_.header.frame_id = fixed_frame_;
-  path_msg_.poses.clear();
-  path_msg_.poses.resize(keyframes_.size());
-  
+{ 
   bool found_match = false;
 
   // regex matching - try match the request string against each
@@ -256,15 +275,6 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
-    // Recompute keyframes' path:
-    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
-
-    pose_stamped.header.stamp.sec = keyframe.header.stamp.sec ;
-    pose_stamped.header.stamp.nsec = keyframe.header.stamp.nsec ;
-    pose_stamped.header.frame_id = fixed_frame_;
-    tf::poseTFToMsg(tfFromEigenAffine(keyframe.pose), pose_stamped.pose);
-
     std::stringstream ss;
     ss << kf_idx;
     std::string kf_idx_string = ss.str();
@@ -281,7 +291,7 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
     }
   }
 
-  path_pub_.publish(path_msg_);  // Publish new keyframes' path
+  publishPath();
 
   return found_match;
 }
@@ -524,13 +534,74 @@ bool KeyframeMapper::solveGraphSrvCallback(
   SolveGraph::Request& request,
   SolveGraph::Response& response)
 {
+  ros::WallTime start = ros::WallTime::now();
   graph_solver_.solve(keyframes_, associations_);
-
+  //graph_solver_.solve(keyframe_path_indices_, path_, associations_);
+  double dur = getMsDuration(start);
+  
+  ROS_INFO("Solving took %.1f ms", dur);
+  
+  //updatePathFromKeyframePoses();
+  
+  publishPath();
   publishKeyframePoses();
   publishKeyframeAssociations();
 
   return true;
 }
+
+
+/** In the event that the keyframe poses change (from pose-graph solving)
+ * this function will propagete teh changes in the path message
+ */
+
+/*
+void KeyframeMapper::updatePathFromKeyframePoses()
+{
+  int kf_size = keyframes_.size();
+  int f_size = path_msg_.poses.size();
+  
+  if (kf_size < 2) return;
+  
+  // the frame index
+  int f_idx = 0;
+  
+  for (int kf_idx = 0; kf_idx < kf_size - 1; ++kf_idx)
+  {
+    int kf_idx_next = kf_idx +1;
+    
+    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe_next = keyframes_[kf_idx_next];
+    
+    int seq      = keyframe.header.seq;
+    int seq_next = keyframe_next.header.seq;
+    
+    // find f_idx_next
+    int f_idx_next = f_idx;
+    
+    while(true)
+    {
+      assert(f_idx_next < f_size);
+      if (path_msg_.poses[f_idx_next].header.seq == seq_next) break;
+      f_idx_next++;
+    }
+    
+    tf::Transform pa = tfFromEigenAffine(keyframe.pose);
+    tf::Transform pb = tfFromEigenAffine(keyframe_next.pose);
+    tf::Transform pb_old;
+    tf::poseMsgToTF(path_msg_.poses[f_idx_next].pose, pb_old);
+    
+    tf_transform delta_new = pa.inverse() * pb;
+    tf_transform delta_old = pa.inverse() * pb_old;
+    
+    tf_transform D = delta_old.inverse() * delta_new();
+    
+    
+    
+  }
+  
+}
+*/
 
 bool KeyframeMapper::savePcdMap(const std::string& path)
 {
@@ -684,20 +755,6 @@ void KeyframeMapper::buildColorOctomap(octomap::ColorOcTree& tree)
 void KeyframeMapper::publishPath()
 {
   path_msg_.header.frame_id = fixed_frame_; 
-  path_msg_.poses.clear();
-  path_msg_.poses.resize(keyframes_.size());
-  
-  for(unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++ kf_idx)
-  {
-    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    geometry_msgs::PoseStamped& pose_stamped = path_msg_.poses[kf_idx];
-    
-    pose_stamped.header.stamp.sec  = keyframe.header.stamp.sec;
-    pose_stamped.header.stamp.nsec = keyframe.header.stamp.nsec;
-    pose_stamped.header.frame_id = fixed_frame_;
-    tf::poseTFToMsg(tfFromEigenAffine(keyframe.pose), pose_stamped.pose);
-  }
-
   path_pub_.publish(path_msg_);
 }
 
