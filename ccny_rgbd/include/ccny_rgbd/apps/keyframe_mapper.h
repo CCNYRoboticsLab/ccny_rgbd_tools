@@ -24,6 +24,8 @@
 #ifndef CCNY_RGBD_KEYFRAME_MAPPER_H
 #define CCNY_RGBD_KEYFRAME_MAPPER_H
 
+#include <iostream>
+#include <fstream>
 #include <ros/ros.h>
 #include <ros/publisher.h>
 #include <pcl/point_cloud.h>
@@ -261,6 +263,8 @@ class KeyframeMapper
     // state vars
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested
 
+    int rgbd_frame_index_;
+
     rgbdtools::KeyframeGraphDetector graph_detector_;  ///< builds graph from the keyframes
     rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement
 
@@ -367,11 +371,10 @@ class KeyframeMapper
       return octomath::Quaternion(qTf.w(), qTf.x(), qTf.y(), qTf.z());
     }
     
-    //void updatePathFromKeyframePoses();
-
-    std::vector<AffineTransform> path_;
+    bool savePath(const std::string& filepath);
+    bool loadPath(const std::string& filepath);
     
-    int rgbd_frame_index_;
+    //void updatePathFromKeyframePoses();
 };
 
 } // namespace ccny_rgbd

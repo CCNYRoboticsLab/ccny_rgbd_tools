@@ -47,7 +47,7 @@ KeyframeMapper::KeyframeMapper(
   kf_assoc_pub_ = nh_.advertise<visualization_msgs::Marker>( 
     "keyframe_associations", queue_size_);
   path_pub_ = nh_.advertise<PathMsg>( 
-    "keyframe_path", queue_size_);
+    "mapper_path", queue_size_);
   
   // **** services
   
@@ -167,6 +167,8 @@ void KeyframeMapper::RGBDCallback(
   {
     return;
   }
+  
+  // create a new frame and increment the counter
   rgbdtools::RGBDFrame frame;
   createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
   frame.index = rgbd_frame_index_;
@@ -184,7 +186,6 @@ bool KeyframeMapper::processFrame(
   const rgbdtools::RGBDFrame& frame, 
   const AffineTransform& pose)
 {
-  /*
   // add the frame pose to the path vector
   geometry_msgs::PoseStamped frame_pose; 
   tf::Transform frame_tf = tfFromEigenAffine(pose);
@@ -196,10 +197,8 @@ bool KeyframeMapper::processFrame(
   frame_pose.header.stamp.sec = frame.header.stamp.sec;
   frame_pose.header.stamp.nsec = frame.header.stamp.nsec;
     
-  path_msg_.poses.push_back(frame_pose);*/
-  
-  path_.push_back(pose);
-  
+  path_msg_.poses.push_back(frame_pose);
+   
   // determine if a new keyframe is needed
   bool result; 
 
@@ -456,28 +455,38 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
   Save::Request& request,
   Save::Response& response)
 {
+  std::string filepath = request.filename;
+
   ROS_INFO("Saving keyframes...");
-  std::string path = request.filename;
-  bool result = saveKeyframes(keyframes_, path);
-  
-  if (result) ROS_INFO("Keyframes saved to %s", path.c_str());
+  bool result_kf = saveKeyframes(keyframes_, filepath);
+  if (result_kf) ROS_INFO("Keyframes saved to %s", filepath.c_str());
   else ROS_ERROR("Keyframe saving failed!");
   
-  return result;
+  ROS_INFO("Saving path...");
+  bool result_path = savePath(filepath);
+  if (result_path ) ROS_INFO("Path saved to %s", filepath.c_str());
+  else ROS_ERROR("Path saving failed!");
+    
+  return result_kf && result_path;
 }
 
 bool KeyframeMapper::loadKeyframesSrvCallback(
   Load::Request& request,
   Load::Response& response)
 {
-  ROS_INFO("Loading keyframes...");
-  std::string path = request.filename;
-  bool result = loadKeyframes(keyframes_, path);
+  std::string filepath = request.filename;
   
-  if (result) ROS_INFO("Keyframes loaded successfully");
+  ROS_INFO("Loading keyframes...");
+  bool result_kf = loadKeyframes(keyframes_, filepath); 
+  if (result_kf) ROS_INFO("Keyframes loaded successfully");
   else ROS_ERROR("Keyframe loading failed!");
   
-  return result;
+  ROS_INFO("Loading path...");
+  bool result_path = loadPath(filepath);
+  if (result_path) ROS_INFO("Path loaded successfully");
+  else ROS_ERROR("Path loading failed!");
+  
+  return result_kf && result_path;
 }
 
 bool KeyframeMapper::savePcdMapSrvCallback(
@@ -756,6 +765,83 @@ void KeyframeMapper::publishPath()
 {
   path_msg_.header.frame_id = fixed_frame_; 
   path_pub_.publish(path_msg_);
+}
+
+bool KeyframeMapper::savePath(const std::string& filepath)
+{
+  // open file
+  std::string filename = filepath + "/path.txt";
+  std::ofstream file(filename.c_str());
+  if (!file.is_open()) return false;
+
+  file << "# index seq stamp.sec stamp.nsec x y z qx qy qz qw" << std::endl;
+
+  for (unsigned int idx = 0; idx < path_msg_.poses.size(); ++idx)
+  {
+    const geometry_msgs::PoseStamped& pose = path_msg_.poses[idx];
+    
+    file << idx << " "
+         << pose.header.seq << " "
+         << pose.header.stamp.sec << " "
+         << pose.header.stamp.nsec << " "
+         << pose.pose.position.x << " "
+         << pose.pose.position.y << " "
+         << pose.pose.position.z << " "
+         << pose.pose.orientation.x << " "
+         << pose.pose.orientation.y << " "
+         << pose.pose.orientation.z << " " 
+         << pose.pose.orientation.w << std::endl;
+  }
+
+  file.close();
+  
+  return true;
+}
+
+bool KeyframeMapper::loadPath(const std::string& filepath)
+{
+  path_msg_.poses.clear();
+
+  // open file
+  std::string filename = filepath + "/path.txt";
+  std::ifstream file(filename.c_str());
+  if (!file.is_open()) return false;
+  
+  std::string line;
+
+  // get header
+  getline(file, line);
+  std::cout << line << std::endl;
+
+  // read each line
+  while(std::getline(file, line))
+  {
+    std::istringstream is(line);
+    //std::cout << "[" << is.str() << "]" << std::endl;
+    
+    // fill out pose information  
+    geometry_msgs::PoseStamped pose;
+    pose.header.frame_id = fixed_frame_;
+    int idx;
+       
+    is >> idx
+       >> pose.header.seq 
+       >> pose.header.stamp.sec 
+       >> pose.header.stamp.nsec 
+       >> pose.pose.position.x 
+       >> pose.pose.position.y 
+       >> pose.pose.position.z 
+       >> pose.pose.orientation.x 
+       >> pose.pose.orientation.y 
+       >> pose.pose.orientation.z 
+       >> pose.pose.orientation.w;
+                 
+    // add to poses vector  
+    path_msg_.poses.push_back(pose);
+  }
+    
+  file.close();
+  return true;
 }
 
 } // namespace ccny_rgbd
