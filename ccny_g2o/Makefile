@@ -9,14 +9,10 @@ SVN_REVISION = -r 30
 
 # needed since certificate of openslam expired
 SVN_CMDLINE = svn --no-auth-cache --trust-server-cert --non-interactive
-#SVN_CMDLINE = svn --non-interactive --config-dir $(TOP_DIR)/svnconf
-
-# patch changes #include <cholmod.h> to <suitesparse/cholmod.h>
-SVN_PATCH = ./patch_suitesparse 
 
 include $(shell rospack find mk)/svn_checkout.mk
 
-g2o: $(SVN_DIR) patched
+g2o: $(SVN_DIR)
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake ../ -DCMAKE_INSTALL_PREFIX=$(TOP_DIR) 
 	cd $(BUILD_DIR) && make install
@@ -24,7 +20,7 @@ g2o: $(SVN_DIR) patched
 
 clean:
 	cd $(BUILD_DIR) && make clean 
-	rm -rf g2o patched
+	rm -rf g2o
 
 wipe: clean
 	-rm -rf $(SVN_DIR) include lib bin  
