@@ -22,5 +22,5 @@ clean:
 	cd $(BUILD_DIR) && make clean 
 	rm -rf g2o
 
-wipe: clean
+wipe:
 	-rm -rf $(SVN_DIR) include lib bin  
