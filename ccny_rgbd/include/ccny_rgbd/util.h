@@ -170,6 +170,21 @@ void createRGBDFrameFromROSMessages(
   const CameraInfoMsg::ConstPtr& info_msg,
   rgbdtools::RGBDFrame& frame);
 
+/** @brief Copies over the poses from a Eigen vector to a ROS message.
+ * Assumes the message is already correctly resized, and preserves
+ * the headers of each pose in the message
+ */
+void pathEigenAffineToROS(
+  const AffineTransformVector& path,
+  PathMsg& path_msg);
+
+/** @brief copies over the poses from a ROS message Eigen vector.
+ * The eigen vector will be cleared and resized appropriately.
+ */
+void pathROSToEigenAffine(
+  const PathMsg& path_msg,
+  AffineTransformVector& path);
+
 } // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_UTIL_H
