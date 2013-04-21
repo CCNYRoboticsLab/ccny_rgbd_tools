@@ -15,4 +15,5 @@
   <depend stack="nodelet_core"/>
   
   <rosdep name="octomap" />
+  <rosdep name="suitesparse" />
 </stack>
