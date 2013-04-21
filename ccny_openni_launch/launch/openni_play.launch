@@ -9,7 +9,7 @@
   <arg name="bag_start" default="0.0" />
   
   <arg name="manager_name" default="rgbd_manager"/>
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_openni_default"/> 
+  <arg name="calib_path" default="$(find ccny_rgbd_data)/calibration_openni_default"/> 
   <arg name="unwarp" default="false"/> 
   <arg name="scale" default="1.0"/>
   <arg name="publish_cloud" default="false"/>

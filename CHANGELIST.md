@@ -3,7 +3,13 @@ ccny_rgbd changelist
 
 current
 ------------------------
+ *
+
+0.2.0        (4/15/2013)
+------------------------
  * seperated into ROS apps (ccny_rgbd) and stand-alone library (rgbdtools)
+ * added seperate package for calibration and misc files: ccny_rgbd_data
+ * added rviz config file for groovy
  * added range threshold parameters to keyframe_mapper
  * unadvertised cloud publishing topic from rgbd_image_proc if param is set to false. Otherwise, advertised.
  * removed ICP registration class (ICPProbModel the default and only option right now)
