@@ -3,7 +3,7 @@ ccny_rgbd changelist
 
 current
 ------------------------
- *
+ * added camera path saving and loading in keyframe_mapper
 
 0.2.0        (4/15/2013)
 ------------------------
