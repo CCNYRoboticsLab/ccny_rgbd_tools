@@ -545,17 +545,17 @@ bool KeyframeMapper::solveGraphSrvCallback(
 {
   ros::WallTime start = ros::WallTime::now();
   
-  /*
   // Graph solving: keyframe positions only
   graph_solver_.solve(keyframes_, associations_);
-  */
-  
+  updatePathFromKeyframePoses();
+    
   // Graph solving: keyframe positions and VO path
-  
+  /*
   AffineTransformVector path;
   pathROSToEigenAffine(path_msg_, path);
   graph_solver_.solve(keyframes_, associations_, path);
   pathEigenAffineToROS(path, path_msg_);
+  */
   
   double dur = getMsDuration(start);
   
@@ -573,53 +573,98 @@ bool KeyframeMapper::solveGraphSrvCallback(
  * this function will propagete teh changes in the path message
  */
 
-/*
 void KeyframeMapper::updatePathFromKeyframePoses()
-{
+{   
   int kf_size = keyframes_.size();
   int f_size = path_msg_.poses.size();
   
-  if (kf_size < 2) return;
+  // temporary store the new path
+  AffineTransformVector path_new;
+  path_new.resize(f_size);
   
-  // the frame index
-  int f_idx = 0;
+  if (kf_size < 2) return; 
   
   for (int kf_idx = 0; kf_idx < kf_size - 1; ++kf_idx)
   {
-    int kf_idx_next = kf_idx +1;
+    // the indices of the current and next keyframes (a and b)   
+    const rgbdtools::RGBDKeyframe& keyframe_a = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe_b = keyframes_[kf_idx + 1];
     
-    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    const rgbdtools::RGBDKeyframe& keyframe_next = keyframes_[kf_idx_next];
+    // the corresponding frame indices
+    int f_idx_a = keyframe_a.index;
+    int f_idx_b = keyframe_b.index;
+         
+    // the new poses of keyframes a and b (after graph solving)
+    tf::Transform kf_pose_a = tfFromEigenAffine(keyframe_a.pose);
+    tf::Transform kf_pose_b = tfFromEigenAffine(keyframe_b.pose);
     
-    int seq      = keyframe.header.seq;
-    int seq_next = keyframe_next.header.seq;
+    // the previous pose of keyframe a and b (before graph solving)
+    tf::Transform kf_pose_a_prev, kf_pose_b_prev;
+    tf::poseMsgToTF(path_msg_.poses[f_idx_a].pose, kf_pose_a_prev);
+    tf::poseMsgToTF(path_msg_.poses[f_idx_b].pose, kf_pose_b_prev);
     
-    // find f_idx_next
-    int f_idx_next = f_idx;
+    // the motion, in the camera frame (after and before graph solving)
+    tf::Transform kf_motion      = kf_pose_a.inverse() * kf_pose_b;
+    tf::Transform kf_motion_prev = kf_pose_a_prev.inverse() * kf_pose_b_prev;
     
-    while(true)
+    // the correction from the graph solving
+    tf::Transform correction = kf_motion_prev.inverse() * kf_motion;
+    
+    // update the poses in-between keyframes
+    for (int f_idx = f_idx_a; f_idx < f_idx_b; ++f_idx)
     {
-      assert(f_idx_next < f_size);
-      if (path_msg_.poses[f_idx_next].header.seq == seq_next) break;
-      f_idx_next++;
-    }
-    
-    tf::Transform pa = tfFromEigenAffine(keyframe.pose);
-    tf::Transform pb = tfFromEigenAffine(keyframe_next.pose);
-    tf::Transform pb_old;
-    tf::poseMsgToTF(path_msg_.poses[f_idx_next].pose, pb_old);
-    
-    tf_transform delta_new = pa.inverse() * pb;
-    tf_transform delta_old = pa.inverse() * pb_old;
-    
-    tf_transform D = delta_old.inverse() * delta_new();
-    
-    
-    
+      // calculate interpolation scale
+      double interp_scale = (double)(f_idx - f_idx_a) / (double)(f_idx_b - f_idx_a);
+      
+      // create interpolated correction translation and rotation
+      tf::Vector3 v_interp = correction.getOrigin() * interp_scale;
+      tf::Quaternion q_interp = tf::Quaternion::getIdentity();
+      q_interp.slerp(correction.getRotation(), interp_scale);
+      
+      // create interpolated correction
+      tf::Transform interpolated_correction;
+      interpolated_correction.setOrigin(v_interp);
+      interpolated_correction.setRotation(q_interp);
+      
+      // the previous frame pose
+      tf::Transform frame_pose_prev;
+      tf::poseMsgToTF(path_msg_.poses[f_idx].pose, frame_pose_prev);
+      
+      // the pevious frame motion
+      tf::Transform frame_motion_prev = kf_pose_a_prev.inverse() * frame_pose_prev;
+      
+      // the interpolated motion
+      tf::Transform interpolated_motion = frame_motion_prev * interpolated_correction;
+      
+      // calculate the interpolated pose
+      path_new[f_idx] = keyframe_a.pose * eigenAffineFromTf(interpolated_motion);
+    }  
   }
+
+  // update the last pose
+  const rgbdtools::RGBDKeyframe& last_kf = keyframes_[kf_size - 1];
+
+  tf::Transform last_kf_pose_prev;
+  tf::poseMsgToTF(path_msg_.poses[last_kf.index].pose, last_kf_pose_prev);
   
+  // update the poses in-between last keyframe and end of vo path
+  for (int f_idx = last_kf.index; f_idx < f_size; ++f_idx)
+  {
+    // the previous frame pose
+    tf::Transform frame_pose_prev;
+    tf::poseMsgToTF(path_msg_.poses[f_idx].pose, frame_pose_prev);
+    
+    // the pevious frame motion
+    tf::Transform frame_motion_prev = last_kf_pose_prev.inverse() * frame_pose_prev;
+    
+    // calculate the new pose
+    path_new[f_idx] = last_kf.pose * eigenAffineFromTf(frame_motion_prev);
+  } 
+  
+  // copy over the interpolated path
+  pathEigenAffineToROS(path_new, path_msg_);
 }
-*/
+
 
 bool KeyframeMapper::savePcdMap(const std::string& path)
 {
