@@ -544,14 +544,23 @@ bool KeyframeMapper::solveGraphSrvCallback(
   SolveGraph::Response& response)
 {
   ros::WallTime start = ros::WallTime::now();
+  
+  /*
+  // Graph solving: keyframe positions only
   graph_solver_.solve(keyframes_, associations_);
-  //graph_solver_.solve(keyframe_path_indices_, path_, associations_);
+  */
+  
+  // Graph solving: keyframe positions and VO path
+  
+  AffineTransformVector path;
+  pathROSToEigenAffine(path_msg_, path);
+  graph_solver_.solve(keyframes_, associations_, path);
+  pathEigenAffineToROS(path, path_msg_);
+  
   double dur = getMsDuration(start);
   
   ROS_INFO("Solving took %.1f ms", dur);
-  
-  //updatePathFromKeyframePoses();
-  
+    
   publishPath();
   publishKeyframePoses();
   publishKeyframeAssociations();
