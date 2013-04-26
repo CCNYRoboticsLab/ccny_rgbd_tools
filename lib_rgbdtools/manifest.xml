@@ -11,6 +11,8 @@
   
   <depend package="ccny_g2o"/>
   
+  <rosdep name="suitesparse" />
+  
   <export>
     <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>
   </export>

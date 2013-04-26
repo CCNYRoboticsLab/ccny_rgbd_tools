@@ -11,7 +11,8 @@ CCNY Robotics Lab
 Overview
 -----------------------------------
 
-The stack contains ROS applications for visual odometry and mapping using RGB-D cameras. The applications are built on top of the [rgbdtools](https://gihub.com/ccny-ros-pkg/rgbdtools.git) library.
+The stack contains ROS applications for visual odometry and mapping using RGB-D cameras. 
+The applications are built on top of the [rgbdtools](https://github.com/ccny-ros-pkg/rgbdtools.git) library.
 
 This code is at an experimental stage, and licensed under the GPLv3 license.
 
