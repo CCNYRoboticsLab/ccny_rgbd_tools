@@ -23,6 +23,8 @@
   <depend package="image_geometry"/>
   <depend package="nodelet"/>
   <depend package="lib_rgbdtools"/>
+      
+  <rosdep name="octomap" />
 
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib/ -Wl,-rpath,${prefix}/lib -lros"/>
