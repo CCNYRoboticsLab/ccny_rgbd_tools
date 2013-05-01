@@ -29,7 +29,7 @@
     <remap from="/rgbd/rgb"   to="/camera/rgb/image_color"/>
     <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>   
     
-    <param name="fixed_frame" value="odom"/>
+    <param name="fixed_frame" value="map"/>
     
     <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
     <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->

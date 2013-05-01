@@ -27,14 +27,13 @@
 #include <ros/ros.h>
 #include <boost/filesystem.hpp>
 #include <opencv2/opencv.hpp>
-#include <cv_bridge/cv_bridge.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <dynamic_reconfigure/server.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/proc_util.h"
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/RGBDImageProcConfig.h"
 
 namespace ccny_rgbd {
@@ -112,8 +111,9 @@ class RGBDImageProc
     int queue_size_;          ///< ROS subscriber (and publisher) queue size parameter
     
     std::string calib_path_;  ///< Path to folder where calibration files are stored
-    bool unwarp_;             ///< Whetehr to perform depth unwarping based on polynomial model
-    bool publish_cloud_;      ///< Whetehr to calculate and publish the dense PointCloud
+    bool verbose_;             ///< Whether to print the rectification and unwarping messages
+    bool unwarp_;             ///< Whether to perform depth unwarping based on polynomial model
+    bool publish_cloud_;      ///< Whether to calculate and publish the dense PointCloud
     
     /** @brief Downasampling scale (0, 1]. For example, 
      * 2.0 will result in an output image half the size of the input

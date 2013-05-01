@@ -5,7 +5,7 @@
   # ORB, SURF, GTF, STAR
   <arg name="detector_type" default="GFT"/> 
 
-  # ICPProbModel, ICP
+  # ICPProbModel
   <arg name="reg_type" default="ICPProbModel"/> 
 
   <node pkg="ccny_rgbd" type="visual_odometry_node" name="visual_odometry_node" 
@@ -15,10 +15,15 @@
     ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
     Also add these to keyframe_mapper in vo+mapping.launch.
     -->
+
     <remap from="/rgbd/depth" to="/camera/depth/image"/>
     <remap from="/rgbd/rgb"   to="/camera/rgb/image_color"/>
     <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>      
-   
+    
+    #### diagnostics ##################################
+        
+    <param name="verbose"     value="true"/>    
+    
     #### frames and tf output #########################
     
     <param name="publish_tf"  value="true"/>
@@ -28,18 +33,18 @@
     #### features #####################################
     
     #  ORB, SURF, or GFT (Good features to track)
-    <param name="feature/detector_type"       value="$(arg detector_type)"/> 
-    <param name="feature/smooth"              value="0"/>
-    <param name="feature/max_range"           value="7.0"/>
-    <param name="feature/max_stdev"           value="0.05"/>
-    <param name="feature/show_keypoints"      value="false"/>
-    <param name="feature/publish_cloud"       value="true"/>
-    <param name="feature/publish_covariances" value="false"/>
+    <param name="feature/detector_type"               value="$(arg detector_type)"/> 
+    <param name="feature/smooth"                      value="0"/>
+    <param name="feature/max_range"                   value="7.0"/>
+    <param name="feature/max_stdev"                   value="0.15"/>
+    <param name="feature/show_keypoints"              value="false"/>
+    <param name="feature/publish_feature_cloud"       value="true"/>
+    <param name="feature/publish_feature_covariances" value="false"/>
 
     #### features: GFT ################################
 
     <param name="feature/GFT/n_features"   value = "400"/>
-    <param name="feature/GFT/min_distance" value = "2.0"/>
+    <param name="feature/GFT/min_distance" value = "0.0"/>
 
     #### features: SURF ###############################
   
@@ -58,7 +63,7 @@
     #### registration: ICP Prob Model #################
 
     <param name="reg/ICPProbModel/max_iterations"            value="10"/>
-    <param name="reg/ICPProbModel/max_model_size"            value="10000"/>
+    <param name="reg/ICPProbModel/max_model_size"            value="5000"/>
     <param name="reg/ICPProbModel/n_nearest_neighbors"       value="4"/>
     <param name="reg/ICPProbModel/max_assoc_dist_mah"        value="10.0"/>
     <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.15"/>

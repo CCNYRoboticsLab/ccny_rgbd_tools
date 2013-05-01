@@ -1,0 +1,14 @@
+<package>
+  <description brief="ccny_rgbd_data">
+
+     Auxiliary data files for ccny_rgbd: calibration files, test sequences, etc.
+
+  </description>
+  <author>Ivan Dryanovski</author>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ccny_rgbd_data</url>
+
+</package>
+
+

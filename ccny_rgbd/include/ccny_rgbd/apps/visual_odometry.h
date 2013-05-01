@@ -27,21 +27,14 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <visualization_msgs/Marker.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <pcl_ros/point_cloud.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/features/feature_detector.h"
-#include "ccny_rgbd/features/orb_detector.h"
-#include "ccny_rgbd/features/surf_detector.h"
-#include "ccny_rgbd/features/gft_detector.h"
-#include "ccny_rgbd/features/star_detector.h"
-#include "ccny_rgbd/registration/motion_estimation.h"
-#include "ccny_rgbd/registration/motion_estimation_icp.h"
-#include "ccny_rgbd/registration/motion_estimation_icp_prob_model.h"
-
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/FeatureDetectorConfig.h"
 #include "ccny_rgbd/GftDetectorConfig.h"
 #include "ccny_rgbd/StarDetectorConfig.h"
@@ -83,9 +76,18 @@ class VisualOdometry
     tf::TransformBroadcaster tf_broadcaster_; ///< ROS transform broadcaster
     ros::Publisher odom_publisher_;           ///< ROS Odometry publisher
     ros::Publisher pose_stamped_publisher_;   ///< ROS pose stamped publisher
-    ros::Publisher cloud_publisher_;          ///< ROS feature cloud publisher
     ros::Publisher path_pub_;                 ///< ROS publisher for the VO path
 
+    ros::Publisher feature_cloud_publisher_;     
+    ros::Publisher feature_cov_publisher_;  
+    ros::Publisher model_cloud_publisher_;       
+    ros::Publisher model_cov_publisher_;         
+             
+    FILE * diagnostics_file_;           ///< File for time recording statistics
+    std::string diagnostics_file_name_; ///< File name for time recording statistics
+    bool save_diagnostics_;              ///< indicates whether to save results to file or print to screen
+    bool verbose_;                      ///< indicates whether to print diagnostics to screen
+    
     GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
     StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
     SurfDetectorConfigServerPtr surf_config_server_;  ///< ROS dynamic reconfigure server for SURF params
@@ -118,6 +120,12 @@ class VisualOdometry
     bool publish_odom_;       ///< Parameter whether to publish an odom message
     bool publish_pose_;       ///< Parameter whether to publish a pose message
 
+    bool publish_feature_cloud_;
+    bool publish_feature_cov_; 
+
+    bool publish_model_cloud_;
+    bool publish_model_cov_;    
+    
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -153,9 +161,9 @@ class VisualOdometry
     tf::Transform b2c_;  ///< Transform from the base to the camera frame, wrt base frame
     tf::Transform f2b_;  ///< Transform from the fixed to the base frame, wrt fixed frame
 
-    boost::shared_ptr<FeatureDetector> feature_detector_; ///< The feature detector object
+    boost::shared_ptr<rgbdtools::FeatureDetector> feature_detector_; ///< The feature detector object
 
-    MotionEstimation * motion_estimation_; ///< The motion estimation object
+    rgbdtools::MotionEstimationICPProbModel motion_estimation_; ///< The motion estimation object
   
     PathMsg path_msg_; ///< contains a vector of positions of the Base frame.
 
@@ -204,7 +212,13 @@ class VisualOdometry
      * 
      * Note: this might decrease performance
      */
-    void publishFeatureCloud(RGBDFrame& frame);
+    void publishFeatureCloud(rgbdtools::RGBDFrame& frame);
+
+    void publishFeatureCovariances(rgbdtools::RGBDFrame& frame);
+
+    void publishModelCloud();
+
+    void publishModelCovariances();
 
     /** @brief Caches the transform from the base frame to the camera frame
      * @param header header of the incoming message, used to stamp things correctly
@@ -226,6 +240,16 @@ class VisualOdometry
     /** @brief ROS dynamic reconfigure callback function for ORB
      */
     void orbReconfigCallback(OrbDetectorConfig& config, uint32_t level);
+
+    /**
+     * @brief Saves computed running times to file (or print on screen)
+     * @return 1 if write to file was successful
+     */
+    void diagnostics(
+      int n_features, int n_valid_features, int n_model_pts,
+      double d_frame, double d_features, double d_reg, double d_total);
+      
+    void configureMotionEstimation();
 };
 
 } // namespace ccny_rgbd

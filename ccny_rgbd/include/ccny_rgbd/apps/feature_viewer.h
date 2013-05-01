@@ -30,16 +30,11 @@
 #include <dynamic_reconfigure/server.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <pcl_ros/point_cloud.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/rgbd_util.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/features/feature_detector.h"
-#include "ccny_rgbd/features/orb_detector.h"
-#include "ccny_rgbd/features/surf_detector.h"
-#include "ccny_rgbd/features/gft_detector.h"
-#include "ccny_rgbd/features/star_detector.h"
-
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/FeatureDetectorConfig.h"
 #include "ccny_rgbd/GftDetectorConfig.h"
 #include "ccny_rgbd/StarDetectorConfig.h"
@@ -138,7 +133,7 @@ class FeatureViewer
     boost::mutex mutex_; ///< state mutex
     int  frame_count_; ///< RGBD frame counter
 
-    FeatureDetectorPtr feature_detector_; ///< The feature detector object
+    rgbdtools::FeatureDetectorPtr feature_detector_; ///< The feature detector object
 
     // **** private functions
     
@@ -164,19 +159,19 @@ class FeatureViewer
      * 
      * Note: this might decrease performance
      */
-    void publishFeatureCloud(RGBDFrame& frame);
+    void publishFeatureCloud(rgbdtools::RGBDFrame& frame);
     
     /** @brief Publish the feature covariance markers
      * 
      * Note: this might decrease performance
      */
-    void publishFeatureCovariances(RGBDFrame& frame);
+    void publishFeatureCovariances(rgbdtools::RGBDFrame& frame);
         
     /** @brief Show the image with keypoints
      * 
      * Note: this might decrease performance
      */
-    void showKeypointImage(RGBDFrame& frame);
+    void showKeypointImage(rgbdtools::RGBDFrame& frame);
     
     /** @brief ROS dynamic reconfigure callback function
      */
@@ -199,6 +194,6 @@ class FeatureViewer
     void orbReconfigCallback(OrbDetectorConfig& config, uint32_t level);
 };
 
-} //namespace ccny_rgbd
+} // namespace ccny_rgbd
 
 #endif // CCNY_RGBD_RGBD_FEATURE_VIEWER_H

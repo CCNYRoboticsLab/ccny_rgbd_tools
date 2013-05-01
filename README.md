@@ -11,7 +11,8 @@ CCNY Robotics Lab
 Overview
 -----------------------------------
 
-The stack contains a tools for visual odometry and mapping using RGB-D cameras. 
+The stack contains ROS applications for visual odometry and mapping using RGB-D cameras. 
+The applications are built on top of the [rgbdtools](https://github.com/ccny-ros-pkg/rgbdtools.git) library.
 
 This code is at an experimental stage, and licensed under the GPLv3 license.
 
@@ -46,6 +47,7 @@ Compile the stack:
 If you get an error compiling `ccny_g2o`, it might be because of an incompatible `g2o` installation. Try removing `libg2o`:
     
     sudo apt-get remove ros-fuerte-libg2o
+    sudo apt-get remove ros-groovy-libg2o
 
 Quick usage
 -----------------------------------

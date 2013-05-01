@@ -5,9 +5,15 @@
 
   <!-- Parameters -->
   <arg name="bag_name" />
-  <arg name="manager_name" value="rgbd_manager"/>
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+  <arg name="bag_rate"  default="1.0" />
+  <arg name="bag_start" default="0.0" />
+  
+  <arg name="manager_name" default="rgbd_manager"/>
+  <arg name="calib_path" default="$(find ccny_rgbd_data)/calibration_openni_default"/> 
+  <arg name="unwarp" default="false"/> 
+  <arg name="scale" default="1.0"/>
   <arg name="publish_cloud" default="false"/>
+  <arg name="verbose" default="false"/>  # for rgbd_image_proc messages
   
   <!-- Nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager"
@@ -16,13 +22,22 @@
   <!-- RGBD playback -->
   <include file="$(find ccny_openni_launch)/launch/include/play.launch">       
      <arg name="bag_name" value="$(arg bag_name)" />
+     <arg name="bag_rate" value="$(arg bag_rate)" />
+     <arg name="bag_start" value="$(arg bag_start)" />
   </include>
   
   <!-- RGBD processing -->
   <include file="$(find ccny_openni_launch)/launch/include/proc.launch">       
      <arg name="manager_name"  value="$(arg manager_name)" />
      <arg name="calib_path"    value="$(arg calib_path)" />
+     <arg name="unwarp"        value="$(arg unwarp)" />
+     <arg name="scale"         value="$(arg scale)" />
      <arg name="publish_cloud" value="$(arg publish_cloud)" />
+     <arg name="verbose"       value="$(arg verbose)"/>  
   </include>
            
+  <node pkg="tf" type="static_transform_publisher" name="init1_pub"
+        args="-0.861749 0.639618 1.633794 -0.463494 0.246590 -0.340852 0.779863 /map /temp1 40" />        
+  <node pkg="tf" type="static_transform_publisher" name="init2_pub"
+        args="-0.011227 0.050255 -0.057404 0.129909 -0.141388 0.681949 0.705747 /temp1 /odom 40" />   
 </launch>

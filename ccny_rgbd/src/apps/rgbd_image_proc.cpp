@@ -41,6 +41,8 @@ RGBDImageProc::RGBDImageProc(
     scale_ = 1.0;
   if (!nh_private_.getParam("unwarp", unwarp_))
     unwarp_ = true;
+  if (!nh_private_.getParam("verbose", verbose_))
+    verbose_ = false;
   if (!nh_private_.getParam("publish_cloud", publish_cloud_))
     publish_cloud_ = true;
   if (!nh_private_.getParam("calib_path", calib_path_))
@@ -275,7 +277,8 @@ void RGBDImageProc::RGBDCallback(
   if (unwarp_) 
   {    
     ros::WallTime start_unwarp = ros::WallTime::now();
-    unwarpDepthImage(depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
+    rgbdtools::unwarpDepthImage(
+      depth_img_rect, coeff_0_rect_, coeff_1_rect_, coeff_2_rect_, fit_mode_);
     dur_unwarp = getMsDuration(start_unwarp);
   }
   else dur_unwarp = 0.0;
@@ -283,8 +286,8 @@ void RGBDImageProc::RGBDCallback(
   // **** reproject
   ros::WallTime start_reproject = ros::WallTime::now();
   cv::Mat depth_img_rect_reg;
-  buildRegisteredDepthImage(intr_rect_depth_, intr_rect_rgb_, ir2rgb_,
-                            depth_img_rect, depth_img_rect_reg);
+  rgbdtools::buildRegisteredDepthImage(
+    intr_rect_depth_, intr_rect_rgb_, ir2rgb_, depth_img_rect, depth_img_rect_reg);
   dur_reproject = getMsDuration(start_reproject);
 
   // **** point cloud
@@ -293,7 +296,8 @@ void RGBDImageProc::RGBDCallback(
     ros::WallTime start_cloud = ros::WallTime::now();
     PointCloudT::Ptr cloud_ptr;
     cloud_ptr.reset(new PointCloudT());
-    buildPointCloud(depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud_ptr);
+    rgbdtools::buildPointCloud(
+      depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud_ptr);
     cloud_ptr->header = rgb_info_msg->header;
     cloud_publisher_.publish(cloud_ptr);
     dur_cloud = getMsDuration(start_cloud);
@@ -318,11 +322,12 @@ void RGBDImageProc::RGBDCallback(
   // **** print diagnostics
   
   double dur_total = dur_rectify + dur_reproject + dur_unwarp + dur_cloud + dur_allocate;
-  
-  ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms", 
-    dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
-    dur_total);
-
+  if(verbose_)
+  {
+    ROS_INFO("Rect %.1f Reproj %.1f Unwarp %.1f Cloud %.1f Alloc %.1f Total %.1f ms",
+             dur_rectify, dur_reproject,  dur_unwarp, dur_cloud, dur_allocate,
+             dur_total);
+  }
   // **** publish
   rgb_publisher_.publish(rgb_out_msg);
   depth_publisher_.publish(depth_out_msg);

@@ -101,7 +101,7 @@ void FeatureViewer::resetDetector()
   if (detector_type_ == "ORB")
   { 
     ROS_INFO("Creating ORB detector");
-    feature_detector_.reset(new OrbDetector());
+    feature_detector_.reset(new rgbdtools::OrbDetector());
     orb_config_server_.reset(new 
       OrbDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/ORB")));
     
@@ -113,7 +113,7 @@ void FeatureViewer::resetDetector()
   else if (detector_type_ == "SURF")
   {
     ROS_INFO("Creating SURF detector");
-    feature_detector_.reset(new SurfDetector());
+    feature_detector_.reset(new rgbdtools::SurfDetector());
     surf_config_server_.reset(new 
       SurfDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/SURF")));
     
@@ -125,7 +125,7 @@ void FeatureViewer::resetDetector()
   else if (detector_type_ == "GFT")
   {
     ROS_INFO("Creating GFT detector");
-    feature_detector_.reset(new GftDetector());
+    feature_detector_.reset(new rgbdtools::GftDetector());
     gft_config_server_.reset(new 
       GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
     
@@ -137,7 +137,7 @@ void FeatureViewer::resetDetector()
   else if (detector_type_ == "STAR")
   {
     ROS_INFO("Creating STAR detector");
-    feature_detector_.reset(new StarDetector());
+    feature_detector_.reset(new rgbdtools::StarDetector());
     star_config_server_.reset(new 
       StarDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/STAR")));
     
@@ -149,7 +149,7 @@ void FeatureViewer::resetDetector()
   else
   {
     ROS_FATAL("%s is not a valid detector type! Using GFT", detector_type_.c_str());
-    feature_detector_.reset(new GftDetector());
+    feature_detector_.reset(new rgbdtools::GftDetector());
     gft_config_server_.reset(new 
       GftDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/GFT")));
     
@@ -170,7 +170,8 @@ void FeatureViewer::RGBDCallback(
   ros::WallTime start = ros::WallTime::now();
 
   // create frame
-  RGBDFrame frame(rgb_msg, depth_msg, info_msg);
+  rgbdtools::RGBDFrame frame;
+  createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
 
   // find features
   feature_detector_->findFeatures(frame);
@@ -198,7 +199,7 @@ void FeatureViewer::RGBDCallback(
   mutex_.unlock();
 }
 
-void FeatureViewer::showKeypointImage(RGBDFrame& frame)
+void FeatureViewer::showKeypointImage(rgbdtools::RGBDFrame& frame)
 {
   cv::namedWindow("Keypoints", CV_WINDOW_NORMAL);
   cv::Mat kp_img(frame.rgb_img.size(), CV_8UC1);
@@ -207,19 +208,23 @@ void FeatureViewer::showKeypointImage(RGBDFrame& frame)
   cv::waitKey(1);
 }
 
-void FeatureViewer::publishFeatureCloud(RGBDFrame& frame)
+void FeatureViewer::publishFeatureCloud(rgbdtools::RGBDFrame& frame)
 {
   PointCloudFeature cloud;
-  cloud.header = frame.header;
   frame.constructFeaturePointCloud(cloud);   
   cloud_publisher_.publish(cloud);
 }
 
-void FeatureViewer::publishFeatureCovariances(RGBDFrame& frame)
+void FeatureViewer::publishFeatureCovariances(rgbdtools::RGBDFrame& frame)
 {
   // create markers
   visualization_msgs::Marker marker;
-  marker.header = frame.header;
+  
+  marker.header.stamp.sec  = frame.header.stamp.sec;
+  marker.header.stamp.nsec = frame.header.stamp.nsec;
+  marker.header.seq        = frame.header.seq;
+  marker.header.frame_id   = frame.header.frame_id;
+  
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.color.r = 1.0;
   marker.color.g = 1.0;
@@ -306,8 +311,8 @@ void FeatureViewer::reconfigCallback(FeatureDetectorConfig& config, uint32_t lev
 
 void FeatureViewer::gftReconfigCallback(GftDetectorConfig& config, uint32_t level)
 {
-  GftDetectorPtr gft_detector = 
-    boost::static_pointer_cast<GftDetector>(feature_detector_);
+  rgbdtools::GftDetectorPtr gft_detector = 
+    boost::static_pointer_cast<rgbdtools::GftDetector>(feature_detector_);
     
   gft_detector->setNFeatures(config.n_features);
   gft_detector->setMinDistance(config.min_distance); 
@@ -315,8 +320,8 @@ void FeatureViewer::gftReconfigCallback(GftDetectorConfig& config, uint32_t leve
 
 void FeatureViewer::starReconfigCallback(StarDetectorConfig& config, uint32_t level)
 {
-  StarDetectorPtr star_detector = 
-    boost::static_pointer_cast<StarDetector>(feature_detector_);
+  rgbdtools::StarDetectorPtr star_detector = 
+    boost::static_pointer_cast<rgbdtools::StarDetector>(feature_detector_);
     
   star_detector->setThreshold(config.threshold);
   star_detector->setMinDistance(config.min_distance); 
@@ -324,16 +329,16 @@ void FeatureViewer::starReconfigCallback(StarDetectorConfig& config, uint32_t le
 
 void FeatureViewer::surfReconfigCallback(SurfDetectorConfig& config, uint32_t level)
 {
-  SurfDetectorPtr surf_detector = 
-    boost::static_pointer_cast<SurfDetector>(feature_detector_);
+  rgbdtools::SurfDetectorPtr surf_detector = 
+    boost::static_pointer_cast<rgbdtools::SurfDetector>(feature_detector_);
     
   surf_detector->setThreshold(config.threshold);
 }
     
 void FeatureViewer::orbReconfigCallback(OrbDetectorConfig& config, uint32_t level)
 {
-  OrbDetectorPtr orb_detector = 
-    boost::static_pointer_cast<OrbDetector>(feature_detector_);
+  rgbdtools::OrbDetectorPtr orb_detector = 
+    boost::static_pointer_cast<rgbdtools::OrbDetector>(feature_detector_);
     
   orb_detector->setThreshold(config.threshold);
   orb_detector->setNFeatures(config.n_features);

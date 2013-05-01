@@ -24,24 +24,24 @@
 #ifndef CCNY_RGBD_KEYFRAME_MAPPER_H
 #define CCNY_RGBD_KEYFRAME_MAPPER_H
 
+#include <iostream>
+#include <fstream>
 #include <ros/ros.h>
 #include <ros/publisher.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/filters/passthrough.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/regex.hpp>
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 #include <octomap/ColorOcTree.h>
+#include <rgbdtools/rgbdtools.h>
 
 #include "ccny_rgbd/types.h"
-#include "ccny_rgbd/structures/rgbd_frame.h"
-#include "ccny_rgbd/structures/rgbd_keyframe.h"
-#include "ccny_rgbd/mapping/keyframe_graph_detector.h"
-#include "ccny_rgbd/mapping/keyframe_graph_solver_g2o.h"
-
+#include "ccny_rgbd/util.h"
 #include "ccny_rgbd/GenerateGraph.h"
 #include "ccny_rgbd/SolveGraph.h"
 #include "ccny_rgbd/AddManualKeyframe.h"
@@ -186,7 +186,7 @@ class KeyframeMapper
     double max_range_;  ///< Maximum threshold for  range (in the z-coordinate of the camera frame)
     double max_stdev_;  ///< Maximum threshold for range (z-coordinate) standard deviation
 
-    KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
+    rgbdtools::KeyframeVector keyframes_;    ///< vector of RGBD Keyframes
     
     /** @brief Main callback for RGB, Depth, and CameraInfo messages
      * 
@@ -258,14 +258,17 @@ class KeyframeMapper
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
     bool octomap_with_color_; ///< whetehr to save Octomaps with color info      
+    double max_map_z_;   ///< maximum z (in fixed frame) when exporting maps.
           
     // state vars
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested
 
-    KeyframeGraphDetector graph_detector_;  ///< builds graph from the keyframes
-    KeyframeGraphSolver * graph_solver_;    ///< optimizes the graph for global alignement
+    int rgbd_frame_index_;
 
-    KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
+    rgbdtools::KeyframeGraphDetector graph_detector_;  ///< builds graph from the keyframes
+    rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement
+
+    rgbdtools::KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
     
     PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
     
@@ -276,14 +279,14 @@ class KeyframeMapper
      * @retval true a keyframe was inserted
      * @retval false no keyframe was inserted
      */
-    bool processFrame(const RGBDFrame& frame, const tf::Transform& pose);
+    bool processFrame(const rgbdtools::RGBDFrame& frame, const AffineTransform& pose);
     
     /** @brief creates a keyframe from an RGBD frame and inserts it in
      * the keyframe vector.
      * @param frame the incoming RGBD frame (image)
      * @param pose the pose of the base frame when RGBD image was taken
      */
-    void addKeyframe(const RGBDFrame& frame, const tf::Transform& pose);
+    void addKeyframe(const rgbdtools::RGBDFrame& frame, const AffineTransform& pose);
 
     /** @brief Publishes the point cloud associated with a keyframe
      * @param i the keyframe index
@@ -367,6 +370,11 @@ class KeyframeMapper
     {
       return octomath::Quaternion(qTf.w(), qTf.x(), qTf.y(), qTf.z());
     }
+    
+    bool savePath(const std::string& filepath);
+    bool loadPath(const std::string& filepath);
+    
+    //void updatePathFromKeyframePoses();
 };
 
 } // namespace ccny_rgbd
