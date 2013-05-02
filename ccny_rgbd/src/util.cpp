@@ -324,4 +324,32 @@ void createRGBDFrameFromROSMessages(
   frame = rgbdtools::RGBDFrame(rgb_img, depth_img, intr, header);
 }
 
+void pathEigenAffineToROS(
+  const AffineTransformVector& path,
+  PathMsg& path_msg)
+{
+  assert(path.size() == path_msg.poses.size());
+
+  for (int idx = 0; idx < path.size(); ++idx)
+  {
+    tf::Transform pose_tf = tfFromEigenAffine(path[idx]);
+    tf::poseTFToMsg(pose_tf, path_msg.poses[idx].pose);
+  }
+}
+
+void pathROSToEigenAffine(
+  const PathMsg& path_msg,
+  AffineTransformVector& path)
+{
+  path.clear();
+  path.resize(path_msg.poses.size());
+
+  for (int idx = 0; idx < path.size(); ++idx)
+  {
+    tf::Transform pose_tf;
+    tf::poseMsgToTF(path_msg.poses[idx].pose, pose_tf);
+    path[idx] = eigenAffineFromTf(pose_tf);
+  }
+}
+
 } //namespace ccny_rgbd
