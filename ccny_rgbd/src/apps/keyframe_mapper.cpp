@@ -456,14 +456,16 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
   Save::Response& response)
 {
   std::string filepath = request.filename;
-
+ 
   ROS_INFO("Saving keyframes...");
-  bool result_kf = saveKeyframes(keyframes_, filepath);
+  std::string filepath_keyframes = filepath + "/keyframes/";
+  bool result_kf = saveKeyframes(keyframes_, filepath_keyframes);
   if (result_kf) ROS_INFO("Keyframes saved to %s", filepath.c_str());
   else ROS_ERROR("Keyframe saving failed!");
   
   ROS_INFO("Saving path...");
   bool result_path = savePath(filepath);
+  savePathTUMFormat(filepath);
   if (result_path ) ROS_INFO("Path saved to %s", filepath.c_str());
   else ROS_ERROR("Path saving failed!");
     
@@ -477,7 +479,8 @@ bool KeyframeMapper::loadKeyframesSrvCallback(
   std::string filepath = request.filename;
   
   ROS_INFO("Loading keyframes...");
-  bool result_kf = loadKeyframes(keyframes_, filepath); 
+  std::string filepath_keyframes = filepath + "/keyframes/";
+  bool result_kf = loadKeyframes(keyframes_, filepath_keyframes); 
   if (result_kf) ROS_INFO("Keyframes loaded successfully");
   else ROS_ERROR("Keyframe loading failed!");
   
@@ -849,6 +852,35 @@ bool KeyframeMapper::savePath(const std::string& filepath)
 
   file.close();
   
+  return true;
+}
+
+bool KeyframeMapper::savePathTUMFormat(const std::string& filepath)
+{
+  // open file
+  std::string filename = filepath + "/path.tum.txt";
+  std::ofstream file(filename.c_str());
+  if (!file.is_open()) return false;
+
+  file << "# stamp x y z qx qy qz qw" << std::endl;
+
+  for (unsigned int idx = 0; idx < path_msg_.poses.size(); ++idx)
+  {
+    const geometry_msgs::PoseStamped& pose = path_msg_.poses[idx];
+    
+    file << pose.header.stamp.sec << "."
+         << pose.header.stamp.nsec << " "
+         << pose.pose.position.x << " "
+         << pose.pose.position.y << " "
+         << pose.pose.position.z << " "
+         << pose.pose.orientation.x << " "
+         << pose.pose.orientation.y << " "
+         << pose.pose.orientation.z << " " 
+         << pose.pose.orientation.w << std::endl;
+  }
+
+  file.close();
+    
   return true;
 }
 

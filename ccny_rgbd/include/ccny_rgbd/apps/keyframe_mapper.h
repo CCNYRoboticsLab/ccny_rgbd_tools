@@ -372,6 +372,8 @@ class KeyframeMapper
     }
     
     bool savePath(const std::string& filepath);
+    bool savePathTUMFormat(const std::string& filepath);
+    
     bool loadPath(const std::string& filepath);
     
     void updatePathFromKeyframePoses();

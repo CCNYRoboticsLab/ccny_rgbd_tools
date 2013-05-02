@@ -5,7 +5,7 @@ BUILD_DIR = $(GIT_DIR)/build
 TOP_DIR = $(PWD)
 
 GIT_URL =  https://github.com/ccny-ros-pkg/rgbdtools.git
-GIT_REVISION = develop
+#GIT_REVISION = develop
 
 G2O_INCLUDE_DIRS  = $(shell rospack find ccny_g2o)/include
 G2O_LIBRARY_DIRS  = $(shell rospack find ccny_g2o)/lib
