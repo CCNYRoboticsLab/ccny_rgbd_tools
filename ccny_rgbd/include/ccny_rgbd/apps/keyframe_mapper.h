@@ -264,6 +264,8 @@ class KeyframeMapper
     bool manual_add_;   ///< flag indicating whetehr a manual add has been requested
 
     int rgbd_frame_index_;
+    
+    tf::Transform offset_;
 
     rgbdtools::KeyframeGraphDetector graph_detector_;  ///< builds graph from the keyframes
     rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement

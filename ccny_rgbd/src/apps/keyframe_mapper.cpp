@@ -34,6 +34,38 @@ KeyframeMapper::KeyframeMapper(
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
    
+  // **** offset
+  /*
+  //-0.861749 0.639618 1.633794 -0.463494 0.246590 -0.340852 0.779863
+  //-0.011227 0.050255 -0.057404 0.129909 -0.141388 0.681949 0.705747
+  
+  tf::Vector3 fr_w2k_pose(-0.861749, 0.639618, 1.633794);
+  tf::Quaternion fr_w2k_q(-0.463494, 0.246590, -0.340852, 0.779863);
+  tf::Transform fr_w2k;
+  fr_w2k.setOrigin(fr_w2k_pose);
+  fr_w2k.setRotation(fr_w2k_q);
+  
+  tf::Vector3 fr_k2c_pose(-0.011227, 0.050255, -0.057404);
+  tf::Quaternion fr_k2c_q(0.129909, -0.141388, 0.681949, 0.705747);
+  tf::Transform fr_k2c;
+  fr_k2c.setOrigin(fr_k2c_pose);
+  fr_k2c.setRotation(fr_k2c_q);
+  
+  tf::Transform fr_w2c_init = fr_w2k * fr_k2c;
+   
+  std::cout << fr_w2c_init.getOrigin().getX() << " " << 
+               fr_w2c_init.getOrigin().getY() << " " <<
+               fr_w2c_init.getOrigin().getZ() << std::endl;
+
+  std::cout << fr_w2c_init.getRotation().getX() << " " << 
+               fr_w2c_init.getRotation().getY() << " " <<
+               fr_w2c_init.getRotation().getZ() << " " <<
+               fr_w2c_init.getRotation().getW() << std::endl;
+  
+  offset_ = fr_w2c_init;
+  */
+  offset_.setIdentity();
+  
   // **** params
   
   initParams();
@@ -153,15 +185,20 @@ void KeyframeMapper::RGBDCallback(
   const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
 {
-  tf::StampedTransform transform;
+  tf::Transform transform;
 
   const ros::Time& time = rgb_msg->header.stamp;
 
   try{
+    tf::StampedTransform transform_stamped;
+      
     tf_listener_.waitForTransform(
      fixed_frame_, rgb_msg->header.frame_id, time, ros::Duration(0.33));
     tf_listener_.lookupTransform(
-      fixed_frame_, rgb_msg->header.frame_id, time, transform);  
+      fixed_frame_, rgb_msg->header.frame_id, time, transform_stamped);
+    
+    transform = transform_stamped;
+    transform = offset_ * transform;
   }
   catch(tf::TransformException& ex)
   {

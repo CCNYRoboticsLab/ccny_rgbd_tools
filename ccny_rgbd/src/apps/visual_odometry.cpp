@@ -40,17 +40,20 @@ VisualOdometry::VisualOdometry(
   initParams();
 
   // **** inititialize state variables
-  
+  /*
   // for [rgbd_dataset_freiburg1_room.bag]
 
-  tf::Vector3 fr_w2k_pose(-0.0552041697502, -0.415246917725,1.66852389526);
-  tf::Quaternion fr_w2k_q(-0.466079328013, 0.0598513320547, -0.123544403938, 0.874027836116);
+  //-0.861749 0.639618 1.633794 -0.463494 0.246590 -0.340852 0.779863
+  //-0.011227 0.050255 -0.057404 0.129909 -0.141388 0.681949 0.705747
+  
+  tf::Vector3 fr_w2k_pose(-0.861749, 0.639618, 1.633794);
+  tf::Quaternion fr_w2k_q(-0.463494, 0.246590, -0.340852, 0.779863);
   tf::Transform fr_w2k;
   fr_w2k.setOrigin(fr_w2k_pose);
   fr_w2k.setRotation(fr_w2k_q);
   
-  tf::Vector3 fr_k2c_pose(-0.0112272525515, 0.0502554918469, -0.0574041954071);
-  tf::Quaternion fr_k2c_q(0.129908557896, -0.141388223098, 0.681948549539, 0.705747343414);
+  tf::Vector3 fr_k2c_pose(-0.011227, 0.050255, -0.057404);
+  tf::Quaternion fr_k2c_q(0.129909, -0.141388, 0.681949, 0.705747);
   tf::Transform fr_k2c;
   fr_k2c.setOrigin(fr_k2c_pose);
   fr_k2c.setRotation(fr_k2c_q);
@@ -66,7 +69,9 @@ VisualOdometry::VisualOdometry(
                fr_w2c_init.getRotation().getZ() << " " <<
                fr_w2c_init.getRotation().getW() << std::endl;
   
-  //f2b_ = fr_w2c_init.inverse();
+  f2b_ = fr_w2c_init;
+  */
+
   f2b_.setIdentity();
     
   // **** publishers
