@@ -93,6 +93,10 @@ KeyframeMapper::~KeyframeMapper()
 
 void KeyframeMapper::initParams()
 {
+  bool verbose;
+  
+  if (!nh_private_.getParam ("verbose", verbose))
+    verbose = false;
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
@@ -116,36 +120,26 @@ void KeyframeMapper::initParams()
    
   // configure graph detection 
     
-  int max_ransac_iterations;  
-  int n_ransac_candidates;
-  int k_nearest_neighbors;
-  int min_ransac_inliers;
-  int n_keypoints;
-  double max_corresp_dist_desc;
-  double max_corresp_dist_eucl;
+  int graph_n_keypoints;        
+  int graph_n_candidates;
+  int graph_k_nearest_neighbors;
+  bool graph_matcher_use_desc_ratio_test = true;
     
-  if (!nh_private_.getParam ("graph/max_ransac_iterations", max_ransac_iterations))
-    max_ransac_iterations = 2000;
-  if (!nh_private_.getParam ("graph/n_ransac_candidates", n_ransac_candidates))
-    n_ransac_candidates = 15;
-  if (!nh_private_.getParam ("graph/k_nearest_neighbors", k_nearest_neighbors))
-    k_nearest_neighbors = 15;
-  if (!nh_private_.getParam ("graph/min_ransac_inliers", min_ransac_inliers))
-    min_ransac_inliers = 30;
-  if (!nh_private_.getParam ("graph/max_corresp_dist_desc", max_corresp_dist_desc))
-    max_corresp_dist_desc = 1.0;
-  if (!nh_private_.getParam ("graph/max_corresp_dist_eucl", max_corresp_dist_eucl))
-    max_corresp_dist_eucl = 0.03;
-  if (!nh_private_.getParam ("graph/n_keypoints", n_keypoints))
-    n_keypoints = 200;
-    
-  graph_detector_.setMaxRansacIterations(max_ransac_iterations);    
-  graph_detector_.setNRansacCandidates(n_ransac_candidates);   
-  graph_detector_.setKNearestNeighbors(k_nearest_neighbors); 
-  graph_detector_.setMinRansacInliers(min_ransac_inliers);
-  graph_detector_.setNKeypoints(n_keypoints);
-  graph_detector_.setMaxCorrespDistDesc(max_corresp_dist_desc);
-  graph_detector_.setMaxCorrespDistEucl(max_corresp_dist_eucl);
+  if (!nh_private_.getParam ("graph/n_keypoints", graph_n_keypoints))
+    graph_n_keypoints = 500;
+  if (!nh_private_.getParam ("graph/n_candidates", graph_n_candidates))
+    graph_n_candidates = 15;
+  if (!nh_private_.getParam ("graph/k_nearest_neighbors", graph_k_nearest_neighbors))
+    graph_k_nearest_neighbors = 4;
+  
+  graph_detector_.setNKeypoints(graph_n_keypoints);
+  graph_detector_.setNCandidates(graph_n_candidates);   
+  graph_detector_.setKNearestNeighbors(graph_k_nearest_neighbors);    
+  graph_detector_.setMatcherUseDescRatioTest(graph_matcher_use_desc_ratio_test);
+  
+  graph_detector_.setSACReestimateTf(false);
+  graph_detector_.setSACSaveResults(false);
+  graph_detector_.setVerbose(verbose);
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -536,6 +530,8 @@ bool KeyframeMapper::generateGraphSrvCallback(
   associations_.clear();
   graph_detector_.generateKeyframeAssociations(keyframes_, associations_);
 
+  ROS_INFO("%d associations detected", (int)associations_.size());
+  
   publishKeyframePoses();
   publishKeyframeAssociations();
 
@@ -548,7 +544,7 @@ bool KeyframeMapper::solveGraphSrvCallback(
 {
   ros::WallTime start = ros::WallTime::now();
   
-  // Graph solving: keyframe positions only
+  // Graph solving: keyframe positions only, path is interpolated
   graph_solver_.solve(keyframes_, associations_);
   updatePathFromKeyframePoses();
     
@@ -575,7 +571,6 @@ bool KeyframeMapper::solveGraphSrvCallback(
 /** In the event that the keyframe poses change (from pose-graph solving)
  * this function will propagete teh changes in the path message
  */
-
 void KeyframeMapper::updatePathFromKeyframePoses()
 {   
   int kf_size = keyframes_.size();
@@ -897,13 +892,11 @@ bool KeyframeMapper::loadPath(const std::string& filepath)
 
   // get header
   getline(file, line);
-  std::cout << line << std::endl;
 
   // read each line
   while(std::getline(file, line))
   {
     std::istringstream is(line);
-    //std::cout << "[" << is.str() << "]" << std::endl;
     
     // fill out pose information  
     geometry_msgs::PoseStamped pose;
