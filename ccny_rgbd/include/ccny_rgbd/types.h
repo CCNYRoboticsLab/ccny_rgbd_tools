@@ -65,6 +65,9 @@ typedef std::vector<Eigen::Matrix3f> Matrix3fVector;
 typedef std::vector<Eigen::Vector3f> Vector3fVector;
 typedef std::vector<cv::KeyPoint>    KeypointVector;
 
+typedef Eigen::aligned_allocator<AffineTransform> AffineTransformAllocator; 
+typedef std::vector<AffineTransform, AffineTransformAllocator> AffineTransformVector;
+
 // PCL types
 
 typedef pcl::PointXYZRGB              PointT;

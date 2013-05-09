@@ -93,6 +93,10 @@ KeyframeMapper::~KeyframeMapper()
 
 void KeyframeMapper::initParams()
 {
+  bool verbose;
+  
+  if (!nh_private_.getParam ("verbose", verbose))
+    verbose = false;
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
@@ -116,36 +120,26 @@ void KeyframeMapper::initParams()
    
   // configure graph detection 
     
-  int max_ransac_iterations;  
-  int n_ransac_candidates;
-  int k_nearest_neighbors;
-  int min_ransac_inliers;
-  int n_keypoints;
-  double max_corresp_dist_desc;
-  double max_corresp_dist_eucl;
+  int graph_n_keypoints;        
+  int graph_n_candidates;
+  int graph_k_nearest_neighbors;
+  bool graph_matcher_use_desc_ratio_test = true;
     
-  if (!nh_private_.getParam ("graph/max_ransac_iterations", max_ransac_iterations))
-    max_ransac_iterations = 2000;
-  if (!nh_private_.getParam ("graph/n_ransac_candidates", n_ransac_candidates))
-    n_ransac_candidates = 15;
-  if (!nh_private_.getParam ("graph/k_nearest_neighbors", k_nearest_neighbors))
-    k_nearest_neighbors = 15;
-  if (!nh_private_.getParam ("graph/min_ransac_inliers", min_ransac_inliers))
-    min_ransac_inliers = 30;
-  if (!nh_private_.getParam ("graph/max_corresp_dist_desc", max_corresp_dist_desc))
-    max_corresp_dist_desc = 1.0;
-  if (!nh_private_.getParam ("graph/max_corresp_dist_eucl", max_corresp_dist_eucl))
-    max_corresp_dist_eucl = 0.03;
-  if (!nh_private_.getParam ("graph/n_keypoints", n_keypoints))
-    n_keypoints = 200;
-    
-  graph_detector_.setMaxRansacIterations(max_ransac_iterations);    
-  graph_detector_.setNRansacCandidates(n_ransac_candidates);   
-  graph_detector_.setKNearestNeighbors(k_nearest_neighbors); 
-  graph_detector_.setMinRansacInliers(min_ransac_inliers);
-  graph_detector_.setNKeypoints(n_keypoints);
-  graph_detector_.setMaxCorrespDistDesc(max_corresp_dist_desc);
-  graph_detector_.setMaxCorrespDistEucl(max_corresp_dist_eucl);
+  if (!nh_private_.getParam ("graph/n_keypoints", graph_n_keypoints))
+    graph_n_keypoints = 500;
+  if (!nh_private_.getParam ("graph/n_candidates", graph_n_candidates))
+    graph_n_candidates = 15;
+  if (!nh_private_.getParam ("graph/k_nearest_neighbors", graph_k_nearest_neighbors))
+    graph_k_nearest_neighbors = 4;
+  
+  graph_detector_.setNKeypoints(graph_n_keypoints);
+  graph_detector_.setNCandidates(graph_n_candidates);   
+  graph_detector_.setKNearestNeighbors(graph_k_nearest_neighbors);    
+  graph_detector_.setMatcherUseDescRatioTest(graph_matcher_use_desc_ratio_test);
+  
+  graph_detector_.setSACReestimateTf(false);
+  graph_detector_.setSACSaveResults(false);
+  graph_detector_.setVerbose(verbose);
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -456,14 +450,16 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
   Save::Response& response)
 {
   std::string filepath = request.filename;
-
+ 
   ROS_INFO("Saving keyframes...");
-  bool result_kf = saveKeyframes(keyframes_, filepath);
+  std::string filepath_keyframes = filepath + "/keyframes/";
+  bool result_kf = saveKeyframes(keyframes_, filepath_keyframes);
   if (result_kf) ROS_INFO("Keyframes saved to %s", filepath.c_str());
   else ROS_ERROR("Keyframe saving failed!");
   
   ROS_INFO("Saving path...");
   bool result_path = savePath(filepath);
+  savePathTUMFormat(filepath);
   if (result_path ) ROS_INFO("Path saved to %s", filepath.c_str());
   else ROS_ERROR("Path saving failed!");
     
@@ -477,7 +473,8 @@ bool KeyframeMapper::loadKeyframesSrvCallback(
   std::string filepath = request.filename;
   
   ROS_INFO("Loading keyframes...");
-  bool result_kf = loadKeyframes(keyframes_, filepath); 
+  std::string filepath_keyframes = filepath + "/keyframes/";
+  bool result_kf = loadKeyframes(keyframes_, filepath_keyframes); 
   if (result_kf) ROS_INFO("Keyframes loaded successfully");
   else ROS_ERROR("Keyframe loading failed!");
   
@@ -533,6 +530,8 @@ bool KeyframeMapper::generateGraphSrvCallback(
   associations_.clear();
   graph_detector_.generateKeyframeAssociations(keyframes_, associations_);
 
+  ROS_INFO("%d associations detected", (int)associations_.size());
+  
   publishKeyframePoses();
   publishKeyframeAssociations();
 
@@ -544,14 +543,23 @@ bool KeyframeMapper::solveGraphSrvCallback(
   SolveGraph::Response& response)
 {
   ros::WallTime start = ros::WallTime::now();
+  
+  // Graph solving: keyframe positions only, path is interpolated
   graph_solver_.solve(keyframes_, associations_);
-  //graph_solver_.solve(keyframe_path_indices_, path_, associations_);
+  updatePathFromKeyframePoses();
+    
+  // Graph solving: keyframe positions and VO path
+  /*
+  AffineTransformVector path;
+  pathROSToEigenAffine(path_msg_, path);
+  graph_solver_.solve(keyframes_, associations_, path);
+  pathEigenAffineToROS(path, path_msg_);
+  */
+  
   double dur = getMsDuration(start);
   
   ROS_INFO("Solving took %.1f ms", dur);
-  
-  //updatePathFromKeyframePoses();
-  
+    
   publishPath();
   publishKeyframePoses();
   publishKeyframeAssociations();
@@ -563,54 +571,98 @@ bool KeyframeMapper::solveGraphSrvCallback(
 /** In the event that the keyframe poses change (from pose-graph solving)
  * this function will propagete teh changes in the path message
  */
-
-/*
 void KeyframeMapper::updatePathFromKeyframePoses()
-{
+{   
   int kf_size = keyframes_.size();
   int f_size = path_msg_.poses.size();
   
-  if (kf_size < 2) return;
+  // temporary store the new path
+  AffineTransformVector path_new;
+  path_new.resize(f_size);
   
-  // the frame index
-  int f_idx = 0;
+  if (kf_size < 2) return; 
   
   for (int kf_idx = 0; kf_idx < kf_size - 1; ++kf_idx)
   {
-    int kf_idx_next = kf_idx +1;
+    // the indices of the current and next keyframes (a and b)   
+    const rgbdtools::RGBDKeyframe& keyframe_a = keyframes_[kf_idx];
+    const rgbdtools::RGBDKeyframe& keyframe_b = keyframes_[kf_idx + 1];
     
-    const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    const rgbdtools::RGBDKeyframe& keyframe_next = keyframes_[kf_idx_next];
+    // the corresponding frame indices
+    int f_idx_a = keyframe_a.index;
+    int f_idx_b = keyframe_b.index;
+         
+    // the new poses of keyframes a and b (after graph solving)
+    tf::Transform kf_pose_a = tfFromEigenAffine(keyframe_a.pose);
+    tf::Transform kf_pose_b = tfFromEigenAffine(keyframe_b.pose);
     
-    int seq      = keyframe.header.seq;
-    int seq_next = keyframe_next.header.seq;
+    // the previous pose of keyframe a and b (before graph solving)
+    tf::Transform kf_pose_a_prev, kf_pose_b_prev;
+    tf::poseMsgToTF(path_msg_.poses[f_idx_a].pose, kf_pose_a_prev);
+    tf::poseMsgToTF(path_msg_.poses[f_idx_b].pose, kf_pose_b_prev);
     
-    // find f_idx_next
-    int f_idx_next = f_idx;
+    // the motion, in the camera frame (after and before graph solving)
+    tf::Transform kf_motion      = kf_pose_a.inverse() * kf_pose_b;
+    tf::Transform kf_motion_prev = kf_pose_a_prev.inverse() * kf_pose_b_prev;
     
-    while(true)
+    // the correction from the graph solving
+    tf::Transform correction = kf_motion_prev.inverse() * kf_motion;
+    
+    // update the poses in-between keyframes
+    for (int f_idx = f_idx_a; f_idx < f_idx_b; ++f_idx)
     {
-      assert(f_idx_next < f_size);
-      if (path_msg_.poses[f_idx_next].header.seq == seq_next) break;
-      f_idx_next++;
-    }
-    
-    tf::Transform pa = tfFromEigenAffine(keyframe.pose);
-    tf::Transform pb = tfFromEigenAffine(keyframe_next.pose);
-    tf::Transform pb_old;
-    tf::poseMsgToTF(path_msg_.poses[f_idx_next].pose, pb_old);
-    
-    tf_transform delta_new = pa.inverse() * pb;
-    tf_transform delta_old = pa.inverse() * pb_old;
-    
-    tf_transform D = delta_old.inverse() * delta_new();
-    
-    
-    
+      // calculate interpolation scale
+      double interp_scale = (double)(f_idx - f_idx_a) / (double)(f_idx_b - f_idx_a);
+      
+      // create interpolated correction translation and rotation
+      tf::Vector3 v_interp = correction.getOrigin() * interp_scale;
+      tf::Quaternion q_interp = tf::Quaternion::getIdentity();
+      q_interp.slerp(correction.getRotation(), interp_scale);
+      
+      // create interpolated correction
+      tf::Transform interpolated_correction;
+      interpolated_correction.setOrigin(v_interp);
+      interpolated_correction.setRotation(q_interp);
+      
+      // the previous frame pose
+      tf::Transform frame_pose_prev;
+      tf::poseMsgToTF(path_msg_.poses[f_idx].pose, frame_pose_prev);
+      
+      // the pevious frame motion
+      tf::Transform frame_motion_prev = kf_pose_a_prev.inverse() * frame_pose_prev;
+      
+      // the interpolated motion
+      tf::Transform interpolated_motion = frame_motion_prev * interpolated_correction;
+      
+      // calculate the interpolated pose
+      path_new[f_idx] = keyframe_a.pose * eigenAffineFromTf(interpolated_motion);
+    }  
   }
+
+  // update the last pose
+  const rgbdtools::RGBDKeyframe& last_kf = keyframes_[kf_size - 1];
+
+  tf::Transform last_kf_pose_prev;
+  tf::poseMsgToTF(path_msg_.poses[last_kf.index].pose, last_kf_pose_prev);
   
+  // update the poses in-between last keyframe and end of vo path
+  for (int f_idx = last_kf.index; f_idx < f_size; ++f_idx)
+  {
+    // the previous frame pose
+    tf::Transform frame_pose_prev;
+    tf::poseMsgToTF(path_msg_.poses[f_idx].pose, frame_pose_prev);
+    
+    // the pevious frame motion
+    tf::Transform frame_motion_prev = last_kf_pose_prev.inverse() * frame_pose_prev;
+    
+    // calculate the new pose
+    path_new[f_idx] = last_kf.pose * eigenAffineFromTf(frame_motion_prev);
+  } 
+  
+  // copy over the interpolated path
+  pathEigenAffineToROS(path_new, path_msg_);
 }
-*/
+
 
 bool KeyframeMapper::savePcdMap(const std::string& path)
 {
@@ -798,6 +850,35 @@ bool KeyframeMapper::savePath(const std::string& filepath)
   return true;
 }
 
+bool KeyframeMapper::savePathTUMFormat(const std::string& filepath)
+{
+  // open file
+  std::string filename = filepath + "/path.tum.txt";
+  std::ofstream file(filename.c_str());
+  if (!file.is_open()) return false;
+
+  file << "# stamp x y z qx qy qz qw" << std::endl;
+
+  for (unsigned int idx = 0; idx < path_msg_.poses.size(); ++idx)
+  {
+    const geometry_msgs::PoseStamped& pose = path_msg_.poses[idx];
+    
+    file << pose.header.stamp.sec << "."
+         << pose.header.stamp.nsec << " "
+         << pose.pose.position.x << " "
+         << pose.pose.position.y << " "
+         << pose.pose.position.z << " "
+         << pose.pose.orientation.x << " "
+         << pose.pose.orientation.y << " "
+         << pose.pose.orientation.z << " " 
+         << pose.pose.orientation.w << std::endl;
+  }
+
+  file.close();
+    
+  return true;
+}
+
 bool KeyframeMapper::loadPath(const std::string& filepath)
 {
   path_msg_.poses.clear();
@@ -811,13 +892,11 @@ bool KeyframeMapper::loadPath(const std::string& filepath)
 
   // get header
   getline(file, line);
-  std::cout << line << std::endl;
 
   // read each line
   while(std::getline(file, line))
   {
     std::istringstream is(line);
-    //std::cout << "[" << is.str() << "]" << std::endl;
     
     // fill out pose information  
     geometry_msgs::PoseStamped pose;
