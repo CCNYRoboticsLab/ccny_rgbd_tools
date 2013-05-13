@@ -465,7 +465,7 @@ void VisualOdometry::diagnostics(
   if (verbose_)
   {
     // print to screen
-    ROS_INFO("[VO %d] %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f\n",
+    ROS_INFO("[VO %d] %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f",
       frame_count_,
       detector_type_.c_str(), n_valid_features, d_features,
       n_model_pts, d_reg,

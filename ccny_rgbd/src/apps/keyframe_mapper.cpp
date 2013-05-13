@@ -451,10 +451,14 @@ bool KeyframeMapper::saveKeyframesSrvCallback(
 {
   std::string filepath = request.filename;
  
+  ROS_INFO("Creating directory: %s", filepath.c_str());
+  boost::filesystem::create_directories(filepath);
+  
   ROS_INFO("Saving keyframes...");
   std::string filepath_keyframes = filepath + "/keyframes/";
+  boost::filesystem::create_directories(filepath_keyframes);
   bool result_kf = saveKeyframes(keyframes_, filepath_keyframes);
-  if (result_kf) ROS_INFO("Keyframes saved to %s", filepath.c_str());
+  if (result_kf) ROS_INFO("Keyframes saved to %s", filepath_keyframes.c_str());
   else ROS_ERROR("Keyframe saving failed!");
   
   ROS_INFO("Saving path...");
