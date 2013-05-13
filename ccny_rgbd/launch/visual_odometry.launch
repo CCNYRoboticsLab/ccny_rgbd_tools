@@ -14,12 +14,12 @@
     <!-- NOTE: if using data from OpenNI driver directly, (without 
     ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
     Also add these to keyframe_mapper in vo+mapping.launch.
-    -->
+   
 
     <remap from="/rgbd/depth" to="/camera/depth/image"/>
     <remap from="/rgbd/rgb"   to="/camera/rgb/image_color"/>
     <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>      
-    
+     -->
     #### diagnostics ##################################
         
     <param name="verbose"     value="true"/>    
@@ -29,6 +29,7 @@
     <param name="publish_tf"  value="true"/>
     <param name="fixed_frame" value="/odom"/>
     <param name="base_frame"  value="/openni_camera"/>
+    <param name="queue_size"  value="5"/>
        
     #### features #####################################
     
@@ -43,7 +44,7 @@
 
     #### features: GFT ################################
 
-    <param name="feature/GFT/n_features"   value = "400"/>
+    <param name="feature/GFT/n_features"   value = "500"/>
     <param name="feature/GFT/min_distance" value = "0.0"/>
 
     #### features: SURF ###############################
@@ -66,7 +67,7 @@
     <param name="reg/ICPProbModel/max_model_size"            value="5000"/>
     <param name="reg/ICPProbModel/n_nearest_neighbors"       value="4"/>
     <param name="reg/ICPProbModel/max_assoc_dist_mah"        value="10.0"/>
-    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.15"/>
+    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.25"/>
     <param name="reg/ICPProbModel/publish_model_cloud"       value="true"/>
     <param name="reg/ICPProbModel/publish_model_covariances" value="false"/>
   </node>

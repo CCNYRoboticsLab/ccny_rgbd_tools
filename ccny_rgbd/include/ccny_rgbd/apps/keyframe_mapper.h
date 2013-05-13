@@ -179,6 +179,8 @@ class KeyframeMapper
     ros::NodeHandle nh_;          ///< public nodehandle
     ros::NodeHandle nh_private_;  ///< private nodepcdhandle
     
+    bool initialized_;
+    
     std::string fixed_frame_;     ///< the fixed frame (usually "odom")
     
     int queue_size_;  ///< Subscription queue size
@@ -271,7 +273,8 @@ class KeyframeMapper
     rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement
 
     rgbdtools::KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
-    
+       
+    //PathMsg gt_path_msg_;
     PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
     
     /** @brief processes an incoming RGBD frame with a given pose,
@@ -379,6 +382,8 @@ class KeyframeMapper
     bool loadPath(const std::string& filepath);
     
     void updatePathFromKeyframePoses();
+    
+    bool getInitOffsetTf(const std_msgs::Header& header);
 };
 
 } // namespace ccny_rgbd

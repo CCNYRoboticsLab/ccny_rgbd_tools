@@ -24,12 +24,12 @@
     <!-- NOTE: if using data from OpenNI driver directly, (without 
     ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
     Also add these to visual_odometry in visual_odometry.launch.
-    -->
+    
     <remap from="/rgbd/depth" to="/camera/depth/image"/>
     <remap from="/rgbd/rgb"   to="/camera/rgb/image_color"/>
     <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>   
-    
-    <param name="fixed_frame" value="map"/>
+    -->
+    <param name="fixed_frame" value="/odom"/>
     
     <param name="kf_dist_eps"  value="0.25"/> <!-- 25 cm -->
     <param name="kf_angle_eps" value="0.35"/> <!-- 20 deg -->

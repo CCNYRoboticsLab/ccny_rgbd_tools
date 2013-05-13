@@ -112,6 +112,7 @@ VisualOdometry::VisualOdometry(
 VisualOdometry::~VisualOdometry()
 {
   fclose(diagnostics_file_);
+  //fclose(traj_file_);
   ROS_INFO("Destroying RGBD Visual Odometry"); 
 }
 
@@ -189,6 +190,8 @@ void VisualOdometry::initParams()
       "Model points", "Registration dur.",
       "Total dur.");
   }
+  
+  //traj_file_ = fopen("/home/idyanov/traj.txt", "w");
 }
 
 void VisualOdometry::configureMotionEstimation()
@@ -379,6 +382,26 @@ void VisualOdometry::RGBDCallback(
 
   diagnostics(n_features, n_valid_features, n_model_pts,
               d_frame, d_features, d_reg, d_total);
+
+  // **** print trajectory *******************************************
+  /*
+  tf::Transform f2c = f2b_ * b2c_;
+  
+  if(traj_file_ != NULL)
+  {
+    // print to file
+    fprintf(traj_file_, "%d.%9d, %f %f %f %f %f %f %f\n",
+      frame.header.stamp.sec, frame.header.stamp.nsec,
+      f2c.getOrigin().getX(),
+      f2c.getOrigin().getY(),
+      f2c.getOrigin().getZ(),
+      f2c.getRotation().getX(),
+      f2c.getRotation().getY(),
+      f2c.getRotation().getZ(),
+      f2c.getRotation().getW());
+  }
+  */
+  
 }
 
 void VisualOdometry::publishTf(const std_msgs::Header& header)
@@ -496,7 +519,7 @@ void VisualOdometry::diagnostics(
   if (verbose_)
   {
     // print to screen
-    ROS_INFO("[VO %d] %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f\n",
+    ROS_INFO("[VO %d] %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f",
       frame_count_,
       detector_type_.c_str(), n_valid_features, d_features,
       n_model_pts, d_reg,

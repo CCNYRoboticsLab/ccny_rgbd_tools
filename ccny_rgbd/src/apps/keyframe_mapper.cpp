@@ -30,6 +30,7 @@ KeyframeMapper::KeyframeMapper(
   const ros::NodeHandle& nh_private):
   nh_(nh), 
   nh_private_(nh_private),
+  initialized_(false),
   rgbd_frame_index_(0)
 {
   ROS_INFO("Starting RGBD Keyframe Mapper");
@@ -125,6 +126,10 @@ KeyframeMapper::~KeyframeMapper()
 
 void KeyframeMapper::initParams()
 {
+  bool verbose;
+  
+  if (!nh_private_.getParam ("verbose", verbose))
+    verbose = false;
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
   if (!nh_private_.getParam ("fixed_frame", fixed_frame_))
@@ -148,36 +153,26 @@ void KeyframeMapper::initParams()
    
   // configure graph detection 
     
-  int max_ransac_iterations;  
-  int n_ransac_candidates;
-  int k_nearest_neighbors;
-  int min_ransac_inliers;
-  int n_keypoints;
-  double max_corresp_dist_desc;
-  double max_corresp_dist_eucl;
+  int graph_n_keypoints;        
+  int graph_n_candidates;
+  int graph_k_nearest_neighbors;
+  bool graph_matcher_use_desc_ratio_test = true;
     
-  if (!nh_private_.getParam ("graph/max_ransac_iterations", max_ransac_iterations))
-    max_ransac_iterations = 2000;
-  if (!nh_private_.getParam ("graph/n_ransac_candidates", n_ransac_candidates))
-    n_ransac_candidates = 15;
-  if (!nh_private_.getParam ("graph/k_nearest_neighbors", k_nearest_neighbors))
-    k_nearest_neighbors = 15;
-  if (!nh_private_.getParam ("graph/min_ransac_inliers", min_ransac_inliers))
-    min_ransac_inliers = 30;
-  if (!nh_private_.getParam ("graph/max_corresp_dist_desc", max_corresp_dist_desc))
-    max_corresp_dist_desc = 1.0;
-  if (!nh_private_.getParam ("graph/max_corresp_dist_eucl", max_corresp_dist_eucl))
-    max_corresp_dist_eucl = 0.03;
-  if (!nh_private_.getParam ("graph/n_keypoints", n_keypoints))
-    n_keypoints = 200;
-    
-  graph_detector_.setMaxRansacIterations(max_ransac_iterations);    
-  graph_detector_.setNRansacCandidates(n_ransac_candidates);   
-  graph_detector_.setKNearestNeighbors(k_nearest_neighbors); 
-  graph_detector_.setMinRansacInliers(min_ransac_inliers);
-  graph_detector_.setNKeypoints(n_keypoints);
-  graph_detector_.setMaxCorrespDistDesc(max_corresp_dist_desc);
-  graph_detector_.setMaxCorrespDistEucl(max_corresp_dist_eucl);
+  if (!nh_private_.getParam ("graph/n_keypoints", graph_n_keypoints))
+    graph_n_keypoints = 500;
+  if (!nh_private_.getParam ("graph/n_candidates", graph_n_candidates))
+    graph_n_candidates = 15;
+  if (!nh_private_.getParam ("graph/k_nearest_neighbors", graph_k_nearest_neighbors))
+    graph_k_nearest_neighbors = 4;
+  
+  graph_detector_.setNKeypoints(graph_n_keypoints);
+  graph_detector_.setNCandidates(graph_n_candidates);   
+  graph_detector_.setKNearestNeighbors(graph_k_nearest_neighbors);    
+  graph_detector_.setMatcherUseDescRatioTest(graph_matcher_use_desc_ratio_test);
+  
+  graph_detector_.setSACReestimateTf(false);
+  graph_detector_.setSACSaveResults(false);
+  graph_detector_.setVerbose(verbose);
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -185,6 +180,13 @@ void KeyframeMapper::RGBDCallback(
   const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
 {
+  // initialize he offset from the TUM data bag
+  if (!initialized_)
+  {
+    initialized_ = getInitOffsetTf(rgb_msg->header);
+    if (!initialized_) return;
+  }
+  
   tf::Transform transform;
 
   const ros::Time& time = rgb_msg->header.stamp;
@@ -217,8 +219,6 @@ void KeyframeMapper::RGBDCallback(
   
   publishPath();
 }
-
-
 
 bool KeyframeMapper::processFrame(
   const rgbdtools::RGBDFrame& frame, 
@@ -574,6 +574,8 @@ bool KeyframeMapper::generateGraphSrvCallback(
   associations_.clear();
   graph_detector_.generateKeyframeAssociations(keyframes_, associations_);
 
+  ROS_INFO("%d associations detected", (int)associations_.size());
+  
   publishKeyframePoses();
   publishKeyframeAssociations();
 
@@ -586,7 +588,7 @@ bool KeyframeMapper::solveGraphSrvCallback(
 {
   ros::WallTime start = ros::WallTime::now();
   
-  // Graph solving: keyframe positions only
+  // Graph solving: keyframe positions only, path is interpolated
   graph_solver_.solve(keyframes_, associations_);
   updatePathFromKeyframePoses();
     
@@ -613,7 +615,6 @@ bool KeyframeMapper::solveGraphSrvCallback(
 /** In the event that the keyframe poses change (from pose-graph solving)
  * this function will propagete teh changes in the path message
  */
-
 void KeyframeMapper::updatePathFromKeyframePoses()
 {   
   int kf_size = keyframes_.size();
@@ -906,8 +907,7 @@ bool KeyframeMapper::savePathTUMFormat(const std::string& filepath)
   {
     const geometry_msgs::PoseStamped& pose = path_msg_.poses[idx];
     
-    file << pose.header.stamp.sec << "."
-         << pose.header.stamp.nsec << " "
+    file << pose.header.stamp << " "
          << pose.pose.position.x << " "
          << pose.pose.position.y << " "
          << pose.pose.position.z << " "
@@ -935,13 +935,11 @@ bool KeyframeMapper::loadPath(const std::string& filepath)
 
   // get header
   getline(file, line);
-  std::cout << line << std::endl;
 
   // read each line
   while(std::getline(file, line))
   {
     std::istringstream is(line);
-    //std::cout << "[" << is.str() << "]" << std::endl;
     
     // fill out pose information  
     geometry_msgs::PoseStamped pose;
@@ -965,6 +963,28 @@ bool KeyframeMapper::loadPath(const std::string& filepath)
   }
     
   file.close();
+  return true;
+}
+
+bool KeyframeMapper::getInitOffsetTf(const std_msgs::Header& header)
+{
+  tf::StampedTransform tf_offset;
+
+  try
+  {
+    tf_listener_.waitForTransform(
+      "world", "openni_camera", header.stamp, ros::Duration(0.3));
+    tf_listener_.lookupTransform (
+      "world", "openni_camera", header.stamp, tf_offset);
+  }
+  catch (tf::TransformException& ex)
+  {
+    ROS_WARN("Base to camera transform unavailable %s", ex.what());
+    return false;
+  }
+
+  offset_ = tf_offset;
+
   return true;
 }
 

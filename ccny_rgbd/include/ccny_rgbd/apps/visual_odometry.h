@@ -83,7 +83,9 @@ class VisualOdometry
     ros::Publisher model_cloud_publisher_;       
     ros::Publisher model_cov_publisher_;         
              
-    FILE * diagnostics_file_;           ///< File for time recording statistics
+    FILE * diagnostics_file_;    ///< File for time recording statistics
+    //FILE * traj_file_;           ///< File for time recording statistics
+
     std::string diagnostics_file_name_; ///< File name for time recording statistics
     bool save_diagnostics_;              ///< indicates whether to save results to file or print to screen
     bool verbose_;                      ///< indicates whether to print diagnostics to screen

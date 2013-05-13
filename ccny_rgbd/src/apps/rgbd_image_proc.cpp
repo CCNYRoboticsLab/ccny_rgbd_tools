@@ -238,7 +238,7 @@ void RGBDImageProc::RGBDCallback(
     ROS_WARN("RGB and depth images have different sizes, skipping");
     return;
   }
-  
+    
   // **** initialize if needed
   if (size_in_.height != (int)rgb_msg->height ||
       size_in_.width  != (int)rgb_msg->width)
@@ -256,7 +256,17 @@ void RGBDImageProc::RGBDCallback(
   cv_bridge::CvImageConstPtr depth_ptr = cv_bridge::toCvShare(depth_msg);
 
   const cv::Mat& rgb_img   = rgb_ptr->image;
-  const cv::Mat& depth_img = depth_ptr->image;
+  
+  // **** check for right encoding of depth image
+
+  cv::Mat depth_img;
+  
+  const std::string& enc = depth_msg->encoding; 
+  
+  if (enc.compare("16UC1") == 0)
+    depth_img = cv_bridge::toCvShare(depth_msg)->image;
+  else if (enc.compare("32FC1") == 0)
+    rgbdtools::depthImageFloatTo16bit(cv_bridge::toCvShare(depth_msg)->image, depth_img); 
   
   //cv::imshow("RGB", rgb_img);
   //cv::imshow("Depth", depth_img);
@@ -311,7 +321,7 @@ void RGBDImageProc::RGBDCallback(
   ImageMsg::Ptr rgb_out_msg = cv_img_rgb.toImageMsg();
 
   // **** allocate registered depth image
-  cv_bridge::CvImage cv_img_depth(depth_msg->header, depth_msg->encoding, depth_img_rect_reg);
+  cv_bridge::CvImage cv_img_depth(depth_msg->header, "16UC1", depth_img_rect_reg);
   ImageMsg::Ptr depth_out_msg = cv_img_depth.toImageMsg();
   
   // **** update camera info (single, since both images are in rgb frame)
