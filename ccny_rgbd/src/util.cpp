@@ -330,7 +330,7 @@ void pathEigenAffineToROS(
 {
   assert(path.size() == path_msg.poses.size());
 
-  for (int idx = 0; idx < path.size(); ++idx)
+  for (unsigned int idx = 0; idx < path.size(); ++idx)
   {
     tf::Transform pose_tf = tfFromEigenAffine(path[idx]);
     tf::poseTFToMsg(pose_tf, path_msg.poses[idx].pose);
@@ -344,7 +344,7 @@ void pathROSToEigenAffine(
   path.clear();
   path.resize(path_msg.poses.size());
 
-  for (int idx = 0; idx < path.size(); ++idx)
+  for (unsigned int idx = 0; idx < path.size(); ++idx)
   {
     tf::Transform pose_tf;
     tf::poseMsgToTF(path_msg.poses[idx].pose, pose_tf);
