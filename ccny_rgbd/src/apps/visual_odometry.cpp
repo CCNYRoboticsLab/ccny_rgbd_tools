@@ -179,7 +179,7 @@ void VisualOdometry::configureMotionEstimation()
   int n_nearest_neighbors;   
 
   if (!nh_private_.getParam ("reg/use_ransac_prediction", use_ransac_prediction_))
-    use_ransac_prediction_ = true;
+    use_ransac_prediction_ = false;
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_linear", tf_epsilon_linear))
     tf_epsilon_linear = 1e-4; // 1 mm
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_angular", tf_epsilon_angular))
