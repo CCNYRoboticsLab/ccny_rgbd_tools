@@ -45,7 +45,7 @@
     #### features: GFT ################################
 
     <param name="feature/GFT/n_features"   value = "400"/>
-    <param name="feature/GFT/min_distance" value = "2.0"/>
+    <param name="feature/GFT/min_distance" value = "1.0"/>
 
     #### features: SURF ###############################
   

@@ -126,6 +126,8 @@ class VisualOdometry
     bool publish_model_cloud_;
     bool publish_model_cov_;    
     
+    bool use_ransac_prediction_;
+    
     /** @brief Feature detector type parameter
      * 
      * Possible values:

@@ -1,7 +1,7 @@
 Background\ ColorB=0.215686
 Background\ ColorG=0
 Background\ ColorR=0
-Camera\ Config=1.0348 2.91406 18.6762 1.01779 -2.13659 0.257
+Camera\ Config=0.5248 3.17906 6.65278 1.0403 -0.7933 0.382772
 Camera\ Type=rviz::OrbitViewController
 Features..AxisColorAutocompute\ Value\ Bounds=1
 Features..AxisColorAxis=2
@@ -65,7 +65,6 @@ Keyframes.Topic=/keyframes
 Marker.Enabled=1
 Marker.Marker\ Topic=/keyframe_associations
 Marker.Queue\ Size=100
-Marker.RANSAC=1
 Marker2.Enabled=1
 Marker2.Marker\ Topic=/keyframe_poses
 Marker2.Queue\ Size=100
@@ -171,8 +170,13 @@ Name=Marker
 [Display7]
 ClassName=rviz::MarkerDisplay
 Name=Marker2
+[TF.Frames.]
+camera_link.Enabled=1
+camera_rgb_frame.Enabled=1
+camera_rgb_optical_frame.Enabled=1
+odom.Enabled=1
 [Window]
 Height=1050
 Width=1680
 X=1466
-Y=-1595
+Y=-1615

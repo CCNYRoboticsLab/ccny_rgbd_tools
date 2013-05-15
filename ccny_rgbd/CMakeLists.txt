@@ -78,19 +78,19 @@ target_link_libraries (visual_odometry_node
 # Build keyframe mapper application
 ################################################################
 
-#rosbuild_add_executable(keyframe_mapper_node
-#  src/node/keyframe_mapper_node.cpp
-#  src/apps/keyframe_mapper.cpp
-#  src/util.cpp)
+rosbuild_add_executable(keyframe_mapper_node
+  src/node/keyframe_mapper_node.cpp
+  src/apps/keyframe_mapper.cpp
+  src/util.cpp)
   
-#target_link_libraries (keyframe_mapper_node
-#  rgbdtools
-#  boost_signals
-#  boost_system
-#  boost_filesystem
-#  boost_regex
-#  ${OpenCV_LIBRARIES}
-#  ${G2O_LIBRARIES})
+target_link_libraries (keyframe_mapper_node
+  rgbdtools
+  boost_signals
+  boost_system
+  boost_filesystem
+  boost_regex
+  ${OpenCV_LIBRARIES}
+  ${G2O_LIBRARIES})
   
 ################################################################
 # Build feature viewer application
