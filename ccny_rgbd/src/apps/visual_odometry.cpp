@@ -212,6 +212,8 @@ void VisualOdometry::configureMotionEstimation()
   double max_assoc_dist_mah;
   int n_nearest_neighbors;   
 
+  if (!nh_private_.getParam ("reg/use_ransac_prediction", use_ransac_prediction_))
+    use_ransac_prediction_ = false;
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_linear", tf_epsilon_linear))
     tf_epsilon_linear = 1e-4; // 1 mm
   if (!nh_private_.getParam ("reg/ICPProbModel/tf_epsilon_angular", tf_epsilon_angular))
@@ -297,7 +299,7 @@ void VisualOdometry::resetDetector()
     // dynamic reconfigure
     StarDetectorConfigServer::CallbackType f = boost::bind(
       &VisualOdometry::starReconfigCallback, this, _1, _2);
-    star_config_server_->setCallback(f);
+    star_config_server_->setCallback(f); 
   }
   else
   {
@@ -329,6 +331,7 @@ void VisualOdometry::RGBDCallback(
     if (!initialized_) return;
 
     motion_estimation_.setBaseToCameraTf(eigenAffineFromTf(b2c_));
+    motion_estimation_ransac_.setBaseToCameraTf(eigenAffineFromTf(b2c_));
   }
 
   // **** create frame *************************************************
@@ -338,16 +341,32 @@ void VisualOdometry::RGBDCallback(
   createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
   ros::WallTime end_frame = ros::WallTime::now();
 
+  // **** prediction ***************************************************
+  
+  ros::WallTime start_pred = ros::WallTime::now();
+  AffineTransform prediction;
+  
+  if (use_ransac_prediction_)
+  {
+    prediction = motion_estimation_ransac_.getMotionEstimation(frame);
+  }
+  else
+    prediction = AffineTransform::Identity();
+    
+  ros::WallTime end_pred = ros::WallTime::now();
+    
   // **** find features ************************************************
 
   ros::WallTime start_features = ros::WallTime::now();
-  feature_detector_->findFeatures(frame);
+  if (detector_type_ != "ORB")
+    feature_detector_->findFeatures(frame);
   ros::WallTime end_features = ros::WallTime::now();
 
   // **** registration *************************************************
   
   ros::WallTime start_reg = ros::WallTime::now();
-  AffineTransform m = motion_estimation_.getMotionEstimation(frame);
+  AffineTransform m = motion_estimation_.getMotionEstimation(frame, prediction);
+  
   tf::Transform motion = tfFromEigenAffine(m);
   f2b_ = motion * f2b_;
   ros::WallTime end_reg = ros::WallTime::now();
@@ -375,13 +394,14 @@ void VisualOdometry::RGBDCallback(
   int n_valid_features = frame.n_valid_keypoints;
   int n_model_pts = motion_estimation_.getModelSize();
 
-  double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
+  //double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
+  double d_pred     = 1000.0 * (end_pred     - start_pred   ).toSec();
   double d_features = 1000.0 * (end_features - start_features).toSec();
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
   diagnostics(n_features, n_valid_features, n_model_pts,
-              d_frame, d_features, d_reg, d_total);
+              d_pred, d_features, d_reg, d_total);
 
   // **** print trajectory *******************************************
   /*
@@ -401,7 +421,6 @@ void VisualOdometry::RGBDCallback(
       f2c.getRotation().getW());
   }
   */
-  
 }
 
 void VisualOdometry::publishTf(const std_msgs::Header& header)
@@ -504,14 +523,14 @@ void VisualOdometry::orbReconfigCallback(OrbDetectorConfig& config, uint32_t lev
 
 void VisualOdometry::diagnostics(
   int n_features, int n_valid_features, int n_model_pts,
-  double d_frame, double d_features, double d_reg, double d_total)
+  double d_pred, double d_features, double d_reg, double d_total)
 {
   if(save_diagnostics_ && diagnostics_file_ != NULL)
   {
     // print to file
     fprintf(diagnostics_file_, "%d, %2.1f, %d, %3.1f, %d, %4.1f, %4.1f\n",
       frame_count_,
-      d_frame,
+      d_pred,
       n_valid_features, d_features,
       n_model_pts, d_reg,
       d_total);
@@ -519,8 +538,9 @@ void VisualOdometry::diagnostics(
   if (verbose_)
   {
     // print to screen
-    ROS_INFO("[VO %d] %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f",
+    ROS_INFO("[VO %d] Pr: %.1f %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f",
       frame_count_,
+      d_pred,
       detector_type_.c_str(), n_valid_features, d_features,
       n_model_pts, d_reg,
       d_total);
@@ -550,7 +570,7 @@ void VisualOdometry::publishModelCloud()
 
 void VisualOdometry::publishModelCovariances()
 {
-  ///< @TODO ppublish model covariances
+  ///< @TODO publish model covariances
 }
 
 } // namespace ccny_rgbd

@@ -15,7 +15,6 @@
     ccny_rgbd/rgbd_image_proc"), then add the following remappings. 
     Also add these to keyframe_mapper in vo+mapping.launch.
    
-
     <remap from="/rgbd/depth" to="/camera/depth/image"/>
     <remap from="/rgbd/rgb"   to="/camera/rgb/image_color"/>
     <remap from="/rgbd/info"  to="/camera/rgb/camera_info"/>      
@@ -58,6 +57,8 @@
 
     #### registration #################################
 
+    <param name="reg/use_ransac_prediction" value="true"/>
+    
     <param name="reg/reg_type"          value="$(arg reg_type)"/>
     <param name="reg/motion_constraint" value="0"/>
 

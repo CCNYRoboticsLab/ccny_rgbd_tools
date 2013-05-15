@@ -128,6 +128,8 @@ class VisualOdometry
     bool publish_model_cloud_;
     bool publish_model_cov_;    
     
+    bool use_ransac_prediction_;
+    
     /** @brief Feature detector type parameter
      * 
      * Possible values:
@@ -166,6 +168,7 @@ class VisualOdometry
     boost::shared_ptr<rgbdtools::FeatureDetector> feature_detector_; ///< The feature detector object
 
     rgbdtools::MotionEstimationICPProbModel motion_estimation_; ///< The motion estimation object
+    rgbdtools::MotionEstimationPairwiseRANSAC motion_estimation_ransac_;
   
     PathMsg path_msg_; ///< contains a vector of positions of the Base frame.
 
