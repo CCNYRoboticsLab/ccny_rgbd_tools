@@ -35,7 +35,7 @@
     
     #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/detector_type"               value="$(arg detector_type)"/> 
-    <param name="feature/smooth"                      value="0"/>
+    <param name="feature/smooth"                      value="1"/>
     <param name="feature/max_range"                   value="7.0"/>
     <param name="feature/max_stdev"                   value="0.15"/>
     <param name="feature/show_keypoints"              value="false"/>
@@ -45,8 +45,8 @@
     #### features: GFT ################################
 
     <param name="feature/GFT/n_features"   value = "500"/>
-    <param name="feature/GFT/min_distance" value = "0.0"/>
-
+    <param name="feature/GFT/min_distance" value = "0"/>
+   
     #### features: SURF ###############################
   
     <param name="feature/SURF/threshold" value = "400"/>
@@ -63,11 +63,11 @@
 
     #### registration: ICP Prob Model #################
 
-    <param name="reg/ICPProbModel/max_iterations"            value="10"/>
-    <param name="reg/ICPProbModel/max_model_size"            value="5000"/>
+    <param name="reg/ICPProbModel/max_iterations"            value="20"/>
+    <param name="reg/ICPProbModel/max_model_size"            value="15000"/>
     <param name="reg/ICPProbModel/n_nearest_neighbors"       value="4"/>
     <param name="reg/ICPProbModel/max_assoc_dist_mah"        value="10.0"/>
-    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.25"/>
+    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.10"/>
     <param name="reg/ICPProbModel/publish_model_cloud"       value="true"/>
     <param name="reg/ICPProbModel/publish_model_covariances" value="false"/>
   </node>

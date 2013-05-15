@@ -96,18 +96,18 @@ target_link_libraries (keyframe_mapper_node
 # Build feature viewer application
 ################################################################
 
-rosbuild_add_executable(feature_viewer_node 
-  src/node/feature_viewer_node.cpp
-  src/apps/feature_viewer.cpp
-  src/util.cpp)
+#rosbuild_add_executable(feature_viewer_node 
+#  src/node/feature_viewer_node.cpp
+#  src/apps/feature_viewer.cpp
+#  src/util.cpp)
   
-target_link_libraries (feature_viewer_node
-  rgbdtools
-  boost_signals
-  boost_system
-  boost_filesystem
-  ${PCL_LIBRARIES}
-  ${OpenCV_LIBRARIES})
+#target_link_libraries (feature_viewer_node
+#  rgbdtools
+#  boost_signals
+#  boost_system
+#  boost_filesystem
+#  ${PCL_LIBRARIES}
+#  ${OpenCV_LIBRARIES})
   
 ################################################################
 # Build image proc application
