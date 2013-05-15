@@ -164,6 +164,7 @@ class VisualOdometry
     boost::shared_ptr<rgbdtools::FeatureDetector> feature_detector_; ///< The feature detector object
 
     rgbdtools::MotionEstimationICPProbModel motion_estimation_; ///< The motion estimation object
+    rgbdtools::MotionEstimationPairwiseRANSAC motion_estimation_ransac_;
   
     PathMsg path_msg_; ///< contains a vector of positions of the Base frame.
 

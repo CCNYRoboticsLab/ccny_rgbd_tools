@@ -263,7 +263,7 @@ void VisualOdometry::resetDetector()
     // dynamic reconfigure
     StarDetectorConfigServer::CallbackType f = boost::bind(
       &VisualOdometry::starReconfigCallback, this, _1, _2);
-    star_config_server_->setCallback(f);
+    star_config_server_->setCallback(f); 
   }
   else
   {
@@ -295,6 +295,7 @@ void VisualOdometry::RGBDCallback(
     if (!initialized_) return;
 
     motion_estimation_.setBaseToCameraTf(eigenAffineFromTf(b2c_));
+    motion_estimation_ransac_.setBaseToCameraTf(eigenAffineFromTf(b2c_));
   }
 
   // **** create frame *************************************************
@@ -307,13 +308,16 @@ void VisualOdometry::RGBDCallback(
   // **** find features ************************************************
 
   ros::WallTime start_features = ros::WallTime::now();
-  feature_detector_->findFeatures(frame);
+  //feature_detector_->findFeatures(frame);
   ros::WallTime end_features = ros::WallTime::now();
 
   // **** registration *************************************************
   
   ros::WallTime start_reg = ros::WallTime::now();
-  AffineTransform m = motion_estimation_.getMotionEstimation(frame);
+  //AffineTransform m = motion_estimation_.getMotionEstimation(frame);
+  
+  AffineTransform m = motion_estimation_ransac_.getMotionEstimation(frame);
+  
   tf::Transform motion = tfFromEigenAffine(m);
   f2b_ = motion * f2b_;
   ros::WallTime end_reg = ros::WallTime::now();
