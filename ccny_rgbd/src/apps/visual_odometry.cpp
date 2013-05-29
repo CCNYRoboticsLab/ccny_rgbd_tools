@@ -74,6 +74,7 @@ VisualOdometry::VisualOdometry(
 
   f2b_.setIdentity();
     
+ 
   // **** publishers
 
   odom_publisher_ = nh_.advertise<OdomMsg>(
@@ -107,6 +108,7 @@ VisualOdometry::VisualOdometry(
                 RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
   
   sync_->registerCallback(boost::bind(&VisualOdometry::RGBDCallback, this, _1, _2, _3));  
+  
 }
 
 VisualOdometry::~VisualOdometry()
@@ -157,6 +159,8 @@ void VisualOdometry::initParams()
   feature_detector_->setSmooth(smooth);
   feature_detector_->setMaxRange(max_range);
   feature_detector_->setMaxStDev(max_stdev);
+  feature_detector_->setComputeDescriptors(true);
+  motion_estimation_ransac_.setFeatureDetector(feature_detector_);
   
   // registration params
   
@@ -182,13 +186,12 @@ void VisualOdometry::initParams()
     }
 
     // print header
-    fprintf(diagnostics_file_, "%s, %s, %s, %s, %s, %s, %s, %s\n",
+    fprintf(diagnostics_file_, "#%s, %s, %s, %s, %s, %s, %s\n",
       "Frame id",
-      "Frame dur.",
-      "All features", "Valid features",
-      "Feat extr. dur.",
+      "Valid features", "Feat extr. dur.",
+      "Pred. dur.",
       "Model points", "Registration dur.",
-      "Total dur.");
+      "Total dur.");    
   }
   
   //traj_file_ = fopen("/home/idyanov/traj.txt", "w");
@@ -341,27 +344,24 @@ void VisualOdometry::RGBDCallback(
   createRGBDFrameFromROSMessages(rgb_msg, depth_msg, info_msg, frame); 
   ros::WallTime end_frame = ros::WallTime::now();
 
+  // **** find features ************************************************
+
+  ros::WallTime start_features = ros::WallTime::now();
+  feature_detector_->findFeatures(frame);
+  ros::WallTime end_features = ros::WallTime::now();
+  
   // **** prediction ***************************************************
   
   ros::WallTime start_pred = ros::WallTime::now();
   AffineTransform prediction;
   
   if (use_ransac_prediction_)
-  {
     prediction = motion_estimation_ransac_.getMotionEstimation(frame);
-  }
   else
     prediction = AffineTransform::Identity();
     
   ros::WallTime end_pred = ros::WallTime::now();
-    
-  // **** find features ************************************************
-
-  ros::WallTime start_features = ros::WallTime::now();
-  if (detector_type_ != "ORB")
-    feature_detector_->findFeatures(frame);
-  ros::WallTime end_features = ros::WallTime::now();
-
+   
   // **** registration *************************************************
   
   ros::WallTime start_reg = ros::WallTime::now();
@@ -395,13 +395,13 @@ void VisualOdometry::RGBDCallback(
   int n_model_pts = motion_estimation_.getModelSize();
 
   //double d_frame    = 1000.0 * (end_frame    - start_frame   ).toSec();
-  double d_pred     = 1000.0 * (end_pred     - start_pred   ).toSec();
   double d_features = 1000.0 * (end_features - start_features).toSec();
+  double d_pred     = 1000.0 * (end_pred     - start_pred   ).toSec();
   double d_reg      = 1000.0 * (end_reg      - start_reg     ).toSec();
   double d_total    = 1000.0 * (end          - start         ).toSec();
 
   diagnostics(n_features, n_valid_features, n_model_pts,
-              d_pred, d_features, d_reg, d_total);
+              d_features, d_pred, d_reg, d_total);
 
   // **** print trajectory *******************************************
   /*
@@ -523,25 +523,25 @@ void VisualOdometry::orbReconfigCallback(OrbDetectorConfig& config, uint32_t lev
 
 void VisualOdometry::diagnostics(
   int n_features, int n_valid_features, int n_model_pts,
-  double d_pred, double d_features, double d_reg, double d_total)
+  double d_features, double d_pred, double d_reg, double d_total)
 {
   if(save_diagnostics_ && diagnostics_file_ != NULL)
   {
     // print to file
-    fprintf(diagnostics_file_, "%d, %2.1f, %d, %3.1f, %d, %4.1f, %4.1f\n",
+    fprintf(diagnostics_file_, "%d, %d, %2.1f, %2.1f, %d, %2.1f, %2.1f \n",
       frame_count_,
-      d_pred,
       n_valid_features, d_features,
+      d_pred,
       n_model_pts, d_reg,
       d_total);
   }
   if (verbose_)
   {
     // print to screen
-    ROS_INFO("[VO %d] Pr: %.1f %s[%d]: %.1f Reg[%d]: %.1f TOT: %.1f",
+    ROS_INFO("[VO %d] %s[%d]: %.1f Pr: %.1f Reg[%d]: %.1f TOT: %.1f",
       frame_count_,
-      d_pred,
       detector_type_.c_str(), n_valid_features, d_features,
+      d_pred,
       n_model_pts, d_reg,
       d_total);
   }

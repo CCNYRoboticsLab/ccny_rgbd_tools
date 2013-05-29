@@ -1,5 +1,21 @@
 <!-- RGB-D Visual odometry -->
 
+<!-- ORB, 
+
+  sac_min_inliers_ = 30;
+  sac_max_eucl_dist_sq_ = pow(0.03, 2.0);
+  sac_reestimate_tf_ = true;
+  ransac_max_iterations_ = 200;
+  ransac_confidence_ = 0.99;
+  matcher_use_desc_ratio_test_ = false;
+  matcher_max_desc_ratio_ = 0.8;
+  matcher_max_desc_dist_ = 50.0;
+  
+  orb_detector->setThreshold(31.0);
+  orb_detector->setNFeatures(400);
+  
+  -->
+
 <launch>
 
   # ORB, SURF, GTF, STAR
@@ -22,6 +38,8 @@
     #### diagnostics ##################################
         
     <param name="verbose"     value="true"/>    
+    <param name="save_diagnostics" value="true"/>
+    <param name="diagnostics_file_name" value="$(env HOME)/times.csv"/>
     
     #### frames and tf output #########################
     
@@ -34,7 +52,7 @@
     
     #  ORB, SURF, or GFT (Good features to track)
     <param name="feature/detector_type"               value="$(arg detector_type)"/> 
-    <param name="feature/smooth"                      value="1"/>
+    <param name="feature/smooth"                      value="0"/>
     <param name="feature/max_range"                   value="7.0"/>
     <param name="feature/max_stdev"                   value="0.15"/>
     <param name="feature/show_keypoints"              value="false"/>
@@ -64,11 +82,11 @@
 
     #### registration: ICP Prob Model #################
 
-    <param name="reg/ICPProbModel/max_iterations"            value="20"/>
-    <param name="reg/ICPProbModel/max_model_size"            value="15000"/>
+    <param name="reg/ICPProbModel/max_iterations"            value="15"/>
+    <param name="reg/ICPProbModel/max_model_size"            value="5000"/>
     <param name="reg/ICPProbModel/n_nearest_neighbors"       value="4"/>
     <param name="reg/ICPProbModel/max_assoc_dist_mah"        value="10.0"/>
-    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.10"/>
+    <param name="reg/ICPProbModel/max_corresp_dist_eucl"     value="0.15"/>
     <param name="reg/ICPProbModel/publish_model_cloud"       value="true"/>
     <param name="reg/ICPProbModel/publish_model_covariances" value="false"/>
   </node>

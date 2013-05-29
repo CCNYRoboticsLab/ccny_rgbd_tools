@@ -1,7 +1,7 @@
 Background\ ColorB=0.215686
 Background\ ColorG=0
 Background\ ColorR=0
-Camera\ Config=0.5448 3.24406 12.0116 1.0403 -0.7933 0.382772
+Camera\ Config=0.7998 1.95406 12.0116 1.0403 -0.7933 0.382772
 Camera\ Type=rviz::OrbitViewController
 Features..AxisColorAutocompute\ Value\ Bounds=1
 Features..AxisColorAxis=2
@@ -67,7 +67,7 @@ Keyframes..IntensityMin\ ColorG=0
 Keyframes..IntensityMin\ ColorR=0
 Keyframes..IntensityMin\ Intensity=0
 Keyframes..IntensityUse\ full\ RGB\ spectrum=0
-Keyframes.Alpha=0.1
+Keyframes.Alpha=1
 Keyframes.Billboard\ Size=0.01
 Keyframes.Color\ Transformer=RGB8
 Keyframes.Decay\ Time=300
@@ -196,8 +196,20 @@ Name=RGBD RGBD
 [Display9]
 ClassName=rviz::ImageDisplay
 Name=RGBD Depth
+[TF.Frames.]
+camera_link.Enabled=1
+camera_rgb_frame.Enabled=1
+camera_rgb_optical_frame.Enabled=1
+kinect.Enabled=1
+odom.Enabled=1
+openni_camera.Enabled=1
+openni_depth_frame.Enabled=1
+openni_depth_optical_frame.Enabled=1
+openni_rgb_frame.Enabled=1
+openni_rgb_optical_frame.Enabled=1
+world.Enabled=1
 [Window]
 Height=1050
 Width=1680
 X=1466
-Y=-1635
+Y=-1655
