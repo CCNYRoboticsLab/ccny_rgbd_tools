@@ -44,6 +44,8 @@
    
     <param name="apps/mono_vo/image_width"                   value="320" /> 
     <param name="apps/mono_vo/image_height"                  value="240" /> 
+    <param name="apps/mono_vo/virtual_image_width"           value="400" /> 
+    <param name="apps/mono_vo/virtual_image_height"          value="300" /> 
    
     <!-- works for 0.2 speed (7 FPS)
     <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>

@@ -97,8 +97,10 @@ class MonocularVisualOdometry
     double detector_threshold_;
     
     double max_descriptor_space_distance_;
-    int image_width_; ///< Virtual and input images will be resized to this width
-    int image_height_; ///< Virtual and input images will be resized to this height
+    int image_width_; ///< Input images will be resized to this width
+    int image_height_; ///< Input images will be resized to this height
+    int virtual_image_width_; ///< Virtual images will be generated at this width
+    int virtual_image_height_; ///< Virtual images will be generated at this height
 
     // **** variables
     boost::mutex::scoped_lock mutex_lock_; ///< Thread lock on subscribed input images

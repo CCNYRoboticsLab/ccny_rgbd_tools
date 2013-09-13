@@ -1,14 +1,33 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
+  # Carlos' baby room
+  <!-- 
+  # arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd"
+  <arg name="PATH_TO_BAG" value="/media/psf/Home/Downloads/data/ROS/bags/rgbd/carlos/carlos_baby_02" />
+  <arg name="BAG_NAME" value="carlos_baby_02" /> # Bag name only (Without .bag extension)
+  -->
+  # Office
   <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
-  <arg name="BAG_NAME" value="ccny_rooms_03" /> # Bag name only (Without extension)
+  <arg name="BAG_NAME" value="ccny_rooms_03" /> # Bag name only (Without .bag extension)
+
+  # Carlos' baby room
+  <!-- 
   <arg name="PATH_TO_PCD" value="$(env HOME)/ros/PCDs" />
-  <arg name="PCD_NAME" value="apt1.pcd" /> # PCD file name (with extension)
+  <arg name="PCD_NAME" value="carlos_baby_02.pcd" /> # PCD file name (with .pcd extension)
+  -->
+  # Office
+  #arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD" 
+  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/PCDs" />
+  <arg name="PCD_NAME" default="ccny_office_1m.pcd" /> # PCD file name (with .pcd extension)
+
   <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
   <arg name="FULL_PCD_NAME" value="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
+
+  <!-- # To adjust the playback speed and delay
   <arg name="BAG_PLAY_DELAY" value="0.0" /> # Delay in seconds to start the bag's playback
   <arg name="BAG_PLAY_RATE" value="1.0" /> # Rate value in Hz? 1 is normal, 10 is faster, 0.1 is slower
+  -->
   
   # ORB, SURF, GTF, KLT
   <arg name="detector_type" value="GFT"/> 
@@ -27,8 +46,10 @@
   <include file="$(find ccny_rgbd)/launch/play_bag.launch">
       <arg name="PATH_TO_BAG" value="$(arg PATH_TO_BAG)" />
       <arg name="BAG_NAME" value="$(arg BAG_NAME)" />
-      <arg name="BAG_PLAY_DELAY" value="$(arg BAG_PLAY_DELAY)" />
-      <arg name="BAG_PLAY_RATE" value="$(arg BAG_PLAY_RATE)" />
+      # arg name="BAG_PLAY_DELAY" value="$(arg BAG_PLAY_DELAY)" # # TODO: Not used in openni_launch
+      # arg name="BAG_PLAY_RATE" value="$(arg BAG_PLAY_RATE)" # 
+      <arg name="RGBD_CALIB_PATH" value="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
+      />
   </include>
 
 </launch>

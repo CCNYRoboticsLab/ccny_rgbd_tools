@@ -91,7 +91,7 @@ void MonocularVisualOdometry::initParams()
   if (!nh_private_.getParam ("base_frame", base_frame_))
     base_frame_ = "/camera_link";
 
-  // FIXME: use a para for the frame name
+  // FIXME: use a param for the frame name
   path_pub_ = nh_.advertise<nav_msgs::Path>("/mono_path", 5);
 
   if (!nh_private_.getParam ("apps/mono_vo/detector_type", detector_type_))
@@ -106,6 +106,10 @@ void MonocularVisualOdometry::initParams()
     image_width_ = 320;
   if (!nh_private_.getParam ("apps/mono_vo/image_height", image_height_))
     image_height_ = 240;
+  if (!nh_private_.getParam ("apps/mono_vo/virtual_image_width", virtual_image_width_))
+    image_width_ = 400;
+  if (!nh_private_.getParam ("apps/mono_vo/virtual_image_height", virtual_image_height_))
+    image_height_ = 300;
   if (!nh_private_.getParam ("apps/mono_vo/virtual_image_blur", virtual_image_blur_))
     virtual_image_blur_ = 3;
   if (!nh_private_.getParam ("apps/mono_vo/virtual_image_fill", virtual_image_fill_))
