@@ -502,8 +502,7 @@ void projectCloudToImage(const PointCloudT& cloud,
     p_world(0,0) = point.x;
     p_world(1,0) = point.y;
     p_world(2,0) = point.z;
-    
-
+   
     // transforms into the camera frame  
     Vector3f p_cam = rmat * p_world + tvec; 
     double depth = p_cam(2,0) * 1000.0;       //depth in millimiter

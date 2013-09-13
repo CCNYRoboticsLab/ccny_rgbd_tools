@@ -1,14 +1,9 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
-  #arg name="PATH_TO_PCD" default="$(env HOME)/ros" #
-  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD" />
-  #arg name="PCD_NAME" default="office.pcd" # PCD file name (with extension)
-  <arg name="PCD_NAME" default="ccny_office_640_loop.pcd" /> # PCD file name (with extension)
+  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/" />
+  <arg name="PCD_NAME" default="freiburg.pcd" /> # PCD file name (with extension)
   <arg name="FULL_PCD_NAME" default="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
-  
-  # ORB, SURF, GTF, KLT
-  <arg name="detector_type" default="GFT"/> 
   
   <node pkg="ccny_rgbd" type="mono_vo_node" name="mono_vo_node" 
     output="screen">
@@ -33,12 +28,13 @@
     <param name="apps/mono_vo/topic_image"  value="/camera/rgb/image_raw" />
     -->
     # Camera with calibration files
-    <param name="apps/mono_vo/topic_cam_info" value="/rgbd/info" />
-    <param name="apps/mono_vo/topic_image"    value="/rgbd/rgb" />
+        
+    <param name="apps/mono_vo/topic_cam_info" value="/camera/rgb/camera_info" />
+    <param name="apps/mono_vo/topic_image"    value="/camera/rgb/image_color" />
 
     # Frames
     <param name="fixed_frame" value="/odom"/>
-    <param name="base_frame"  value="/camera_link"/>
+    <param name="base_frame"  value="/openni_camera"/>
        
     ##########################################################################
    
@@ -65,13 +61,13 @@
     <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
     -->
 
-    <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
-    <param name="apps/mono_vo/min_inliers_count"             value="50"/>
-    <param name="apps/mono_vo/max_reproj_error"              value="2"/>   
-    <param name="apps/mono_vo/detector_threshold"            value="800" /> 
-    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
-    <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
-    <param name="apps/mono_vo/virtual_image_fill"            value="3"/>
+    <param name="apps/mono_vo/max_ransac_iterations"         value="500"/>
+    <param name="apps/mono_vo/min_inliers_count"             value="30"/>
+    <param name="apps/mono_vo/max_reproj_error"              value="10"/>   
+    <param name="apps/mono_vo/detector_threshold"            value="100" /> 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="1.0" /> 
+    <param name="apps/mono_vo/virtual_image_blur"            value="0"/>
+    <param name="apps/mono_vo/virtual_image_fill"            value="1"/>
     
    </node>
 
