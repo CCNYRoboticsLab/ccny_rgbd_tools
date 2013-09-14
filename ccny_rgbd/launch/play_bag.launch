@@ -1,24 +1,16 @@
 <!-- Play BAG for Visual Odometry -->
 
 <launch>
-  <arg name="PATH_TO_BAG" default="$(env HOME)/ros/bags/rgbd" />
-  # arg name="BAG_NAME" default="ccny_rooms_01_qvga"  # Bag name only (Without extension)
-  <arg name="BAG_NAME" default="ccny_rooms_03" />  # Bag name only (Without extension)
-  <arg name="FULL_BAG_NAME" default="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
+  <arg name="FULL_BAG_NAME" default="ccny_rooms_01_qvga.bag" /> # With .bag extension
   <arg name="BAG_PLAY_DELAY" default="0.0" /> # Delay in seconds to start the bag's playback
   <arg name="BAG_PLAY_RATE" default="0.2" /> # Rate value or speed (FPS = rate*known_fps for images) 1 is normal, 10 is faster, 0.1 is slower
+  <arg name="RGBD_CALIB_PATH" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   
   <include file="$(find ccny_openni_launch)/launch/openni_play.launch">
-      <arg name="path" value="$(arg PATH_TO_BAG)" />
-      <arg name="bag_name" value="$(arg BAG_NAME).bag" />
+      <arg name="bag_name" value="$(arg FULL_BAG_NAME)" />
       <arg name="play_delay" value="$(arg BAG_PLAY_DELAY)" /> 
-      <arg name="rate" value="$(arg BAG_PLAY_RATE)" />
+      <arg name="bag_rate" value="$(arg BAG_PLAY_RATE)" />
+      <arg name="calib_path" value="$(arg RGBD_CALIB_PATH)" />
   </include>
-
-  <arg name="calibration_files_path" default="$(arg PATH_TO_BAG)/calibration/" />
-    
-  <include file="$(find rgbd_image_proc)/launch/rgbd_image_proc.launch">
-        <arg name="calib_path" value="$(arg calibration_files_path)" />
-  </include>   
 
 </launch>

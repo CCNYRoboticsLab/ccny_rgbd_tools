@@ -1,16 +1,18 @@
 <!-- Play raw OpenNI data from a bag and process it-->
 <launch>
 
+  <!-- Parameters -->
   <param name="use_sim_time" value="true"/>
     
-  <!-- Parameters -->
-  <arg name="bag_name" />
+  <!-- Arguments -->
+  <arg name="bag_name" default="rgbd.bag" /> # Complete path to bag (including .bag extension)
+  <arg name="play_delay" default="2.0" />  # TODO: Not used yet
   <arg name="bag_rate"  default="1.0" />
   <arg name="bag_start" default="0.0" />
+  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_asus_xtion_pro"/> 
   
   <arg name="manager_name" default="rgbd_manager"/>
-  <arg name="calib_path" default="$(find ccny_rgbd)/data/calibration_openni_default"/> 
-  <arg name="unwarp" default="false"/> 
+  <arg name="unwarp" default="true"/> 
   <arg name="scale" default="1.0"/>
   <arg name="publish_cloud" default="false"/>
   <arg name="verbose" default="false"/>  # for rgbd_image_proc messages

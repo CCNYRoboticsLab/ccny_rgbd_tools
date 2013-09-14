@@ -502,8 +502,7 @@ void projectCloudToImage(const PointCloudT& cloud,
     p_world(0,0) = point.x;
     p_world(1,0) = point.y;
     p_world(2,0) = point.z;
-    
-
+   
     // transforms into the camera frame  
     Vector3f p_cam = rmat * p_world + tvec; 
     double depth = p_cam(2,0) * 1000.0;       //depth in millimiter
@@ -524,7 +523,8 @@ void projectCloudToImage(const PointCloudT& cloud,
       color_rgb[0] = point.b;  
       color_rgb[1] = point.g;
       color_rgb[2] = point.r;
-          
+
+      // Depth buffers:
       if (depth_img.at<uint16_t>(v,u) == 0)
       {
         rgb_img.at<cv::Vec3b>(v,u) = color_rgb;           
