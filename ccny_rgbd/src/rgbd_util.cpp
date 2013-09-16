@@ -488,10 +488,13 @@ void projectCloudToImage(const PointCloudT& cloud,
                          int height,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img,
-                         float scale_from_virtual)
+                         cv::Size virtual_margin_offset)
 {
   rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
+
+  int left_margin_offset = virtual_margin_offset.width;
+  int top_margin_offset = virtual_margin_offset.height;
 
   for (uint i=0; i<cloud.points.size(); ++i)
   {
@@ -518,8 +521,12 @@ void projectCloudToImage(const PointCloudT& cloud,
     int u = (p_proj(0,0))/z_proj;
     int v = (p_proj(1,0))/z_proj;
     
+    int u_offset = u + left_margin_offset;
+    int v_offset = v + top_margin_offset;
+
     //takes only the visible points  
-    if ((u<width) && (u>=0) && (v<height) && (v>=0))
+    if( (u_offset>=0) && (u_offset<width)
+        && (v_offset>=0) && (v_offset<height) )
     {
       cv::Vec3b color_rgb;
       color_rgb[0] = point.b;  
@@ -527,15 +534,15 @@ void projectCloudToImage(const PointCloudT& cloud,
       color_rgb[2] = point.r;
 
       // Depth buffers:
-      if (depth_img.at<uint16_t>(v,u) == 0)
+      if (depth_img.at<uint16_t>(v_offset,u_offset) == 0)
       {
-        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
-        depth_img.at<uint16_t>(v,u) = depth;
+        rgb_img.at<cv::Vec3b>(v_offset,u_offset) = color_rgb;
+        depth_img.at<uint16_t>(v_offset,u_offset) = depth;
       }
-      else if  (depth > 0 && depth < depth_img.at<uint16_t>(v,u))
+      else if  (depth > 0 && depth < depth_img.at<uint16_t>(v_offset,u_offset))
       {
-        depth_img.at<uint16_t>(v,u) = depth;
-        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+        depth_img.at<uint16_t>(v_offset,u_offset) = depth;
+        rgb_img.at<cv::Vec3b>(v_offset,u_offset) = color_rgb;
       }
     }
   }

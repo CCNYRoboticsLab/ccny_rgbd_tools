@@ -169,7 +169,7 @@ void MonocularVisualOdometry::getVirtualImageFromKeyframe(
 
   // TODO: use the float scale_from_virtual_ for shifting pixels
   // FIXME: becareful with the depth computation, since it also needs to reshift points back in order to project as 3D points
-  projectCloudToImage(cloud, rmat, tvec, intrinsic, virtual_image_width_, virtual_image_height_, rgb_img_projected, depth_img_projected, scale_from_virtual_);
+  projectCloudToImage(cloud, rmat, tvec, intrinsic, virtual_image_width_, virtual_image_height_, rgb_img_projected, depth_img_projected, virtual_margin_offset_);
 
   
   holeFilling2(rgb_img_projected, depth_img_projected, virtual_image_fill_, virtual_rgb_img, virtual_depth_img);
@@ -240,7 +240,8 @@ void MonocularVisualOdometry::imageCallback(
     cam_model_.fromCameraInfo(info_msg);
     openCVRToEigenR(cam_model_.intrinsicMatrix(), intrinsic_matrix_);
 
-    scale_from_virtual_ = (float) virtual_image_width_ / image_width_;
+    virtual_margin_offset_ = cv::Size((virtual_image_width_-image_width_)/2,
+                                      (virtual_image_height_-image_height_)/2);
 
     // Rescale intrinsic
     float scale_factor_intrinsic;
@@ -363,7 +364,7 @@ void MonocularVisualOdometry::estimatePose(
       const cv::Point2f& point2f_mono    = keypoints_mono[idx_query].pt;
       
       int virtual_u = (int)(point2f_virtual.x);
-      int virtual_v = (int)(point2f_virtual.y);      
+      int virtual_v = (int)(point2f_virtual.y);
       
       uint16_t depth = virtual_depth_img.at<uint16_t>(virtual_v, virtual_u);
 
@@ -375,9 +376,11 @@ void MonocularVisualOdometry::estimatePose(
         corr_2D_points_vector.push_back(point2f_mono);
 
         Vector3f p;
-        // FIXME: Reshift (x, y) points back in order to project with intrinsic as 3D points
-        p(0,0) = point2f_virtual.x * z;
-        p(1,0) = point2f_virtual.y * z;
+        // Shift (x, y) points back (using the margin offset)
+        // in order to project with intrinsic matrix into valid 3D points
+        // FIXME: wrong offset?
+        p(0,0) = (point2f_virtual.x - virtual_margin_offset_.height) * z;
+        p(1,0) = (point2f_virtual.y - virtual_margin_offset_.width )* z;
         p(2,0) = z;
 
         Vector3f P = intr_inv * p;

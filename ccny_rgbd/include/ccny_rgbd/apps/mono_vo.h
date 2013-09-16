@@ -101,7 +101,7 @@ class MonocularVisualOdometry
     int image_height_; ///< Input images will be resized to this height
     int virtual_image_width_; ///< Virtual images will be generated at this width
     int virtual_image_height_; ///< Virtual images will be generated at this height
-    float scale_from_virtual_; ///< Assists on generating the virtual image shifted to left-top by a scale factor
+    cv::Size virtual_margin_offset_; ///< Assists on generating the virtual image when it's bigger than the real image's size
     // **** variables
     boost::mutex::scoped_lock mutex_lock_; ///< Thread lock on subscribed input images
     bool initialized_;

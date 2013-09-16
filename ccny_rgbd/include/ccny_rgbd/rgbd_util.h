@@ -303,6 +303,7 @@ void cv3x3FromEigen(const Matrix3f& emat, cv::Mat& Q);
  * @param height the virtual camera's height (in pixels)
  * @param rgb_img the output virtual RGB-image
  * @param depth_img the output virtual depth-image
+ * @param virtual_margin_offset The total margin offset (difference in size between real and virtual images)
  */
 void projectCloudToImage(const PointCloudT& cloud,
                          const Matrix3f& rmat,
@@ -312,7 +313,7 @@ void projectCloudToImage(const PointCloudT& cloud,
                          int height,
                          cv::Mat& rgb_img,
                          cv::Mat& depth_img,
-                         float scale_from_virtual = 1.0);
+                         cv::Size virtual_margin_offset);
 
 /* Fills the holes due to the sparse model in the projected image
  * N.B. mask size has to be a odd number 
