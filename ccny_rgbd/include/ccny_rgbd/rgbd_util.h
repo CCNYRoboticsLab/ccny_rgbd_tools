@@ -311,7 +311,8 @@ void projectCloudToImage(const PointCloudT& cloud,
                          int width,
                          int height,
                          cv::Mat& rgb_img,
-                         cv::Mat& depth_img);
+                         cv::Mat& depth_img,
+                         float scale_from_virtual = 1.0);
 
 /* Fills the holes due to the sparse model in the projected image
  * N.B. mask size has to be a odd number 

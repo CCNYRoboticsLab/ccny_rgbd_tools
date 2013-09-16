@@ -101,13 +101,14 @@ class MonocularVisualOdometry
     int image_height_; ///< Input images will be resized to this height
     int virtual_image_width_; ///< Virtual images will be generated at this width
     int virtual_image_height_; ///< Virtual images will be generated at this height
-
+    float scale_from_virtual_; ///< Assists on generating the virtual image shifted to left-top by a scale factor
     // **** variables
     boost::mutex::scoped_lock mutex_lock_; ///< Thread lock on subscribed input images
     bool initialized_;
     bool is_first_time_projecting_; ///< To indicate the first instance when the complete cloud model gets projected to the camera
     bool assume_initial_position_; ///< To indicate whether the assumption of known initial position of the camera pose is applied
     bool visualize_correspondences_; ///< To indicate whether correspondeces (matched points) will be vizualized in the frame
+    bool debug_mode_; ///< Puts program in debug mode
     int  frame_count_;
     ros::Time init_time_;
     nav_msgs::Path path_msg_;    /// < contains a vector of positions of the camera (not base) pose

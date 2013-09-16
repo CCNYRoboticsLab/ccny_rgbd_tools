@@ -487,7 +487,8 @@ void projectCloudToImage(const PointCloudT& cloud,
                          int width,
                          int height,
                          cv::Mat& rgb_img,
-                         cv::Mat& depth_img)
+                         cv::Mat& depth_img,
+                         float scale_from_virtual)
 {
   rgb_img   = cv::Mat::zeros(height, width, CV_8UC3);
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
@@ -509,15 +510,16 @@ void projectCloudToImage(const PointCloudT& cloud,
     
     if (depth <= 0) continue;
 
-    //projection into the imiage plane   
-    Vector3f p_proj = intrinsic * p_cam;                    
+    //projection into the imiage plane
+
+    Vector3f p_proj = intrinsic * p_cam; // HACKED
     double z_proj = p_proj(2,0);
 
     int u = (p_proj(0,0))/z_proj;
     int v = (p_proj(1,0))/z_proj;
     
     //takes only the visible points  
-    if ((u<width) && (u>=0) && (v<height) && (v>=0)) 
+    if ((u<width) && (u>=0) && (v<height) && (v>=0))
     {
       cv::Vec3b color_rgb;
       color_rgb[0] = point.b;  
@@ -527,8 +529,8 @@ void projectCloudToImage(const PointCloudT& cloud,
       // Depth buffers:
       if (depth_img.at<uint16_t>(v,u) == 0)
       {
-        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;           
-        depth_img.at<uint16_t>(v,u) = depth; 
+        rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
+        depth_img.at<uint16_t>(v,u) = depth;
       }
       else if  (depth > 0 && depth < depth_img.at<uint16_t>(v,u))
       {
@@ -536,7 +538,8 @@ void projectCloudToImage(const PointCloudT& cloud,
         rgb_img.at<cv::Vec3b>(v,u) = color_rgb;
       }
     }
-  }   
+  }
+
 }
 
 void holeFilling(

@@ -138,6 +138,8 @@ void MonocularVisualOdometry::initParams()
   if (!nh_private_.getParam ("apps/mono_vo/max_reproj_error", max_reproj_error_))
     max_reproj_error_ = 16;
 
+  if (!nh_private_.getParam ("apps/mono_vo/debug_mode", debug_mode_))
+    debug_mode_ = false;
   if (!nh_private_.getParam ("apps/mono_vo/publish_cloud_model", publish_cloud_model_))
     publish_cloud_model_ = false;
   if (!nh_private_.getParam ("apps/mono_vo/publish_virtual_img", publish_virtual_img_))
@@ -165,7 +167,9 @@ void MonocularVisualOdometry::getVirtualImageFromKeyframe(
   cv::Mat rgb_img_projected;
   cv::Mat depth_img_projected;
 
-  projectCloudToImage(cloud, rmat, tvec, intrinsic, image_width_, image_height_, rgb_img_projected, depth_img_projected);
+  // TODO: use the float scale_from_virtual_ for shifting pixels
+  // FIXME: becareful with the depth computation, since it also needs to reshift points back in order to project as 3D points
+  projectCloudToImage(cloud, rmat, tvec, intrinsic, virtual_image_width_, virtual_image_height_, rgb_img_projected, depth_img_projected, scale_from_virtual_);
 
   
   holeFilling2(rgb_img_projected, depth_img_projected, virtual_image_fill_, virtual_rgb_img, virtual_depth_img);
@@ -235,10 +239,13 @@ void MonocularVisualOdometry::imageCallback(
 
     cam_model_.fromCameraInfo(info_msg);
     openCVRToEigenR(cam_model_.intrinsicMatrix(), intrinsic_matrix_);
-    float scale_factor_intrinsic = 1.0;
-    // Rescale intrinsice
+
+    scale_from_virtual_ = (float) virtual_image_width_ / image_width_;
+
+    // Rescale intrinsic
+    float scale_factor_intrinsic;
     scale_factor_intrinsic =  (float) image_width_ / (float) cam_model_.width();
-    printf("Scale factor = %f \n", scale_factor_intrinsic);
+    printf("Intrinsic Scale factor (from original) = %f \n", scale_factor_intrinsic);
     intrinsic_matrix_(0,0) = scale_factor_intrinsic*intrinsic_matrix_(0,0); // fx
     intrinsic_matrix_(0,2) = scale_factor_intrinsic*intrinsic_matrix_(0,2); // cx
     intrinsic_matrix_(1,1) = scale_factor_intrinsic*intrinsic_matrix_(1,1); // fy
@@ -269,6 +276,7 @@ void MonocularVisualOdometry::estimatePose(
   // **** parameters **********************************************************
   
   bool draw_image_pair        = true;
+  bool draw_virtual_depth_img = false;
   bool draw_candidate_matches = false;
   bool draw_inlier_matches    = true; 
   
@@ -288,6 +296,15 @@ void MonocularVisualOdometry::estimatePose(
     cv::namedWindow("Monocular Image", 0);
     cv::imshow("Virtual Image", virtual_img);
     cv::imshow("Monocular Image", mono_img_resized);
+//    if(debug_mode_)
+//      cv::waitKey(0); // Pause on each frame
+//    else
+      cv::waitKey(1);
+  }
+  if(draw_virtual_depth_img)
+  {
+    cv::namedWindow("Virtual Depth", 0);
+    cv::imshow("Virtual Depth", virtual_depth_img);
     cv::waitKey(1);
   }
   
@@ -300,7 +317,7 @@ void MonocularVisualOdometry::estimatePose(
   // mask for virtual image - masks empty areas
   cv::Mat virtual_img_mask;
   virtual_depth_img.convertTo(virtual_img_mask, CV_8U);
-  
+
   // feature detection
   cv::SurfFeatureDetector feature_detector(detector_threshold_);
   std::vector<cv::KeyPoint> keypoints_virtual, keypoints_mono;
@@ -314,7 +331,7 @@ void MonocularVisualOdometry::estimatePose(
   descriptor_extractor.compute(mono_img_resized, keypoints_mono, descriptors_mono);
   
   ros::WallTime end_detect = ros::WallTime::now();  
-  
+
   // **** Feature matching
   ros::WallTime start_match = ros::WallTime::now();
 
@@ -358,6 +375,7 @@ void MonocularVisualOdometry::estimatePose(
         corr_2D_points_vector.push_back(point2f_mono);
 
         Vector3f p;
+        // FIXME: Reshift (x, y) points back in order to project with intrinsic as 3D points
         p(0,0) = point2f_virtual.x * z;
         p(1,0) = point2f_virtual.y * z;
         p(2,0) = z;
@@ -391,8 +409,11 @@ void MonocularVisualOdometry::estimatePose(
 
   // Fix max inliers count to be reasonable within number of descriptors
   int number_of_candidate_matches = candidate_matches.size();
+  int minimum_inliers_for_RANSAC;
   if(number_of_candidate_matches < min_inliers_count_)
-    min_inliers_count_ = number_of_candidate_matches; // update minimum
+    minimum_inliers_for_RANSAC = number_of_candidate_matches;
+  else
+    minimum_inliers_for_RANSAC = min_inliers_count_;
 
   ros::WallTime end_match = ros::WallTime::now();
     
@@ -407,68 +428,75 @@ void MonocularVisualOdometry::estimatePose(
 
   std::vector<int> inliers_indices;
 
-  cv::solvePnPRansac(
-    corr_3D_points_vector, 
-    corr_2D_points_vector, M, cv::Mat(), 
-    rvec, tvec, false,
-    max_ransac_iterations_, max_reproj_error_, 
-    min_inliers_count_, inliers_indices,
-//    CV_EPNP);
-    CV_ITERATIVE);
-  
-  if(draw_inlier_matches)
+  if(minimum_inliers_for_RANSAC > 5) // For at least a P5P
   {
-    std::vector<cv::DMatch> inliers_matches;
+    cv::solvePnPRansac(
+        corr_3D_points_vector,
+        corr_2D_points_vector, M, cv::Mat(),
+        rvec, tvec, false,
+        max_ransac_iterations_, max_reproj_error_,
+        minimum_inliers_for_RANSAC, inliers_indices,
+            CV_EPNP);
+//        CV_ITERATIVE);
 
-    for (unsigned int m_idx = 0; m_idx < inliers_indices.size(); ++m_idx)
+    if(draw_inlier_matches)
     {
-      cv::DMatch match = candidate_matches[inliers_indices[m_idx]];
-      inliers_matches.push_back(match);
+      std::vector<cv::DMatch> inliers_matches;
+
+      for (unsigned int m_idx = 0; m_idx < inliers_indices.size(); ++m_idx)
+      {
+        cv::DMatch match = candidate_matches[inliers_indices[m_idx]];
+        inliers_matches.push_back(match);
+      }
+
+      cv::Mat virtual_img_copy = virtual_img.clone();
+      cv::Mat mono_img_copy    = mono_img_resized.clone();
+
+      cv::Mat matches_result_img;
+      cv::drawMatches(
+          mono_img_copy,    keypoints_mono,     // Query image and its keypoints
+          virtual_img_copy, keypoints_virtual,  // Train image and its keypoints
+          inliers_matches,
+          matches_result_img);
+
+      cv::namedWindow("Inlier matches", 0);
+      cv::imshow("Inlier matches", matches_result_img);
+      cv::waitKey(1);
     }
-    
-    cv::Mat virtual_img_copy = virtual_img.clone();
-    cv::Mat mono_img_copy    = mono_img_resized.clone();
 
-    cv::Mat matches_result_img;
-    cv::drawMatches(
-        mono_img_copy,    keypoints_mono,     // Query image and its keypoints
-        virtual_img_copy, keypoints_virtual,  // Train image and its keypoints
-        inliers_matches, 
-        matches_result_img);
+    if((int) inliers_indices.size() < minimum_inliers_for_RANSAC)
+      return; // Just exit without updating pose
 
-    cv::namedWindow("Inlier matches", 0);
-    cv::imshow("Inlier matches", matches_result_img);
-    cv::waitKey(1);
+    cv::Rodrigues(rvec, rmat);
+    tf::Transform pnp_extr;
+    openCVRtToTf(rmat, tvec, pnp_extr);
+    tf::Transform transform_est = pnp_extr.inverse();
+
+    ros::WallTime end_pnp = ros::WallTime::now();
+
+    // **** update poses ******************************************************
+
+    tf::Transform f2c_new = f2c * transform_est;
+    f2b_ = f2c_new * b2c_.inverse();
+    publishTransform(f2b_, fixed_frame_, base_frame_);
+
+    ros::WallTime end = ros::WallTime::now();
+
+    // **** profiling *********************************************************
+
+    double dur_proj   = 1000.0 * (end_proj   - start_proj).toSec();
+    double dur_detect = 1000.0 * (end_detect - start_detect).toSec();
+    double dur_match  = 1000.0 * (end_match  - start_match).toSec();
+    double dur_pnp    = 1000.0 * (end_pnp    - start_pnp).toSec();
+    double dur        = 1000.0 * (end        - start).toSec();
+
+    printf("[%d] Proj %.1f Det[%d][%d]: %.1f Match[%d][%d][%d]: %.1f PnP: %.1f TOTAL: %.1f\n",
+           frame_count_, dur_proj,
+           (int)keypoints_virtual.size(), (int)keypoints_mono.size(), dur_detect,
+           (int)all_matches.size(), (int)candidate_matches.size(), (int)inliers_indices.size(),
+           dur_match, dur_pnp, dur);
   }
 
-  cv::Rodrigues(rvec, rmat);
-  tf::Transform pnp_extr;
-  openCVRtToTf(rmat, tvec, pnp_extr);
-  tf::Transform transform_est = pnp_extr.inverse();
-  
-  ros::WallTime end_pnp = ros::WallTime::now();
-   
-  // **** update poses ******************************************************
-
-  tf::Transform f2c_new = f2c * transform_est; 
-  f2b_ = f2c_new * b2c_.inverse(); 
-  publishTransform(f2b_, fixed_frame_, base_frame_);
-  
-  ros::WallTime end = ros::WallTime::now();
-  
-  // **** profiling *********************************************************
-  
-  double dur_proj   = 1000.0 * (end_proj   - start_proj).toSec();
-  double dur_detect = 1000.0 * (end_detect - start_detect).toSec();
-  double dur_match  = 1000.0 * (end_match  - start_match).toSec();
-  double dur_pnp    = 1000.0 * (end_pnp    - start_pnp).toSec();
-  double dur        = 1000.0 * (end        - start).toSec();
-  
-  printf("[%d] Proj %.1f Det[%d][%d]: %.1f Match[%d][%d][%d]: %.1f PnP: %.1f TOTAL: %.1f\n",
-    frame_count_, dur_proj, 
-    (int)keypoints_virtual.size(), (int)keypoints_mono.size(), dur_detect,
-    (int)all_matches.size(), (int)candidate_matches.size(), (int)inliers_indices.size(), 
-    dur_match, dur_pnp, dur);
 }
 
 void MonocularVisualOdometry::publishTransform(const tf::Transform &source2target_transform, const std::string& source_frame_id, const std::string& target_frame_id)
