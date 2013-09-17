@@ -509,7 +509,8 @@ void projectCloudToImage(const PointCloudT& cloud,
    
     // transforms into the camera frame  
     Vector3f p_cam = rmat * p_world + tvec; 
-    double depth = p_cam(2,0) * 1000.0;       //depth in millimiter
+//    double depth = p_cam(2,0) * 1000.0;       //depth in millimiters
+    double depth = p_cam(2,0);       //depth in meters
     
     if (depth <= 0) continue;
 

@@ -45,8 +45,8 @@
    
     <param name="apps/mono_vo/image_width"                   value="320" /> 
     <param name="apps/mono_vo/image_height"                  value="240" /> 
-    <param name="apps/mono_vo/virtual_image_width"           value="400" /> # Or 360, 400 
-    <param name="apps/mono_vo/virtual_image_height"          value="300" /> # Or 270, 300 
+    <param name="apps/mono_vo/virtual_image_width"           value="640" /> # Or 360, 400, 440 
+    <param name="apps/mono_vo/virtual_image_height"          value="300" /> # Or 270, 300, 330 
    
     <!-- works for 0.2 speed (7 FPS)
     <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
@@ -86,12 +86,24 @@
     <param name="apps/mono_vo/virtual_image_fill"            value="3"/>    
     -->
     
+    <!--
     # New office map
+    # BAD BAD BAD
     <param name="apps/mono_vo/max_ransac_iterations"         value="2000"/>
-    <param name="apps/mono_vo/min_inliers_count"             value="30"/> # It's also the minimum number of matches allowed
-    <param name="apps/mono_vo/max_reproj_error"              value="10"/>  
-    <param name="apps/mono_vo/detector_threshold"            value="1000" /> 
-    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.7" /> 
+    <param name="apps/mono_vo/min_inliers_count"             value="20"/> # It's also the minimum number of matches allowed
+    <param name="apps/mono_vo/max_reproj_error"              value="6"/>  
+    <param name="apps/mono_vo/detector_threshold"            value="500" /> 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
+    <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
+    <param name="apps/mono_vo/virtual_image_fill"            value="5"/>    
+    -->
+    
+    # Baby's room
+    <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
+    <param name="apps/mono_vo/min_inliers_count"             value="15"/> # It's also the minimum number of matches allowed
+    <param name="apps/mono_vo/max_reproj_error"              value="8"/>  
+    <param name="apps/mono_vo/detector_threshold"            value="1500" /> # Higher number finds fewer, but more robust features 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.75" /> 
     <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
     <param name="apps/mono_vo/virtual_image_fill"            value="5"/>    
     

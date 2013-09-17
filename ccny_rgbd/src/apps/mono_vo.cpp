@@ -366,11 +366,12 @@ void MonocularVisualOdometry::estimatePose(
       int virtual_u = (int)(point2f_virtual.x);
       int virtual_v = (int)(point2f_virtual.y);
       
-      uint16_t depth = virtual_depth_img.at<uint16_t>(virtual_v, virtual_u);
+      uint16_t depth = virtual_depth_img.at<uint16_t>(virtual_v, virtual_u); // at(row,col)
 
       if(depth > 0)
       {
-        float z = depth / 1000.0;
+        // float z = depth / 1000.0; // Convert depth in mm to meters
+        float z = depth; // Convert depth in meters
         
         candidate_matches.push_back(match);
         corr_2D_points_vector.push_back(point2f_mono);
@@ -379,8 +380,8 @@ void MonocularVisualOdometry::estimatePose(
         // Shift (x, y) points back (using the margin offset)
         // in order to project with intrinsic matrix into valid 3D points
         // FIXME: wrong offset?
-        p(0,0) = (point2f_virtual.x - virtual_margin_offset_.height) * z;
-        p(1,0) = (point2f_virtual.y - virtual_margin_offset_.width )* z;
+        p(0,0) = (point2f_virtual.x - virtual_margin_offset_.width) * z;
+        p(1,0) = (point2f_virtual.y - virtual_margin_offset_.height)* z;
         p(2,0) = z;
 
         Vector3f P = intr_inv * p;
@@ -439,8 +440,11 @@ void MonocularVisualOdometry::estimatePose(
         rvec, tvec, false,
         max_ransac_iterations_, max_reproj_error_,
         minimum_inliers_for_RANSAC, inliers_indices,
-            CV_EPNP);
-//        CV_ITERATIVE);
+//            CV_EPNP);
+        CV_ITERATIVE);
+
+    if((int) inliers_indices.size() < minimum_inliers_for_RANSAC)
+      return; // Just exit without updating pose
 
     if(draw_inlier_matches)
     {
@@ -466,9 +470,6 @@ void MonocularVisualOdometry::estimatePose(
       cv::imshow("Inlier matches", matches_result_img);
       cv::waitKey(1);
     }
-
-    if((int) inliers_indices.size() < minimum_inliers_for_RANSAC)
-      return; // Just exit without updating pose
 
     cv::Rodrigues(rvec, rmat);
     tf::Transform pnp_extr;
