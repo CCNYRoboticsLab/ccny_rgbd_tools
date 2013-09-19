@@ -509,21 +509,21 @@ void projectCloudToImage(const PointCloudT& cloud,
    
     // transforms into the camera frame  
     Vector3f p_cam = rmat * p_world + tvec; 
-//    double depth = p_cam(2,0) * 1000.0;       //depth in millimiters
+    //double depth = p_cam(2,0) * 1000.0;       //depth in millimiters
     double depth = p_cam(2,0);       //depth in meters
     
     if (depth <= 0) continue;
 
     //projection into the imiage plane
 
-    Vector3f p_proj = intrinsic * p_cam; // HACKED
+    Vector3f p_proj = intrinsic * p_cam;
     double z_proj = p_proj(2,0);
 
     int u = (p_proj(0,0))/z_proj;
     int v = (p_proj(1,0))/z_proj;
     
-    int u_offset = u + left_margin_offset;
-    int v_offset = v + top_margin_offset;
+    int u_offset = u + left_margin_offset; // Cols or x-axis
+    int v_offset = v + top_margin_offset;  // Rows or y-axis
 
     //takes only the visible points  
     if( (u_offset>=0) && (u_offset<width)
@@ -534,6 +534,7 @@ void projectCloudToImage(const PointCloudT& cloud,
       color_rgb[1] = point.g;
       color_rgb[2] = point.r;
 
+      // Note: "syntax" at(row,col)
       // Depth buffers:
       if (depth_img.at<uint16_t>(v_offset,u_offset) == 0)
       {

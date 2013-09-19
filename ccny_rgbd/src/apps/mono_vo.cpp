@@ -242,7 +242,7 @@ void MonocularVisualOdometry::imageCallback(
 
     virtual_margin_offset_ = cv::Size((virtual_image_width_-image_width_)/2,
                                       (virtual_image_height_-image_height_)/2);
-
+    ROS_INFO("Virtual margin offset: width=%d px, height=%d", virtual_margin_offset_.width, virtual_margin_offset_.height);
     // Rescale intrinsic
     float scale_factor_intrinsic;
     scale_factor_intrinsic =  (float) image_width_ / (float) cam_model_.width();
@@ -370,7 +370,7 @@ void MonocularVisualOdometry::estimatePose(
 
       if(depth > 0)
       {
-        // float z = depth / 1000.0; // Convert depth in mm to meters
+        //float z = depth / 1000.0; // Convert depth in mm to meters
         float z = depth; // Convert depth in meters
         
         candidate_matches.push_back(match);

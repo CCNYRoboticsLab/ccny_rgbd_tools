@@ -1,31 +1,36 @@
 <!-- RGB-D Monocual Visual Odometry -->
 
 <launch>
+  <!-- 
   # Carlos' baby room
   <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
   <arg name="BAG_NAME" value="carlos_baby_02-short" /> # Bag name only (Without .bag extension)
-  <!-- 
+  -->
   # Office
   <arg name="PATH_TO_BAG" value="$(env HOME)/ros/bags/rgbd" />
+  <arg name="BAG_NAME" value="ccny_room" /> # Bag name only (Without .bag extension)
+  <!--
+  # Better office
   <arg name="BAG_NAME" value="ccny_office" /> # Bag name only (Without .bag extension)
   -->
-
+  
   # Carlos' baby room
+  <!-- 
   <arg name="PATH_TO_PCD" value="$(env HOME)/ros/PCDs" />
   <arg name="PCD_NAME" value="carlos_baby_02.pcd" /> # PCD file name (with .pcd extension)
+  -->
   # Office
-  <!-- 
-  <arg name="PATH_TO_PCD" default="$(env HOME)/ros/Maps/3D/CCNY Office 640/PCD" />
-  <arg name="PCD_NAME" default="ccny_office_640_loop.pcd" /> # PCD file name (with .pcd extension)
   <arg name="PATH_TO_PCD" default="$(env HOME)/ros/PCDs" />
+  <arg name="PCD_NAME" default="ccny_room.pcd" /> # PCD file name (with .pcd extension)
+  <!-- 
   <arg name="PCD_NAME" default="ccny_office_1m.pcd" /> # PCD file name (with .pcd extension)
   -->
   
   <arg name="FULL_BAG_NAME" value="$(arg PATH_TO_BAG)/$(arg BAG_NAME)" /> # Without extension
   <arg name="FULL_PCD_NAME" value="$(arg PATH_TO_PCD)/$(arg PCD_NAME)" />
 
-  # To adjust the playback speed and delay
-  <arg name="BAG_PLAY_START" value="0.0" /> # Delay in seconds to start the bag's playback
+  # To adjust the playback speed and start point
+  <arg name="BAG_PLAY_START" value="0.0" /> # Point in seconds to start the bag's playback
   <arg name="BAG_PLAY_RATE" value="0.5" /> # Rate value in Hz? 1 is normal, 10 is faster, 0.1 is slower
   
   
