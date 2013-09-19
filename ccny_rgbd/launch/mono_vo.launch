@@ -57,8 +57,9 @@
     <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
     -->
     
-    # For old office at 1.0 speed (30 FPS)
     <!--
+    # For old office at 1.0 speed (30 FPS)
+    -->
     <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
     <param name="apps/mono_vo/min_inliers_count"             value="50"/>
     <param name="apps/mono_vo/max_reproj_error"              value="2"/>   
@@ -66,16 +67,15 @@
     <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
     <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
     <param name="apps/mono_vo/virtual_image_fill"            value="3"/>    
-    -->
     
-    <!-- works for 0.5 speed (15 FPS)
-    -->
+    <!-- For 0.5 speed (15 FPS)
     <param name="apps/mono_vo/max_ransac_iterations"         value="1000"/>
-    <param name="apps/mono_vo/min_inliers_count"             value="50"/>
+    <param name="apps/mono_vo/min_inliers_count"             value="10"/>
     <param name="apps/mono_vo/max_reproj_error"              value="2"/>   
     <param name="apps/mono_vo/detector_threshold"            value="800" /> 
-    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.5" /> 
+    <param name="apps/mono_vo/max_descriptor_space_distance" value="0.7" /> 
     <param name="apps/mono_vo/virtual_image_blur"            value="3"/>
+    -->
 
     <!-- For Freigburg bags:
     <param name="apps/mono_vo/max_ransac_iterations"         value="500"/>

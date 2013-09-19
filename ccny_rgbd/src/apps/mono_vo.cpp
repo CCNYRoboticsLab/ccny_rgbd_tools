@@ -411,6 +411,7 @@ void MonocularVisualOdometry::estimatePose(
     cv::imshow("Matches FLANN", matches_result_img);
   }
 
+  /*
   // Fix max inliers count to be reasonable within number of descriptors
   int number_of_candidate_matches = candidate_matches.size();
   int minimum_inliers_for_RANSAC;
@@ -445,6 +446,36 @@ void MonocularVisualOdometry::estimatePose(
 
     if((int) inliers_indices.size() < minimum_inliers_for_RANSAC)
       return; // Just exit without updating pose
+*/
+
+  // vvvvvvvvvvvvvvv Original project in December vvvvvvvvvvvvvvvvv
+
+  // Fix max inliers count to be reasonable within number of descriptors
+    int number_of_candidate_matches = candidate_matches.size();
+    if(number_of_candidate_matches < min_inliers_count_)
+      min_inliers_count_ = number_of_candidate_matches; // update minimum
+
+    ros::WallTime end_match = ros::WallTime::now();
+
+    // **** transformation computation with PnP
+    ros::WallTime start_pnp = ros::WallTime::now();
+
+    cv::Mat M; // The intrinsic matrix
+    cv3x3FromEigen(intrinsic_matrix_, M);
+
+    cv::Mat rvec, rmat;
+    cv::Mat tvec;
+
+    std::vector<int> inliers_indices;
+
+    cv::solvePnPRansac(
+      corr_3D_points_vector,
+      corr_2D_points_vector, M, cv::Mat(),
+      rvec, tvec, false,
+      max_ransac_iterations_, max_reproj_error_,
+      min_inliers_count_, inliers_indices,
+      CV_EPNP);
+    // ^^^^^^^^^^^^^^^^ Original project in December ^^^^^^^^^^^^^
 
     if(draw_inlier_matches)
     {
@@ -499,7 +530,8 @@ void MonocularVisualOdometry::estimatePose(
            (int)keypoints_virtual.size(), (int)keypoints_mono.size(), dur_detect,
            (int)all_matches.size(), (int)candidate_matches.size(), (int)inliers_indices.size(),
            dur_match, dur_pnp, dur);
-  }
+  // TODO: ending of commented block if RANSAC ... /* } */
+
 
 }
 
