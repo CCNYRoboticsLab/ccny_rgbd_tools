@@ -3,6 +3,7 @@ ccny_rgbd changelist
 
 current
 ------------------------
+ * added new g2o interface (can use libg2o)
  * added camera path saving and loading in keyframe_mapper
 
 0.2.0        (4/15/2013)
