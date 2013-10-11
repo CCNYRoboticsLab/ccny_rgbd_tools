@@ -298,7 +298,9 @@ void RGBDImageProc::RGBDCallback(
     cloud_ptr.reset(new PointCloudT());
     rgbdtools::buildPointCloud(
       depth_img_rect_reg, rgb_img_rect, intr_rect_rgb_, *cloud_ptr);
-    cloud_ptr->header = rgb_info_msg->header;
+    // The point cloud timestamp, int usec.
+    cloud_ptr->header.stamp = rgb_info_msg->header.stamp.toNSec() * 1e-3;
+    cloud_ptr->header.frame_id = rgb_info_msg->header.frame_id;
     cloud_publisher_.publish(cloud_ptr);
     dur_cloud = getMsDuration(start_cloud);
   }
