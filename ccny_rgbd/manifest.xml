@@ -9,7 +9,6 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ccny_rgbd</url>
   <depend package="roscpp"/>
-  <depend package="pcl"/>
   <depend package="pcl_ros"/>
   <depend package="nav_msgs"/>
   <depend package="std_srvs"/>
@@ -25,6 +24,7 @@
   <depend package="lib_rgbdtools"/>
       
   <rosdep name="octomap" />
+  <rosdep name="libg2o" />
 
   <export>
     <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp" lflags="-L${prefix}/lib/ -Wl,-rpath,${prefix}/lib -lros"/>
