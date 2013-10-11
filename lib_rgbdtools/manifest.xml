@@ -8,15 +8,12 @@
   <license>GPL</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/lib_rgbdtools</url>
-  
-  <depend package="ccny_g2o"/>
-  
+
   <rosdep name="suitesparse" />
-  
+ 
   <export>
-    <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib"/>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib"/>
   </export>
 
 </package>
-
 
