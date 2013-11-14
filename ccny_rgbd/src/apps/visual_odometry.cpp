@@ -380,7 +380,7 @@ void VisualOdometry::publishOdom(const std_msgs::Header& header)
                     0, 0, zz , 0, 0, 0,
                     0, 0, 0, yawyaw , 0, 0,
                     0, 0, 0, 0, pitchpitch , 0,
-                    0, 0, 0, 0, rollroll}};
+                    0, 0, 0, 0, 0, rollroll}};
   odom.pose.covariance=pose_covariance;
   tf::poseTFToMsg(f2b_, odom.pose.pose);
   odom_publisher_.publish(odom);
