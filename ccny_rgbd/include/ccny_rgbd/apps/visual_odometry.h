@@ -126,6 +126,16 @@ class VisualOdometry
     bool publish_model_cloud_;
     bool publish_model_cov_;    
     
+    /**
+    *   This is the pose covariance matrix
+    */
+    double xx;
+    double yy;
+    double zz;
+    double yawyaw;
+    double pitchpitch;
+    double rollroll;
+
     /** @brief Feature detector type parameter
      * 
      * Possible values:
