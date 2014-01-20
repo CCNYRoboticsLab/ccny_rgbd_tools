@@ -59,7 +59,7 @@
     #### registration #################################
 
     <param name="reg/reg_type"          value="$(arg reg_type)"/>
-    <param name="reg/motion_constraint" value="0"/>
+    <param name="reg/motion_constraint" value="2"/>
 
     #### registration: ICP Prob Model #################
 

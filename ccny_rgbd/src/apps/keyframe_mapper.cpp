@@ -48,6 +48,7 @@ KeyframeMapper::KeyframeMapper(
     "keyframe_associations", queue_size_);
   path_pub_ = nh_.advertise<PathMsg>( 
     "mapper_path", queue_size_);
+  pose_correction_pub_ = nh_.advertise<geometry_msgs::Transform>("pose_correction_tfs", queue_size_);
   
   // **** services
   
@@ -117,14 +118,17 @@ void KeyframeMapper::initParams()
     max_stdev_  = 0.03;
   if (!nh_private_.getParam ("max_map_z", max_map_z_))
     max_map_z_ = std::numeric_limits<double>::infinity();
-   
+  if (!nh_private_.getParam ("online_graph_opt", online_graph_opt_))
+    online_graph_opt_ = false; 
+
+
   // configure graph detection 
     
   int graph_n_keypoints;        
   int graph_n_candidates;
   int graph_k_nearest_neighbors;
   bool graph_matcher_use_desc_ratio_test = true;
-    
+
   if (!nh_private_.getParam ("graph/n_keypoints", graph_n_keypoints))
     graph_n_keypoints = 500;
   if (!nh_private_.getParam ("graph/n_candidates", graph_n_candidates))
@@ -140,6 +144,8 @@ void KeyframeMapper::initParams()
   graph_detector_.setSACReestimateTf(false);
   graph_detector_.setSACSaveResults(false);
   graph_detector_.setVerbose(verbose);
+
+  aggregatedPoseCorrection_.setIdentity();
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -147,6 +153,7 @@ void KeyframeMapper::RGBDCallback(
   const ImageMsg::ConstPtr& depth_msg,
   const CameraInfoMsg::ConstPtr& info_msg)
 {
+  //ROS_INFO("RGBDCallback called.");
   tf::StampedTransform transform;
 
   const ros::Time& time = rgb_msg->header.stamp;
@@ -226,15 +233,72 @@ void KeyframeMapper::addKeyframe(
 {
   rgbdtools::RGBDKeyframe keyframe(frame);
   keyframe.pose = pose;
-  
+  int associations_prev = associations_.size();
+
   if (manual_add_)
   {
     ROS_INFO("Adding frame manually");
     manual_add_ = false;
     keyframe.manually_added = true;
   }
+
+  if(online_graph_opt_){
+    //First extract and add keypoints/features to keyframe
+    ROS_INFO("Extracting keypoints...");
+    graph_detector_.extractFeatures(keyframe);
+  }
+
+  //Add keyframe to keyframevector
   keyframes_.push_back(keyframe); 
+
+  //Record the odometry measured between consecutive keyframes (only if more than one keyframe exists)
+  if(keyframes_.size()>1){
+    rgbdtools::KeyframeAssociation odometryEdge;
+
+    int from_idx = keyframes_.size() - 2; 
+    int to_idx = keyframes_.size() - 1;
+
+    const AffineTransform& from_pose = keyframes_[from_idx].pose;
+    const AffineTransform& to_pose   = keyframes_[to_idx].pose;
+    AffineTransform tf = from_pose.inverse() * to_pose;
+
+    odometryEdge.kf_idx_a = from_idx;
+    odometryEdge.kf_idx_b = to_idx;
+    odometryEdge.a2b = tf;
+
+    odometryEdges_.push_back(odometryEdge);
+  }
+
+  if(online_graph_opt_){
+    graph_detector_.prepareMatcher(keyframes_);
+    //ROS_INFO("Keyframe associations being checked...");
+    graph_detector_.onlineLoopClosureDetector(keyframes_, associations_);
+    ROS_INFO("Number of associations :%d", (int)associations_.size());
+    if(associations_.size()>associations_prev){
+      graph_solver_.solve(keyframes_, associations_,odometryEdges_);
+      updatePathFromKeyframePoses();
+  
+      publishPath();
+      publishKeyframePoses();
+      publishKeyframeAssociations();
+
+      //Calculate and publish pose correction
+      AffineTransform poseCorrection;
+      poseCorrection = pose.inverse() * keyframes_[keyframes_.size()-1].pose;
+      aggregatedPoseCorrection_=poseCorrection * aggregatedPoseCorrection_;
+      publishAggregatedPoseCorrection();
+
+    }
+  }
 }
+
+void KeyframeMapper::publishAggregatedPoseCorrection(){
+  geometry_msgs::Transform msg;
+  tf::Transform correctiontf = tfFromEigenAffine(aggregatedPoseCorrection_);
+  tf::transformTFToMsg(correctiontf,msg);
+  pose_correction_pub_.publish(msg);
+}
+
 
 bool KeyframeMapper::publishKeyframeSrvCallback(
   PublishKeyframe::Request& request,
@@ -545,7 +609,7 @@ bool KeyframeMapper::solveGraphSrvCallback(
   ros::WallTime start = ros::WallTime::now();
   
   // Graph solving: keyframe positions only, path is interpolated
-  graph_solver_.solve(keyframes_, associations_);
+  graph_solver_.solve(keyframes_, associations_,odometryEdges_);
   updatePathFromKeyframePoses();
     
   // Graph solving: keyframe positions and VO path

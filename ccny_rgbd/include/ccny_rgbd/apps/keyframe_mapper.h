@@ -204,6 +204,7 @@ class KeyframeMapper
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
     ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
+    ros::Publisher pose_correction_pub_; ///< ROS publisher for the pose correction transform
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
@@ -257,7 +258,8 @@ class KeyframeMapper
     double octomap_res_;  ///< tree resolution for octomap (in meters)
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
-    bool octomap_with_color_; ///< whetehr to save Octomaps with color info      
+    bool octomap_with_color_; ///< whetehr to save Octomaps with color info 
+    bool online_graph_opt_; //Whether or not to do online graph optimization and association checking  
     double max_map_z_;   ///< maximum z (in fixed frame) when exporting maps.
           
     // state vars
@@ -269,8 +271,11 @@ class KeyframeMapper
     rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement
 
     rgbdtools::KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
+    rgbdtools::KeyframeAssociationVector odometryEdges_; ///< odometry measurements between keyframes in the graph
     
     PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
+
+    AffineTransform aggregatedPoseCorrection_;
     
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted
@@ -377,6 +382,8 @@ class KeyframeMapper
     bool loadPath(const std::string& filepath);
     
     void updatePathFromKeyframePoses();
+
+    void publishAggregatedPoseCorrection();
 };
 
 } // namespace ccny_rgbd
