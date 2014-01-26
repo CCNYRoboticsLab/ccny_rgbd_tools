@@ -81,6 +81,7 @@ class KeyframeGraphDetector
     void setCandidateGenerationMethod(CandidateGenerationMethod candidate_method);
     void setPairwiseMatchingMethod(PairwiseMatchingMethod pairwsie_matching_method);
     void setPairwiseMatcherIndex(PairwiseMatcherIndex pairwsie_matcher_index);
+    void setRANSACMinTemporalDistance(int graph_min_temporal_distance);
     
     void setMatcherUseDescRatioTest(bool matcher_use_desc_ratio_test);
     void setMatcherMaxDescRatio(double matcher_max_desc_ratio);
@@ -118,6 +119,10 @@ class KeyframeGraphDetector
     void prepareMatcher(KeyframeVector &keyframes);
 
    private:
+       double surf_threshold;
+    int edot;
+    int eintegral;
+    int e;
 
     bool verbose_;
      
@@ -176,6 +181,12 @@ class KeyframeGraphDetector
     int n_keypoints_;
     
     double init_surf_threshold_;
+
+    int RANSAC_min_temporal_distance_;
+
+    bool motion_constraint_;
+
+    void constrainMotion(Eigen::Matrix4f& motionEig);
     
     /** @brief TREE of BRUTE_FORCE */
     CandidateGenerationMethod candidate_method_;
@@ -211,7 +222,6 @@ class KeyframeGraphDetector
     void buildCandidateMatrixSurfTree();
 
     
-    
     void buildCorrespondenceMatrix(
       const KeyframeVector& keyframes,
       KeyframeAssociationVector& associations);
@@ -243,6 +253,8 @@ class KeyframeGraphDetector
       const KeyframeVector& keyframes);
 
     cv::FlannBasedMatcher trainMatcher(const RGBDKeyframe& keyframe);
+
+
     
 };
 

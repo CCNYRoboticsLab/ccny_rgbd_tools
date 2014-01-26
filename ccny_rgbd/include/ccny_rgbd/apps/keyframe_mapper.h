@@ -32,6 +32,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/regex.hpp>
@@ -173,6 +174,10 @@ class KeyframeMapper
     bool solveGraphSrvCallback(
       SolveGraph::Request& request,
       SolveGraph::Response& response);
+
+    /** @brief Publishes a voxel grid filtered point cloud map from the current keyframe positions
+     */
+    void publishMap(void);
     
   protected:
 
@@ -252,6 +257,10 @@ class KeyframeMapper
    
     /** @brief Camera info message subscriber */
     CameraInfoSubFilter sub_info_;
+
+    ros::Subscriber odom_sub_;
+    float angularVelocity_;
+    void updateOdom(const nav_msgs::Odometry & odom_msg);
     
     // params
     double pcd_map_res_; ///< downsampling resolution of pcd map (in meters)
@@ -276,6 +285,8 @@ class KeyframeMapper
     PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
 
     AffineTransform aggregatedPoseCorrection_;
+
+    std::vector<AffineTransform> uncorrected_keyframe_poses_;
     
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted

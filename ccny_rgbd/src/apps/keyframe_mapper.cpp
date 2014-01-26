@@ -80,6 +80,8 @@ KeyframeMapper::KeyframeMapper(
   sub_depth_.subscribe(depth_it, "/rgbd/depth", queue_size_);
   sub_info_.subscribe(nh_,       "/rgbd/info",  queue_size_);
 
+  odom_sub_ = nh_.subscribe("/odom", 1, &KeyframeMapper::updateOdom,this);
+
   // Synchronize inputs.
   sync_.reset(new RGBDSynchronizer3(
                 RGBDSyncPolicy3(queue_size_), sub_rgb_, sub_depth_, sub_info_));
@@ -127,6 +129,7 @@ void KeyframeMapper::initParams()
   int graph_n_keypoints;        
   int graph_n_candidates;
   int graph_k_nearest_neighbors;
+  int graph_min_temporal_distance;
   bool graph_matcher_use_desc_ratio_test = true;
 
   if (!nh_private_.getParam ("graph/n_keypoints", graph_n_keypoints))
@@ -135,17 +138,25 @@ void KeyframeMapper::initParams()
     graph_n_candidates = 15;
   if (!nh_private_.getParam ("graph/k_nearest_neighbors", graph_k_nearest_neighbors))
     graph_k_nearest_neighbors = 4;
+  if (!nh_private_.getParam ("graph/min_temporal_distance_for_RANSAC", graph_min_temporal_distance))
+    graph_min_temporal_distance = 2;
   
   graph_detector_.setNKeypoints(graph_n_keypoints);
   graph_detector_.setNCandidates(graph_n_candidates);   
   graph_detector_.setKNearestNeighbors(graph_k_nearest_neighbors);    
   graph_detector_.setMatcherUseDescRatioTest(graph_matcher_use_desc_ratio_test);
+  graph_detector_.setRANSACMinTemporalDistance(graph_min_temporal_distance);
   
   graph_detector_.setSACReestimateTf(false);
   graph_detector_.setSACSaveResults(false);
   graph_detector_.setVerbose(verbose);
 
   aggregatedPoseCorrection_.setIdentity();
+}
+
+void KeyframeMapper::updateOdom(const nav_msgs::Odometry & odom_msg){
+  angularVelocity_ = odom_msg.twist.twist.angular.z; 
+  //printf("Angular velocity %f \n", angularVelocity_);
 }
   
 void KeyframeMapper::RGBDCallback(
@@ -189,7 +200,9 @@ bool KeyframeMapper::processFrame(
 {
   // add the frame pose to the path vector
   geometry_msgs::PoseStamped frame_pose; 
-  tf::Transform frame_tf = tfFromEigenAffine(pose);
+
+  //Correct the pose!
+  tf::Transform frame_tf = tfFromEigenAffine(aggregatedPoseCorrection_  * pose);
   tf::poseTFToMsg(frame_tf, frame_pose.pose);
  
   // update the header of the pose for the path
@@ -210,15 +223,26 @@ bool KeyframeMapper::processFrame(
   else
   {
     double dist, angle;
-    getTfDifference(tfFromEigenAffine(pose), 
+    getTfDifference(tfFromEigenAffine(aggregatedPoseCorrection_ *pose), 
                     tfFromEigenAffine(keyframes_.back().pose), 
                     dist, angle);
 
-    if (dist > kf_dist_eps_ || angle > kf_angle_eps_)
+    if (dist > kf_dist_eps_ || angle > kf_angle_eps_){
       result = true;
-    else 
+    }
+    else{ 
       result = false;
+    }
   }
+
+  if(fabs(angularVelocity_)>0.2){
+        result = false;
+        printf("Angular velocity too large! Will not add keyframe \n");
+      }
+      else{
+        printf("Angular velocity: %f \n", angularVelocity_);
+      }
+  
 
   if (result)
   {
@@ -232,7 +256,9 @@ void KeyframeMapper::addKeyframe(
   const AffineTransform& pose)
 {
   rgbdtools::RGBDKeyframe keyframe(frame);
-  keyframe.pose = pose;
+  //Apply correction to pose
+  keyframe.pose = aggregatedPoseCorrection_ * pose;
+  uncorrected_keyframe_poses_.push_back(pose);
   int associations_prev = associations_.size();
 
   if (manual_add_)
@@ -258,8 +284,8 @@ void KeyframeMapper::addKeyframe(
     int from_idx = keyframes_.size() - 2; 
     int to_idx = keyframes_.size() - 1;
 
-    const AffineTransform& from_pose = keyframes_[from_idx].pose;
-    const AffineTransform& to_pose   = keyframes_[to_idx].pose;
+    const AffineTransform& from_pose = uncorrected_keyframe_poses_[from_idx];
+    const AffineTransform& to_pose   = uncorrected_keyframe_poses_[to_idx];
     AffineTransform tf = from_pose.inverse() * to_pose;
 
     odometryEdge.kf_idx_a = from_idx;
@@ -284,8 +310,8 @@ void KeyframeMapper::addKeyframe(
 
       //Calculate and publish pose correction
       AffineTransform poseCorrection;
-      poseCorrection = pose.inverse() * keyframes_[keyframes_.size()-1].pose;
-      aggregatedPoseCorrection_=poseCorrection * aggregatedPoseCorrection_;
+      poseCorrection = keyframes_[keyframes_.size()-1].pose * uncorrected_keyframe_poses_[uncorrected_keyframe_poses_.size()-1].inverse() ;
+      aggregatedPoseCorrection_=poseCorrection;
       publishAggregatedPoseCorrection();
 
     }
@@ -324,7 +350,7 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   PublishKeyframes::Request& request,
   PublishKeyframes::Response& response)
 { 
-  bool found_match = false;
+  /*bool found_match = false;
 
   // regex matching - try match the request string against each
   // keyframe index
@@ -350,7 +376,9 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
 
   publishPath();
 
-  return found_match;
+  return found_match;*/
+  publishMap();
+  return true;
 }
 
 void KeyframeMapper::publishKeyframeData(int i)
@@ -368,6 +396,14 @@ void KeyframeMapper::publishKeyframeData(int i)
   cloud_ff.header.frame_id = fixed_frame_;
 
   keyframes_pub_.publish(cloud_ff);
+}
+
+void KeyframeMapper::publishMap(void)
+{
+  PointCloudT pcd_map;
+  buildPcdMap(pcd_map);
+
+  keyframes_pub_.publish(pcd_map);
 }
 
 void KeyframeMapper::publishKeyframeAssociations()
@@ -408,9 +444,9 @@ void KeyframeMapper::publishKeyframeAssociations()
     marker.points[idx_end].y = keyframe_b_pose.getOrigin().getY();
     marker.points[idx_end].z = keyframe_b_pose.getOrigin().getZ();
 
-    if (association.type == rgbdtools::KeyframeAssociation::VO)
+    if (association.type == rgbdtools::KeyframeAssociation::ODOMETRY)
     {
-      marker.ns = "VO";
+      marker.ns = "ODOMETRY";
       marker.scale.x = 0.002;
 
       marker.color.r = 0.0;
@@ -751,14 +787,23 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
   {
     const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
     
-    PointCloudT cloud;   
-    keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+    PointCloudT::Ptr cloud(new PointCloudT());   
+    keyframe.constructDensePointCloud(*cloud, max_range_, max_stdev_);
 
+    pcl::VoxelGrid<PointT> sor;
+    sor.setInputCloud(cloud);
+    sor.setLeafSize(pcd_map_res_, pcd_map_res_, pcd_map_res_);
+    sor.setFilterFieldName("z");
+    sor.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
+    PointCloudT cloud_filtered;
+    sor.filter(cloud_filtered);
     PointCloudT cloud_tf;
-    pcl::transformPointCloud(cloud, cloud_tf, keyframe.pose);
+
+    pcl::transformPointCloud(cloud_filtered, cloud_tf, keyframe.pose);
     cloud_tf.header.frame_id = fixed_frame_;
 
     *aggregate_cloud += cloud_tf;
+
   }
 
   // filter cloud using voxel grid, and for max z
