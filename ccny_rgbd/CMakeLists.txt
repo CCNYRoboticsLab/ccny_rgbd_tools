@@ -19,6 +19,9 @@ include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 # Generate services
 rosbuild_gensrv()
 
+#Generate Messages
+rosbuild_genmsg()
+
 # Generate dynamic parameters
 rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)

@@ -28,6 +28,7 @@
 #include <fstream>
 #include <ros/ros.h>
 #include <ros/publisher.h>
+#include <std_srvs/Empty.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
@@ -50,6 +51,7 @@
 #include "ccny_rgbd/PublishKeyframes.h"
 #include "ccny_rgbd/Save.h"
 #include "ccny_rgbd/Load.h"
+#include "ccny_rgbd/Keyframe.h"
 
 namespace ccny_rgbd {
 
@@ -206,10 +208,12 @@ class KeyframeMapper
   private:
 
     ros::Publisher keyframes_pub_;    ///< ROS publisher for the keyframe point clouds
+    ros::Publisher pcd_to_octomap_pub_;    ///< ROS publisher for keyframe poses and filtered point clouds
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
     ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
     ros::Publisher pose_correction_pub_; ///< ROS publisher for the pose correction transform
+
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
@@ -237,6 +241,8 @@ class KeyframeMapper
     
     /** @brief ROS service to add a manual keyframe */
     ros::ServiceServer add_manual_keyframe_service_;
+
+    ros::ServiceClient reset_octomap_client_;
 
     tf::TransformListener tf_listener_; ///< ROS transform listener
 
@@ -395,6 +401,10 @@ class KeyframeMapper
     void updatePathFromKeyframePoses();
 
     void publishAggregatedPoseCorrection();
+
+    void publishKeyframeClouds(void);
+
+    void updateOctoMapServer(void);
 };
 
 } // namespace ccny_rgbd

@@ -49,6 +49,12 @@ KeyframeMapper::KeyframeMapper(
   path_pub_ = nh_.advertise<PathMsg>( 
     "mapper_path", queue_size_);
   pose_correction_pub_ = nh_.advertise<geometry_msgs::Transform>("pose_correction_tfs", queue_size_);
+
+  pcd_to_octomap_pub_ = nh_.advertise<ccny_rgbd::Keyframe>("keyframes_to_octomap", 100);
+
+  // ***** service clients
+
+  reset_octomap_client_ = nh_.serviceClient<std_srvs::Empty>("reset");
   
   // **** services
   
@@ -260,6 +266,7 @@ void KeyframeMapper::addKeyframe(
   keyframe.pose = aggregatedPoseCorrection_ * pose;
   uncorrected_keyframe_poses_.push_back(pose);
   int associations_prev = associations_.size();
+  keyframe.storeFilteredPointCloud(max_range_,max_stdev_,pcd_map_res_);
 
   if (manual_add_)
   {
@@ -276,6 +283,7 @@ void KeyframeMapper::addKeyframe(
 
   //Add keyframe to keyframevector
   keyframes_.push_back(keyframe); 
+  publishKeyframePoses();
 
   //Record the odometry measured between consecutive keyframes (only if more than one keyframe exists)
   if(keyframes_.size()>1){
@@ -307,6 +315,7 @@ void KeyframeMapper::addKeyframe(
       publishPath();
       publishKeyframePoses();
       publishKeyframeAssociations();
+      updateOctoMapServer();
 
       //Calculate and publish pose correction
       AffineTransform poseCorrection;
@@ -381,17 +390,24 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
   return true;
 }
 
+void KeyframeMapper::publishKeyframeClouds(void){
+  for(int i = 0; i < keyframes_.size(); i++){
+    publishKeyframeData(i);
+  }
+}
+
 void KeyframeMapper::publishKeyframeData(int i)
 {
   rgbdtools::RGBDKeyframe& keyframe = keyframes_[i];
 
   // construct a cloud from the images
-  PointCloudT cloud;
+  /*PointCloudT cloud;
   keyframe.constructDensePointCloud(cloud, max_range_, max_stdev_);
+  */
   
   // cloud transformed to the fixed frame
   PointCloudT cloud_ff; 
-  pcl::transformPointCloud(cloud, cloud_ff, keyframe.pose);
+  pcl::transformPointCloud(keyframe.filteredCloud, cloud_ff, keyframe.pose);
 
   cloud_ff.header.frame_id = fixed_frame_;
 
@@ -786,7 +802,7 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
   for (unsigned int kf_idx = 0; kf_idx < keyframes_.size(); ++kf_idx)
   {
     const rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
-    
+    /*
     PointCloudT::Ptr cloud(new PointCloudT());   
     keyframe.constructDensePointCloud(*cloud, max_range_, max_stdev_);
 
@@ -797,9 +813,10 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
     sor.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
     PointCloudT cloud_filtered;
     sor.filter(cloud_filtered);
+    */
     PointCloudT cloud_tf;
 
-    pcl::transformPointCloud(cloud_filtered, cloud_tf, keyframe.pose);
+    pcl::transformPointCloud(keyframe.filteredCloud, cloud_tf, keyframe.pose);
     cloud_tf.header.frame_id = fixed_frame_;
 
     *aggregate_cloud += cloud_tf;
@@ -814,6 +831,16 @@ void KeyframeMapper::buildPcdMap(PointCloudT& map_cloud)
   vgf.setFilterLimits (-std::numeric_limits<double>::infinity(), max_map_z_);
 
   vgf.filter(map_cloud);
+}
+
+void KeyframeMapper::updateOctoMapServer(void){
+  //Reset map located in octomap server
+  std_srvs::Empty srv;
+  reset_octomap_client_.call(srv);
+
+  //Republish all keyframe point clouds
+  publishKeyframeClouds();
+
 }
 
 bool KeyframeMapper::saveOctomap(const std::string& path)
