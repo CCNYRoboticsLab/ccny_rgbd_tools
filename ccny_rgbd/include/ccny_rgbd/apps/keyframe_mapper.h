@@ -52,7 +52,6 @@
 #include "ccny_rgbd/PublishKeyframes.h"
 #include "ccny_rgbd/Save.h"
 #include "ccny_rgbd/Load.h"
-#include "ccny_rgbd/Keyframe.h"
 
 namespace ccny_rgbd {
 
