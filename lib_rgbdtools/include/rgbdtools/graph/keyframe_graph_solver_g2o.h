@@ -53,8 +53,7 @@ class KeyframeGraphSolverG2O: public KeyframeGraphSolver
      * @param keyframes vector of keyframes
      * @param associations vector of input keyframe associations
      */
-     void solve(KeyframeVector& keyframes, const KeyframeAssociationVector & associations, const KeyframeAssociationVector & odometryEdges);
-      
+    void solve(KeyframeVector& keyframes, const KeyframeAssociationVector & associations, const KeyframeAssociationVector & odometryEdges);
 
     void solve(KeyframeVector& keyframes,
                const KeyframeAssociationVector& associations,

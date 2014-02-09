@@ -50,7 +50,7 @@ KeyframeMapper::KeyframeMapper(
     "mapper_path", queue_size_);
   pose_correction_pub_ = nh_.advertise<geometry_msgs::Transform>("pose_correction_tfs", queue_size_);
 
-  pcd_to_octomap_pub_ = nh_.advertise<ccny_rgbd::Keyframe>("keyframes_to_octomap", 100);
+  pcd_to_octomap_pub_ = nh_.advertise<qbo_graph_slam_messages::Keyframe>("keyframes_to_octomap", 100);
 
   // ***** service clients
 
@@ -282,7 +282,8 @@ void KeyframeMapper::addKeyframe(
   }
 
   //Add keyframe to keyframevector
-  keyframes_.push_back(keyframe); 
+  keyframes_.push_back(keyframe);
+  publishKeyframeMsg(keyframes_.size()-1); 
   publishKeyframePoses();
 
   //Record the odometry measured between consecutive keyframes (only if more than one keyframe exists)
@@ -392,7 +393,7 @@ bool KeyframeMapper::publishKeyframesSrvCallback(
 
 void KeyframeMapper::publishKeyframeClouds(void){
   for(int i = 0; i < keyframes_.size(); i++){
-    publishKeyframeData(i);
+    publishKeyframeMsg(i);
   }
 }
 
@@ -412,6 +413,7 @@ void KeyframeMapper::publishKeyframeData(int i)
   cloud_ff.header.frame_id = fixed_frame_;
 
   keyframes_pub_.publish(cloud_ff);
+
 }
 
 void KeyframeMapper::publishMap(void)
@@ -559,6 +561,22 @@ void KeyframeMapper::publishKeyframePose(int i)
   marker_text.scale.z = 0.05; // shaft radius
 
   poses_pub_.publish(marker_text);
+}
+
+void KeyframeMapper::publishKeyframeMsg(int kf_idx){
+  rgbdtools::RGBDKeyframe& keyframe = keyframes_[kf_idx];
+
+  qbo_graph_slam_messages::Keyframe kf_msg;
+  tf::Transform keyframe_pose = tfFromEigenAffine(keyframe.pose);
+  tf::poseTFToMsg(keyframe_pose,kf_msg.pose);
+
+  PointCloudT cloud_ff; 
+  pcl::transformPointCloud(keyframe.filteredCloud, cloud_ff, keyframe.pose);
+
+  cloud_ff.header.frame_id = fixed_frame_;
+
+  pcl::toROSMsg ( cloud_ff,kf_msg.pcl); 
+  pcd_to_octomap_pub_.publish(kf_msg);
 }
 
 bool KeyframeMapper::saveKeyframesSrvCallback(

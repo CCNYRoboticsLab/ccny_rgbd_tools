@@ -41,6 +41,7 @@
 #include <octomap/OcTree.h>
 #include <octomap/ColorOcTree.h>
 #include <rgbdtools/rgbdtools.h>
+#include <qbo_graph_slam_messages/Keyframe.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/util.h"
@@ -319,6 +320,11 @@ class KeyframeMapper
      * @param i the keyframe index
      */
     void publishKeyframePose(int i);
+
+    /** @brief Publishes the Keyframe point cloud and pose associated with a keyframe
+     * @param i the keyframe index
+     */
+    void publishKeyframeMsg(int kf_idx);
         
     /** @brief Publishes all the keyframe associations markers
      */

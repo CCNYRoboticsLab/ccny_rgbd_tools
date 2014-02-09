@@ -22,6 +22,7 @@
   <depend package="image_geometry"/>
   <depend package="nodelet"/>
   <depend package="lib_rgbdtools"/>
+  <depend package="qbo_graph_slam_messages" />
       
   <rosdep name="octomap" />
   <rosdep name="libg2o" />

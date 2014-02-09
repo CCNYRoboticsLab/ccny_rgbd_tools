@@ -90,6 +90,10 @@ class RGBDKeyframe: public RGBDFrame
     */
     static bool load(RGBDKeyframe& keyframe, 
                      const std::string& path);
+
+    void storeFilteredPointCloud(double max_range, double max_stdev,double leaf_size);
+
+    PointCloudT filteredCloud;
 };
 
 typedef Eigen::aligned_allocator<RGBDKeyframe> KeyframeAllocator;
