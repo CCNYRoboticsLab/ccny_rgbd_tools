@@ -269,6 +269,7 @@ class KeyframeMapper
     void updateOdom(const nav_msgs::Odometry & odom_msg);
     
     // params
+    double max_ang_vel_; ///< maximum angular velocity of robot for keyframe to be added
     double pcd_map_res_; ///< downsampling resolution of pcd map (in meters)
     double octomap_res_;  ///< tree resolution for octomap (in meters)
     double kf_dist_eps_;  ///< linear distance threshold between keyframes

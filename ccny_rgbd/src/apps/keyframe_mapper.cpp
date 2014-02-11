@@ -128,7 +128,8 @@ void KeyframeMapper::initParams()
     max_map_z_ = std::numeric_limits<double>::infinity();
   if (!nh_private_.getParam ("online_graph_opt", online_graph_opt_))
     online_graph_opt_ = false; 
-
+  if (!nh_private_.getParam ("max_ang_vel", max_ang_vel_))
+    max_ang_vel_ = 9999; 
 
   // configure graph detection 
     
@@ -232,7 +233,7 @@ bool KeyframeMapper::processFrame(
     getTfDifference(tfFromEigenAffine(aggregatedPoseCorrection_ *pose), 
                     tfFromEigenAffine(keyframes_.back().pose), 
                     dist, angle);
-
+    ROS_INFO("Distance travelled & degrees turned since last KF: %f m, %f degrees",dist,angle);
     if (dist > kf_dist_eps_ || angle > kf_angle_eps_){
       result = true;
     }
@@ -241,12 +242,12 @@ bool KeyframeMapper::processFrame(
     }
   }
 
-  if(fabs(angularVelocity_)>0.2){
+  if(fabs(angularVelocity_)>max_ang_vel_){
         result = false;
-        printf("Angular velocity too large! Will not add keyframe \n");
+        ROS_INFO("Angular velocity too large! Will not add keyframe");
       }
       else{
-        printf("Angular velocity: %f \n", angularVelocity_);
+        //printf("Angular velocity: %f \n", angularVelocity_);
       }
   
 
