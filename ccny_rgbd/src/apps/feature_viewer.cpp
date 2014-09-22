@@ -96,7 +96,6 @@ void FeatureViewer::resetDetector()
   gft_config_server_.reset();
   star_config_server_.reset();
   orb_config_server_.reset();
-  surf_config_server_.reset();
   
   if (detector_type_ == "ORB")
   { 
@@ -109,18 +108,6 @@ void FeatureViewer::resetDetector()
     OrbDetectorConfigServer::CallbackType f = boost::bind(
       &FeatureViewer::orbReconfigCallback, this, _1, _2);
     orb_config_server_->setCallback(f);
-  }
-  else if (detector_type_ == "SURF")
-  {
-    ROS_INFO("Creating SURF detector");
-    feature_detector_.reset(new rgbdtools::SurfDetector());
-    surf_config_server_.reset(new 
-      SurfDetectorConfigServer(ros::NodeHandle(nh_private_, "feature/SURF")));
-    
-    // dynamic reconfigure
-    SurfDetectorConfigServer::CallbackType f = boost::bind(
-      &FeatureViewer::surfReconfigCallback, this, _1, _2);
-    surf_config_server_->setCallback(f);
   }
   else if (detector_type_ == "GFT")
   {
@@ -325,14 +312,6 @@ void FeatureViewer::starReconfigCallback(StarDetectorConfig& config, uint32_t le
     
   star_detector->setThreshold(config.threshold);
   star_detector->setMinDistance(config.min_distance); 
-}
-
-void FeatureViewer::surfReconfigCallback(SurfDetectorConfig& config, uint32_t level)
-{
-  rgbdtools::SurfDetectorPtr surf_detector = 
-    boost::static_pointer_cast<rgbdtools::SurfDetector>(feature_detector_);
-    
-  surf_detector->setThreshold(config.threshold);
 }
     
 void FeatureViewer::orbReconfigCallback(OrbDetectorConfig& config, uint32_t level)
