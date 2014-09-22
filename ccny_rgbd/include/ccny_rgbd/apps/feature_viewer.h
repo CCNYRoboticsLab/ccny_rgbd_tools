@@ -38,7 +38,6 @@
 #include "ccny_rgbd/FeatureDetectorConfig.h"
 #include "ccny_rgbd/GftDetectorConfig.h"
 #include "ccny_rgbd/StarDetectorConfig.h"
-#include "ccny_rgbd/SurfDetectorConfig.h"
 #include "ccny_rgbd/OrbDetectorConfig.h"
 
 namespace ccny_rgbd {
@@ -75,7 +74,6 @@ class FeatureViewer
     
     GftDetectorConfigServerPtr gft_config_server_;    ///< ROS dynamic reconfigure server for GFT params
     StarDetectorConfigServerPtr star_config_server_;  ///< ROS dynamic reconfigure server for STAR params
-    SurfDetectorConfigServerPtr surf_config_server_;    ///< ROS dynamic reconfigure server for SURF params
     OrbDetectorConfigServerPtr orb_config_server_;  ///< ROS dynamic reconfigure server for ORB params
     
     /** @brief Image transport for RGB message subscription */
@@ -102,7 +100,6 @@ class FeatureViewer
      * 
      * Possible values:
      *  - GFT (default)
-     *  - SURF
      *  - STAR
      *  - ORB
      */
@@ -184,10 +181,6 @@ class FeatureViewer
     /** @brief ROS dynamic reconfigure callback function for STAR
      */
     void starReconfigCallback(StarDetectorConfig& config, uint32_t level);
-    
-    /** @brief ROS dynamic reconfigure callback function for SURF
-     */
-    void surfReconfigCallback(SurfDetectorConfig& config, uint32_t level);
     
     /** @brief ROS dynamic reconfigure callback function for ORB
      */
