@@ -28,10 +28,12 @@
 #include <fstream>
 #include <ros/ros.h>
 #include <ros/publisher.h>
+#include <std_srvs/Empty.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/regex.hpp>
@@ -39,6 +41,7 @@
 #include <octomap/OcTree.h>
 #include <octomap/ColorOcTree.h>
 #include <rgbdtools/rgbdtools.h>
+#include <qbo_graph_slam_messages/Keyframe.h>
 
 #include "ccny_rgbd/types.h"
 #include "ccny_rgbd/util.h"
@@ -173,6 +176,10 @@ class KeyframeMapper
     bool solveGraphSrvCallback(
       SolveGraph::Request& request,
       SolveGraph::Response& response);
+
+    /** @brief Publishes a voxel grid filtered point cloud map from the current keyframe positions
+     */
+    void publishMap(void);
     
   protected:
 
@@ -201,9 +208,12 @@ class KeyframeMapper
   private:
 
     ros::Publisher keyframes_pub_;    ///< ROS publisher for the keyframe point clouds
+    ros::Publisher pcd_to_octomap_pub_;    ///< ROS publisher for keyframe poses and filtered point clouds
     ros::Publisher poses_pub_;        ///< ROS publisher for the keyframe poses
     ros::Publisher kf_assoc_pub_;     ///< ROS publisher for the keyframe associations
     ros::Publisher path_pub_;         ///< ROS publisher for the keyframe path
+    ros::Publisher pose_correction_pub_; ///< ROS publisher for the pose correction transform
+
     
     /** @brief ROS service to generate the graph correpondences */
     ros::ServiceServer generate_graph_service_;
@@ -232,6 +242,8 @@ class KeyframeMapper
     /** @brief ROS service to add a manual keyframe */
     ros::ServiceServer add_manual_keyframe_service_;
 
+    ros::ServiceClient reset_octomap_client_;
+
     tf::TransformListener tf_listener_; ///< ROS transform listener
 
     /** @brief Image transport for RGB message subscription */
@@ -251,13 +263,19 @@ class KeyframeMapper
    
     /** @brief Camera info message subscriber */
     CameraInfoSubFilter sub_info_;
+
+    ros::Subscriber odom_sub_;
+    float angularVelocity_;
+    void updateOdom(const nav_msgs::Odometry & odom_msg);
     
     // params
+    double max_ang_vel_; ///< maximum angular velocity of robot for keyframe to be added
     double pcd_map_res_; ///< downsampling resolution of pcd map (in meters)
     double octomap_res_;  ///< tree resolution for octomap (in meters)
     double kf_dist_eps_;  ///< linear distance threshold between keyframes
     double kf_angle_eps_; ///< angular distance threshold between keyframes
-    bool octomap_with_color_; ///< whetehr to save Octomaps with color info      
+    bool octomap_with_color_; ///< whetehr to save Octomaps with color info 
+    bool online_graph_opt_; //Whether or not to do online graph optimization and association checking  
     double max_map_z_;   ///< maximum z (in fixed frame) when exporting maps.
           
     // state vars
@@ -269,8 +287,13 @@ class KeyframeMapper
     rgbdtools::KeyframeGraphSolverG2O graph_solver_;    ///< optimizes the graph for global alignement
 
     rgbdtools::KeyframeAssociationVector associations_; ///< keyframe associations that form the graph
+    rgbdtools::KeyframeAssociationVector odometryEdges_; ///< odometry measurements between keyframes in the graph
     
     PathMsg path_msg_;    /// < contains a vector of positions of the camera (not base) pose
+
+    AffineTransform aggregatedPoseCorrection_;
+
+    std::vector<AffineTransform> uncorrected_keyframe_poses_;
     
     /** @brief processes an incoming RGBD frame with a given pose,
      * and determines whether a keyframe should be inserted
@@ -297,6 +320,11 @@ class KeyframeMapper
      * @param i the keyframe index
      */
     void publishKeyframePose(int i);
+
+    /** @brief Publishes the Keyframe point cloud and pose associated with a keyframe
+     * @param i the keyframe index
+     */
+    void publishKeyframeMsg(int kf_idx);
         
     /** @brief Publishes all the keyframe associations markers
      */
@@ -377,6 +405,12 @@ class KeyframeMapper
     bool loadPath(const std::string& filepath);
     
     void updatePathFromKeyframePoses();
+
+    void publishAggregatedPoseCorrection();
+
+    void publishKeyframeClouds(void);
+
+    void updateOctoMapServer(void);
 };
 
 } // namespace ccny_rgbd

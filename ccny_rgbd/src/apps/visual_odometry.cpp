@@ -101,6 +101,19 @@ void VisualOdometry::initParams()
   if (!nh_private_.getParam ("queue_size", queue_size_))
     queue_size_ = 5;
 
+  if (!nh_private_.getParam ("x_variance", xx))
+    xx = 0.3;
+  if (!nh_private_.getParam ("y_variance", yy))
+    yy = 0.3;
+  if (!nh_private_.getParam ("z_variance", zz))
+    zz = 0.3;
+  if (!nh_private_.getParam ("yaw_variance", yawyaw))
+    yawyaw = 0.3;
+  if (!nh_private_.getParam ("pitch_variance", pitchpitch))
+    pitchpitch = 0.3;
+  if (!nh_private_.getParam ("roll_variance", rollroll))
+    rollroll = 0.3;
+
   // detector params
   
   if (!nh_private_.getParam ("feature/publish_feature_cloud", publish_feature_cloud_))
@@ -349,6 +362,13 @@ void VisualOdometry::publishOdom(const std_msgs::Header& header)
   OdomMsg odom;
   odom.header.stamp = header.stamp;
   odom.header.frame_id = fixed_frame_;
+  boost::array<double, 36> pose_covariance = {{xx, 0, 0, 0, 0, 0,
+                    0, yy, 0, 0, 0, 0,
+                    0, 0, zz , 0, 0, 0,
+                    0, 0, 0, yawyaw , 0, 0,
+                    0, 0, 0, 0, pitchpitch , 0,
+                    0, 0, 0, 0, 0, rollroll}};
+  odom.pose.covariance=pose_covariance;
   tf::poseTFToMsg(f2b_, odom.pose.pose);
   odom_publisher_.publish(odom);
 }
