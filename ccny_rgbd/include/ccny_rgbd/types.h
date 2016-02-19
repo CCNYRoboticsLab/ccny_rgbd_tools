@@ -25,24 +25,24 @@
 #define CCNY_RGBD_TYPES_H
 
 #include <Eigen/Core>
-#include <pcl/point_types.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/registration/transformation_estimation_svd.h>
-#include <sensor_msgs/image_encodings.h>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
-#include <image_geometry/pinhole_camera_model.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <dynamic_reconfigure/server.h>
+#include </opt/ros/groovy/include/pcl-1.6/pcl/point_types.h>
+#include </opt/ros/groovy/include/pcl-1.6/pcl/kdtree/kdtree_flann.h>
+#include </opt/ros/groovy/include/pcl-1.6/pcl/registration/transformation_estimation_svd.h>
+#include </opt/ros/groovy/include/sensor_msgs/image_encodings.h>
+#include </opt/ros/groovy/include/nav_msgs/Odometry.h>
+#include </opt/ros/groovy/include/nav_msgs/Path.h>
+#include </opt/ros/groovy/include/image_transport/image_transport.h>
+#include </opt/ros/groovy/include/image_transport/subscriber_filter.h>
+#include </opt/ros/groovy/include/image_geometry/pinhole_camera_model.h>
+#include </opt/ros/groovy/include/message_filters/subscriber.h>
+#include </opt/ros/groovy/include/message_filters/synchronizer.h>
+#include </opt/ros/groovy/include/message_filters/sync_policies/approximate_time.h>
+#include </opt/ros/groovy/include/dynamic_reconfigure/server.h>
 
 #include "ccny_rgbd/FeatureDetectorConfig.h"
 #include "ccny_rgbd/GftDetectorConfig.h"
 #include "ccny_rgbd/StarDetectorConfig.h"
-#include "ccny_rgbd/SurfDetectorConfig.h"
+//#include "ccny_rgbd/SurfDetectorConfig.h"
 #include "ccny_rgbd/OrbDetectorConfig.h"
 
 namespace ccny_rgbd {
@@ -109,8 +109,8 @@ typedef boost::shared_ptr<GftDetectorConfigServer> GftDetectorConfigServerPtr;
 typedef dynamic_reconfigure::Server<StarDetectorConfig> StarDetectorConfigServer;
 typedef boost::shared_ptr<StarDetectorConfigServer> StarDetectorConfigServerPtr; 
 
-typedef dynamic_reconfigure::Server<SurfDetectorConfig> SurfDetectorConfigServer;
-typedef boost::shared_ptr<SurfDetectorConfigServer> SurfDetectorConfigServerPtr; 
+//typedef dynamic_reconfigure::Server<SurfDetectorConfig> SurfDetectorConfigServer;
+//typedef boost::shared_ptr<SurfDetectorConfigServer> SurfDetectorConfigServerPtr; 
 
 typedef dynamic_reconfigure::Server<OrbDetectorConfig> OrbDetectorConfigServer;
 typedef boost::shared_ptr<OrbDetectorConfigServer> OrbDetectorConfigServerPtr; 
